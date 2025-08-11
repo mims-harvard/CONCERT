@@ -7,4 +7,3 @@ Spots can be selected by using single-clicks or the lasso tool.
 Example files used in the experiments:
 1. pert_cells_GSM5808054_patchclose_tumor_Jak2.txt - perturb these spots without perturbation to have Jak2 gene knockout
 2. pert_cells_stroke_sham1_CIA.txt - perturb these spots on sham sample to have stroke
-
