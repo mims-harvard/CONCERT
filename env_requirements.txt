@@ -4,3 +4,5 @@ sklearn==1.4.0
 scipy==1.12.0
 pandas==2.2.0
 numpy==1.23.5
+scvi-tools
+
