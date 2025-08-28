@@ -64,9 +64,9 @@ numpy==1.23.5
 #### 🗂️ Datasets
 | Dataset        | Raw data                     | Processed data |
 |----------------|---------------------------------|------|
-| [Perturb-Map](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7)          | [Raw](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460)           | [Processed]   |
-| [Colon inflammation](https://www.nature.com/articles/s41586-024-08216-z)     | [Raw](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE245316)    | [Processed]  |
-| [Brain stroke](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323)  | Raw     | [Processed]   |
+| [Perturb-Map](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7)          | [Raw](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460)           | [Processed](https://figshare.com/articles/dataset/Datasets_-_Perturb-Map/29198468)   |
+| [Colon inflammation](https://www.nature.com/articles/s41586-024-08216-z)     | [Raw](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE245316)    | [Processed](https://figshare.com/articles/dataset/Mouse_gut_inflammation_dataset/29882873)  |
+| [Brain stroke](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323)  | available from the authors of the original paper upon request     | [Processed](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900)   |
 
 #### ⚖️ License
 The code in this package is licensed under the MIT License.
