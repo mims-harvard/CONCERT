@@ -76,6 +76,6 @@ The code in this package is licensed under the MIT License.
 #### 📝 Reference  
 
 #### 💬 Questions
-Please leave a Github issue or contact [![Xiang Lin]](mailto:xianglin226@gmail.com) or [![Marinka Zitnik]](mailto:marinka@zitnik.si)  
+Please leave a Github issue or contact [Xiang Lin](mailto:xianglin226@gmail.com) or [Marinka Zitnik](mailto:marinka@zitnik.si)  
 
 
