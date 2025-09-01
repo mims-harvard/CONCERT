@@ -1,6 +1,6 @@
-1. Perturb-map data (4 slides with 3 perturbagens)  
-2. Gut DSS data (4 slides with 1 perturbagen and time)  
-3. Stroke data (4 PT slides with 1 perturbaen adn 4 sham slides)
+1. Perturb-map visium data (4 slides with 3 perturbagens)  
+2. Mouse colon DSS data (4 slides with 1 perturbagen at 3 time points after perturbation)  
+3. Mouse Stroke PT data (4 PT slides with 1 perturbagen and 4 sham slides without perturbation in the corresponding brain region)
   
 | Dataset        | Raw data                     | Processed data |
 |----------------|---------------------------------|------|
