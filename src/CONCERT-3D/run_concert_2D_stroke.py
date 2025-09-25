@@ -2,7 +2,7 @@ import math, os
 from time import time
 
 import torch
-from concert_batch_stroke2d import CONCERT
+from concert_batch_2D_stroke import CONCERT
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
