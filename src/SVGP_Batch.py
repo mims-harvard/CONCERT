@@ -15,11 +15,11 @@ def _add_diagonal_jitter(matrix, jitter=1e-8):
 
 
 class SVGP(nn.Module):
-    def __init__(self, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, allow_batch_kernel_scale, jitter, 
+    def __init__(self, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, multi_kernel_mode, jitter, 
                  N_train, dtype, device, kernel_phi=1.):
         super(SVGP, self).__init__()
         self.N_train = torch.tensor(N_train, dtype=dtype).to(device)
-        self.allow_batch_kernel_scale = allow_batch_kernel_scale
+        self.multi_kernel_mode = multi_kernel_mode
         self.jitter = jitter
         self.dtype = dtype
         self.device = device
@@ -32,7 +32,7 @@ class SVGP(nn.Module):
             self.inducing_index_points = nn.Parameter(torch.tensor(initial_inducing_points, dtype=dtype).to(device), requires_grad=True)
 
         # length scale of the kernel
-        if allow_batch_kernel_scale:
+        if multi_kernel_mode:
             self.kernel = BatchedCauchyKernel_CONCERT_flex(scale=kernel_scale, fixed_scale=fixed_gp_params, phi=self.kernel_phi,
                                                            dtype=dtype, device=device).to(device)
         else:
@@ -54,7 +54,7 @@ class SVGP(nn.Module):
         pos_y = y[:, :2]
         sample_y = y[:, 2:]
 
-        if self.allow_batch_kernel_scale:
+        if self.multi_kernel_mode:
             if x_inducing and y_inducing:
                 if diag_only:
                     matrix = self.kernel.forward_diag_samples(pos_x, pos_y, sample_x, sample_y, cutoff=torch.tensor(0.))
@@ -90,7 +90,7 @@ class SVGP(nn.Module):
         pos_y = y[:, :2]
         sample_y = y[:, 2:]
 
-        if self.allow_batch_kernel_scale:
+        if self.multi_kernel_mode:
             if x_inducing and y_inducing:
                 if diag_only:
                     matrix = self.kernel.forward_diag_samples(pos_x, pos_y, sample_x, sample_y, cutoff=torch.tensor(0.))
