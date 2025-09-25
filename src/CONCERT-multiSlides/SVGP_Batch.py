@@ -7,7 +7,8 @@ from torch.optim.lr_scheduler import *
 from torch.utils.data import DataLoader, TensorDataset
 from torch.nn.utils import clip_grad_norm_, clip_grad_value_
 import numpy as np
-from kernel import CauchyKernel, BatchedCauchyKernel, SampleKernel, BatchedCauchyKernel_CONCERT, BatchedCauchyKernel_CONCERT_flex
+from kernel import EQKernel, CauchyKernel, BatchedCauchyKernel, SampleKernel
+
 
 def _add_diagonal_jitter(matrix, jitter=1e-8):
     Eye = torch.eye(matrix.size(-1), device=matrix.device).expand(matrix.shape)
@@ -15,15 +16,13 @@ def _add_diagonal_jitter(matrix, jitter=1e-8):
 
 
 class SVGP(nn.Module):
-    def __init__(self, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, allow_batch_kernel_scale, jitter, 
-                 N_train, dtype, device, kernel_phi=1.):
+    def __init__(self, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, allow_batch_kernel_scale, jitter, N_train, dtype, device):
         super(SVGP, self).__init__()
         self.N_train = torch.tensor(N_train, dtype=dtype).to(device)
         self.allow_batch_kernel_scale = allow_batch_kernel_scale
         self.jitter = jitter
         self.dtype = dtype
         self.device = device
-        self.kernel_phi = kernel_phi
 
         # inducing points
         if fixed_inducing_points:
@@ -32,14 +31,14 @@ class SVGP(nn.Module):
             self.inducing_index_points = nn.Parameter(torch.tensor(initial_inducing_points, dtype=dtype).to(device), requires_grad=True)
 
         # length scale of the kernel
+#        self.kernel = EQKernel(scale=kernel_scale, fixed_scale=fixed_gp_params, dtype=dtype, device=device).to(device)
         if allow_batch_kernel_scale:
-            self.kernel = BatchedCauchyKernel_CONCERT_flex(scale=kernel_scale, fixed_scale=fixed_gp_params, phi=self.kernel_phi,
-                                                           dtype=dtype, device=device).to(device)
+            self.kernel = BatchedCauchyKernel(scale=kernel_scale, fixed_scale=fixed_gp_params, dtype=dtype, device=device).to(device)
         else:
             self.kernel = CauchyKernel(scale=kernel_scale, fixed_scale=fixed_gp_params, dtype=dtype, device=device).to(device)
         self.sample_kernel = SampleKernel().to(device)
 
-    def kernel_matrix(self, x, y, x_inducing=True, y_inducing=True, diag_only=False, cutoff=0.):
+    def kernel_matrix(self, x, y, x_inducing=True, y_inducing=True, diag_only=False):
         """
         Computes GP kernel matrix K(x,y).
         :param x:
@@ -50,70 +49,30 @@ class SVGP(nn.Module):
         :return:
         """
         pos_x = x[:, :2]
-        sample_x = x[:, 2:]
         pos_y = y[:, :2]
+
+        sample_x = x[:, 2:]
         sample_y = y[:, 2:]
 
         if self.allow_batch_kernel_scale:
-            if x_inducing and y_inducing:
-                if diag_only:
-                    matrix = self.kernel.forward_diag_samples(pos_x, pos_y, sample_x, sample_y, cutoff=torch.tensor(0.))
-                else:
-                    matrix = self.kernel.forward_samples(pos_x, pos_y, sample_x, sample_y, cutoff=torch.tensor(0.))
-            elif not x_inducing and y_inducing:
-                matrix = self.kernel.forward_samples_points(pos_x, pos_y, sample_x, sample_y, cutoff=cutoff)
-            elif not x_inducing and not y_inducing:
-                if diag_only:
-                    matrix = self.kernel.forward_diag_samples(pos_x, pos_y, sample_x, sample_y, cutoff=cutoff)
-                else:
-                    matrix = self.kernel.forward_samples(pos_x, pos_y, sample_x, sample_y, cutoff=cutoff)
+            if diag_only:
+    #            matrix = torch.diagonal(self.sample_kernel(sample_x, sample_y) * self.kernel(pos_x, pos_y))
+                matrix_diag_1 = self.sample_kernel.forward_diag(sample_x, sample_y)
+                matrix_diag_2 = self.kernel.forward_diag(pos_x, pos_y, sample_x, sample_y)
+                matrix = matrix_diag_1 * matrix_diag_2
+            else:
+                matrix = self.sample_kernel(sample_x, sample_y) * self.kernel(pos_x, pos_y, sample_x, sample_y)
         else:
             if diag_only:
-                matrix = self.kernel.forward_diag(pos_x, pos_y)
+    #            matrix = torch.diagonal(self.sample_kernel(sample_x, sample_y) * self.kernel(pos_x, pos_y))
+                matrix_diag_1 = self.sample_kernel.forward_diag(sample_x, sample_y)
+                matrix_diag_2 = self.kernel.forward_diag(pos_x, pos_y)
+                matrix = matrix_diag_1 * matrix_diag_2
             else:
-                matrix = self.kernel(pos_x, pos_y)
-
-        return matrix
-    
-    def kernel_matrix_impute(self, x, y, x_inducing=True, y_inducing=True, diag_only=False, x_cutoff=0, y_cutoff=0.):
-        """
-        Computes GP kernel matrix K(x,y).
-        :param x:
-        :param y:
-        :param x_inducing: whether x is a set of inducing points
-        :param y_inducing: whether y is a set of inducing points
-        :param diag_only: whether or not to only compute diagonal terms of the kernel matrix
-        :return:
-        """
-        pos_x = x[:, :2]
-        sample_x = x[:, 2:]
-        pos_y = y[:, :2]
-        sample_y = y[:, 2:]
-
-        if self.allow_batch_kernel_scale:
-            if x_inducing and y_inducing:
-                if diag_only:
-                    matrix = self.kernel.forward_diag_samples(pos_x, pos_y, sample_x, sample_y, cutoff=torch.tensor(0.))
-                else:
-                    matrix = self.kernel.forward_samples(pos_x, pos_y, sample_x, sample_y, cutoff=torch.tensor(0.))
-            elif not x_inducing and y_inducing:
-                matrix = self.kernel.forward_samples_points(pos_x, pos_y, sample_x, sample_y, cutoff=x_cutoff)
-            elif not x_inducing and not y_inducing:
-                if diag_only:
-                    matrix = self.kernel.forward_diag_samples_impute(pos_x, pos_y, sample_x, sample_y, 
-                                                                     x_cutoff=x_cutoff, y_cutoff=y_cutoff)
-                else:
-                    matrix = self.kernel.forward_samples_impute(pos_x, pos_y, sample_x, sample_y, 
-                                                                x_cutoff=x_cutoff, y_cutoff=y_cutoff)
-        else:
-            if diag_only:
-                matrix = self.kernel.forward_diag(pos_x, pos_y)
-            else:
-                matrix = self.kernel(pos_x, pos_y)
+                matrix = self.sample_kernel(sample_x, sample_y) * self.kernel(pos_x, pos_y)
         return matrix
 
-
-    def variational_loss(self, x, y, noise, mu_hat, A_hat, cutoff=0.):
+    def variational_loss(self, x, y, noise, mu_hat, A_hat):
         """
         Computes L_H for the data in the current batch.
         :param x: auxiliary data for current batch (batch, 1 + 1 + M)
@@ -126,12 +85,12 @@ class SVGP(nn.Module):
         b = x.shape[0]
         m = self.inducing_index_points.shape[0]
 
-        K_mm = self.kernel_matrix(self.inducing_index_points, self.inducing_index_points,cutoff=cutoff) # (m,m)
+        K_mm = self.kernel_matrix(self.inducing_index_points, self.inducing_index_points) # (m,m)
         K_mm_inv = torch.linalg.inv(_add_diagonal_jitter(K_mm, self.jitter)) # (m,m)
 
-        K_nn = self.kernel_matrix(x, x, x_inducing=False, y_inducing=False, diag_only=True, cutoff=cutoff) # (b)
+        K_nn = self.kernel_matrix(x, x, x_inducing=False, y_inducing=False, diag_only=True) # (b)
 
-        K_nm = self.kernel_matrix(x, self.inducing_index_points, x_inducing=False, cutoff=cutoff)  # (b, m)
+        K_nm = self.kernel_matrix(x, self.inducing_index_points, x_inducing=False)  # (b, m)
         K_mn = torch.transpose(K_nm, 0, 1)
 
         S = A_hat
@@ -169,7 +128,7 @@ class SVGP(nn.Module):
 
         return L_3_sum_term, KL_term
 
-    def approximate_posterior_params(self, index_points_test, index_points_train=None, y=None, noise=None, cutoff=0.):
+    def approximate_posterior_params(self, index_points_test, index_points_train=None, y=None, noise=None):
         """
         Computes parameters of q_S.
         :param index_points_test: X_*
@@ -181,19 +140,17 @@ class SVGP(nn.Module):
         """
         b = index_points_train.shape[0]
 
-        K_mm = self.kernel_matrix(self.inducing_index_points, self.inducing_index_points, cutoff=cutoff) # (m,m)
-
+        K_mm = self.kernel_matrix(self.inducing_index_points, self.inducing_index_points) # (m,m)
         K_mm_inv = torch.linalg.inv(_add_diagonal_jitter(K_mm, self.jitter)) # (m,m)
 
         K_xx = self.kernel_matrix(index_points_test, index_points_test, x_inducing=False,
-                                  y_inducing=False, diag_only=True, cutoff=cutoff)  # (x)
-
-        K_xm = self.kernel_matrix(index_points_test, self.inducing_index_points, x_inducing=False, cutoff=cutoff)  # (x, m)
+                                  y_inducing=False, diag_only=True)  # (x)
+        K_xm = self.kernel_matrix(index_points_test, self.inducing_index_points, x_inducing=False)  # (x, m)
         K_mx = torch.transpose(K_xm, 0, 1)  # (m, x)
 
-        K_nm = self.kernel_matrix(index_points_train, self.inducing_index_points, x_inducing=False, cutoff=cutoff)  # (N, m)
+        K_nm = self.kernel_matrix(index_points_train, self.inducing_index_points, x_inducing=False)  # (N, m)
         K_mn = torch.transpose(K_nm, 0, 1)  # (m, N)
-        
+
         sigma_l = K_mm + (self.N_train / b) * torch.matmul(K_mn, K_nm / noise[:,None])
         sigma_l_inv = torch.linalg.inv(_add_diagonal_jitter(sigma_l, self.jitter))
         mean_vector = (self.N_train / b) * torch.matmul(K_xm, torch.matmul(sigma_l_inv, torch.matmul(K_mn, y/noise)))
@@ -203,78 +160,5 @@ class SVGP(nn.Module):
 
         mu_hat = (self.N_train / b) * torch.matmul(torch.matmul(K_mm, torch.matmul(sigma_l_inv, K_mn)), y / noise)
         A_hat = torch.matmul(K_mm, torch.matmul(sigma_l_inv, K_mm))
-
-        for name, tensor in {
-            "K_xx": K_xx,
-            "K_xm": K_xm,
-            "K_mx": K_mx,
-            "K_mm": K_mm,
-            "K_mm_inv": K_mm_inv,
-            "K_xm_Sigma_l_K_mx": K_xm_Sigma_l_K_mx,
-            "B": B}.items():
-            if torch.isnan(tensor).any():
-                print(f"NaN detected in {name}")
-            if torch.isinf(tensor).any():
-                print(f"Inf detected in {name}")
-        
-        if (B <= 0).any():
-            print("B has non-positive values!")
-
-        return mean_vector, B, mu_hat, A_hat
-    
-    def approximate_posterior_params_impute(self, index_points_test, index_points_train=None, y=None, noise=None, 
-                                            x_cutoff=0., y_cutoff=0.):
-        """
-        Computes parameters of q_S.
-        :param index_points_test: X_*
-        :param index_points_train: X_Train
-        :param y: y vector of latent GP
-        :param noise: noise vector of latent GP
-        :return: posterior mean at index points,
-                 (diagonal of) posterior covariance matrix at index points
-        """
-        b = index_points_train.shape[0]
-
-        K_mm = self.kernel_matrix_impute(self.inducing_index_points, self.inducing_index_points, 
-                                         x_cutoff=x_cutoff, y_cutoff=y_cutoff) # (m,m)
-
-        K_mm_inv = torch.linalg.inv(_add_diagonal_jitter(K_mm, self.jitter)) # (m,m)
-
-        K_xx = self.kernel_matrix_impute(index_points_test, index_points_test, x_inducing=False,
-                                  y_inducing=False, diag_only=True, x_cutoff=x_cutoff, y_cutoff=y_cutoff)  # (x)
-
-        K_xm = self.kernel_matrix_impute(index_points_test, self.inducing_index_points, x_inducing=False, 
-                                         x_cutoff=x_cutoff, y_cutoff=y_cutoff)  # (x, m)
-        K_mx = torch.transpose(K_xm, 0, 1)  # (m, x)
-
-        K_nm = self.kernel_matrix_impute(index_points_train, self.inducing_index_points, x_inducing=False, 
-                                         x_cutoff=x_cutoff, y_cutoff=y_cutoff)  # (N, m)
-        K_mn = torch.transpose(K_nm, 0, 1)  # (m, N)
-        
-        sigma_l = K_mm + (self.N_train / b) * torch.matmul(K_mn, K_nm / noise[:,None])
-        sigma_l_inv = torch.linalg.inv(_add_diagonal_jitter(sigma_l, self.jitter))
-        mean_vector = (self.N_train / b) * torch.matmul(K_xm, torch.matmul(sigma_l_inv, torch.matmul(K_mn, y/noise)))
-
-        K_xm_Sigma_l_K_mx = torch.matmul(K_xm, torch.matmul(sigma_l_inv, K_mx))
-        B = K_xx + torch.diagonal(-torch.matmul(K_xm, torch.matmul(K_mm_inv, K_mx)) + K_xm_Sigma_l_K_mx)
-
-        mu_hat = (self.N_train / b) * torch.matmul(torch.matmul(K_mm, torch.matmul(sigma_l_inv, K_mn)), y / noise)
-        A_hat = torch.matmul(K_mm, torch.matmul(sigma_l_inv, K_mm))
-
-        for name, tensor in {
-            "K_xx": K_xx,
-            "K_xm": K_xm,
-            "K_mx": K_mx,
-            "K_mm": K_mm,
-            "K_mm_inv": K_mm_inv,
-            "K_xm_Sigma_l_K_mx": K_xm_Sigma_l_K_mx,
-            "B": B}.items():
-            if torch.isnan(tensor).any():
-                print(f"NaN detected in {name}")
-            if torch.isinf(tensor).any():
-                print(f"Inf detected in {name}")
-        
-        if (B <= 0).any():
-            print("B has non-positive values!")
 
         return mean_vector, B, mu_hat, A_hat
