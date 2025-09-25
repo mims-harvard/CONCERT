@@ -69,17 +69,17 @@ class EarlyStopping:
 
 class CONCERT(nn.Module):
     def __init__(self, encoder_dim, GP_dim, Normal_dim, cell_atts, num_genes, n_batch, encoder_layers, decoder_layers, noise, encoder_dropout, decoder_dropout, 
-                    shared_dispersion, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, allow_batch_kernel_scale, mask_cutoff,
+                    shared_dispersion, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, multi_kernel_mode, mask_cutoff,
                     N_train, KL_loss, dynamicVAE, init_beta, min_beta, max_beta, dtype, device):
         super(CONCERT, self).__init__()
         torch.set_default_dtype(dtype)
-        if allow_batch_kernel_scale:
+        if multi_kernel_mode:
             self.svgp = SVGP(fixed_inducing_points=fixed_inducing_points, initial_inducing_points=initial_inducing_points,
-                fixed_gp_params=fixed_gp_params, kernel_scale=kernel_scale, allow_batch_kernel_scale=allow_batch_kernel_scale, 
+                fixed_gp_params=fixed_gp_params, kernel_scale=kernel_scale, multi_kernel_mode=multi_kernel_mode, 
                 kernel_phi=1., jitter=1e-8, N_train=N_train, dtype=dtype, device=device)
         else:
             self.svgp = SVGP(fixed_inducing_points=fixed_inducing_points, initial_inducing_points=initial_inducing_points,
-                fixed_gp_params=fixed_gp_params, kernel_scale=kernel_scale[0], allow_batch_kernel_scale=allow_batch_kernel_scale,
+                fixed_gp_params=fixed_gp_params, kernel_scale=kernel_scale[0], multi_kernel_mode=multi_kernel_mode,
                 jitter=1e-8, N_train=N_train, dtype=dtype, device=device)
         self.encoder_dim = encoder_dim
         self.PID = PIDControl(Kp=0.01, Ki=-0.005, init_beta=init_beta, min_beta=min_beta, max_beta=max_beta)
