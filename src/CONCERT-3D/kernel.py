@@ -355,7 +355,7 @@ class BatchedCauchyKernel(nn.Module):
         else:
             self.scale = nn.Parameter(torch.tensor(scale, dtype=dtype).to(device), requires_grad=True)
 
-    def forward_samples(self, x, y, sample_x, sample_y):
+    def forward(self, x, y, sample_x, sample_y):
         sq_norms_x = torch.sum(x**2, dim=-1, keepdim=True)
         sq_norms_y = torch.transpose(torch.sum(y**2, dim=-1, keepdim=True), -2, -1)
         dotprods = torch.matmul(x, torch.transpose(y, -2, -1))
@@ -372,7 +372,7 @@ class BatchedCauchyKernel(nn.Module):
             res = 1/(1+d/scale_xy)
         return res
 
-    def forward_diag_samples(self, x, y, sample_x, sample_y):
+    def forward_diag(self, x, y, sample_x, sample_y):
         d = ((x-y)**2).sum(dim=1)
         if self.fixed_scale:
             scale_x = torch.matmul(sample_x, self.scale.unsqueeze(dim=1)).squeeze()
