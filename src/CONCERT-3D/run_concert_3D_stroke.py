@@ -18,7 +18,7 @@ if __name__ == "__main__":
 
     # setting the hyper parameters
     import argparse
-    parser = argparse.ArgumentParser(description='Spatial dependency-aware variational autoencoder',
+    parser = argparse.ArgumentParser(description='Spatial-aware perturbation prediction',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data_file', default='data.h5')
     parser.add_argument('--data_index', default='x')
