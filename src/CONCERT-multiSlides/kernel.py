@@ -372,7 +372,7 @@ class BatchedCauchyKernel(nn.Module):
             res = 1/(1+d/scale_xy)
         return res
 
-    def forward_diag_samples(self, x, y, sample_x, sample_y):
+    def forward_diag(self, x, y, sample_x, sample_y):
         d = ((x-y)**2).sum(dim=1)
         if self.fixed_scale:
             scale_x = torch.matmul(sample_x, self.scale.unsqueeze(dim=1)).squeeze()
