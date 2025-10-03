@@ -11,9 +11,10 @@ patience: 200
 pert_cells: "./pert_cells/patch_trans.txt"
 target_cell_tissue: "tumor"
 target_cell_perturbation: "Jak2"
-project_index: "trans"
+project_index: "map"
 model_file: "model.pt"
 wandb: true
 wandb_project: "concert"
 wandb_run: "test"
 wandb_mode: "online"
+
