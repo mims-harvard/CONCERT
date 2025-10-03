@@ -1,0 +1,19 @@
+data_file: "datasets/GSM5808054_data.h5"
+outdir: "./outputs"
+stage: "train"
+batch_size: "auto"
+encoder_layers: [256, 128]
+decoder_layers: [256]
+GP_dim: 2
+Normal_dim: 8
+lr: 0.0002
+maxiter: 3000
+patience: 200
+pert_cells: "./pert_cells/patch_trans.txt"
+target_cell_tissue: "tumor"
+target_cell_perturbation: "Jak2"
+project_index: "trans"
+wandb: true
+wandb_project: "concert"
+wandb_run: "test"
+wandb_mode: "online"
