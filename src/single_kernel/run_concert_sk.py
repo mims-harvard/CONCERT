@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Driver (SK) — Spatial-aware counterfactual perturbation using CONCERT (scikit-style variant).
+Driver (SK) — Spatial-aware counterfactual perturbation using CONCERT
 
 Highlights
 ----------
@@ -347,6 +347,13 @@ def run(cfg: RunConfigSK) -> None:
 # -----------------------------------------------------------------------------
 # CLI (config-first, explicit overrides only)
 # -----------------------------------------------------------------------------
+def str2bool(v):
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return v
+    return v.lower() in ("1", "true", "yes", "y", "on")
+      
 def parse_args() -> RunConfigSK:
     p = argparse.ArgumentParser(
         description="CONCERT (SK) runner",
@@ -380,14 +387,6 @@ def parse_args() -> RunConfigSK:
     p.add_argument("--noise", type=float)
     p.add_argument("--dropoutE", type=float)
     p.add_argument("--dropoutD", type=float)
-
-    def str2bool(v):
-        if v is None:
-            return None
-        if isinstance(v, bool):
-            return v
-        return v.lower() in ("1", "true", "yes", "y", "on")
-
     p.add_argument("--dynamicVAE", type=str2bool)
     p.add_argument("--init_beta", type=float)
     p.add_argument("--min_beta", type=float)
