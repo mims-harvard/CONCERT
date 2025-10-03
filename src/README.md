@@ -3,7 +3,7 @@ run_concert_map.py - train model and conduct counterfactual prediction on specif
 run_concert_map_impute.py - conduct imputation and imputation + counterfactual prediction on specified unseen spots  
 Specify the parameters in config.yaml/config_impute.yaml
 ### Example commands:
-1. train model
+1. train model  
 python run_concert_map.py \
   --config config.yaml \
   --stage train \
@@ -12,7 +12,7 @@ python run_concert_map.py \
   --wandb_run train
 
   
-2. conduct counterfactual prediction
+2. conduct counterfactual prediction  
 python run_concert_map.py \
   --config config.yaml \
   --stage eval \
@@ -20,7 +20,7 @@ python run_concert_map.py \
   --wandb_project concert-map \
   --wandb_run train
   
-3. conduct imputation + CP
+3. conduct imputation + CP  
 python run_concert_map_impute.py \ 
   --config config_impute.yaml \
   --wandb \
