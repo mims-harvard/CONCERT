@@ -11,7 +11,7 @@ CONCERT with a single 2D/3D kernel for stroke data.
 </pre> 
 
 2. Adjust sampling strategies as random or patch, also change the number of perturbed spots
-   <pre> python run_concert_2D_stroke.py \
+<pre> python run_concert_2D_stroke.py \
   --config config_2D.yaml \
   --stage eval \
   --model_file stroke_2D.pt \
