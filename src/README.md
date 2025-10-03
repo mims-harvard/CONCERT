@@ -10,10 +10,9 @@ Specify the parameters in config.yaml/config_impute.yaml
   --wandb \
   --wandb_project concert-map \
   --wandb_run train
-<pre>
+  <pre>
   
 2. conduct counterfactual prediction
-
 <pre> python run_concert_map.py \
   --config config.yaml \
   --stage eval \
