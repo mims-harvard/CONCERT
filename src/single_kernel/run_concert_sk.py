@@ -115,7 +115,7 @@ class RunConfigSK:
     data_file: str = "data.h5"
     outdir: str = "./outputs"
     sample: str = "sample"
-    data_index: str = "x"
+    project_index: str = "x"
 
     # Selection / normalization
     select_genes: int = 0
@@ -308,7 +308,7 @@ def run(cfg: RunConfigSK) -> None:
         logging.info("Loaded existing weights: %s", cfg.model_file)
 
     # Counterfactual prediction
-    data_index = f"{cfg.sample}_{cfg.data_index}"
+    project_index = f"{cfg.sample}_{cfg.project_index}"
     pert_ind = (np.loadtxt(cfg.pert_cells, dtype=int) - 1).astype(int)
 
     target_tissue_code = tissue_dict.get(cfg.target_cell_tissue, None)
@@ -339,7 +339,7 @@ def run(cfg: RunConfigSK) -> None:
     # mark perturbed cells (1/0)
     pert_set = set(pert_ind.tolist() if isinstance(pert_ind, np.ndarray) else list(pert_ind))
     ad.obs["perturbed"] = [1 if i in pert_set else 0 for i in range(ad.n_obs)]
-    out_path = outdir / f"{data_index}_{cfg.target_cell_tissue}_{cfg.target_cell_perturbation}_perturbed_counts.h5ad"
+    out_path = outdir / f"{project_index}_{cfg.target_cell_tissue}_{cfg.target_cell_perturbation}_perturbed_counts.h5ad"
     ad.write(out_path)
     logging.info("Wrote perturbed counts: %s", out_path)
 
@@ -367,7 +367,7 @@ def parse_args() -> RunConfigSK:
     p.add_argument("--data_file")
     p.add_argument("--outdir")
     p.add_argument("--sample")
-    p.add_argument("--data_index")
+    p.add_argument("--project_index")
 
     # selection / training
     p.add_argument("--select_genes", type=int)
