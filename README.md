@@ -42,7 +42,7 @@ numpy==1.23.5
 <pre> python run_concert_map.py  \
   --config config.yaml \
   --stage train  \
-  --dataset GSM5808054_data.h5  
+  --dataset GSM5808054_data.h5  \
   --model_file model.pt  \
   --wandb \
   --wandb_project concert-map \
@@ -55,10 +55,14 @@ numpy==1.23.5
 <pre> python run_concert_map.py  \
   --config config.yaml \
   --stage eval  \
+  --dataset GSM5808054_data.h5  \
   --model_file model.pt  
   --pert_cells spots.txt  \
   --target_cell_tissue tumor \  
-  --target_cell_perturbation jak2-KO  
+  --target_cell_perturbation jak2-KO  \
+  --wandb \
+  --wandb_project concert-map \
+  --wandb_run pred
 </pre> 
 4. Visualized the intermediate and final outputs - see folder [outputs](./outputs/)
   
