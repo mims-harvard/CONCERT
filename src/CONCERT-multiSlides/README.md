@@ -10,7 +10,8 @@ CONCERT applied on gut DSS data with a single kernel for multi-slides.
   --model_file gut_model.pt
 </pre> 
 
-2. Do perturbation prediction on the specified time points. Here we predict inflammed spots after 30, 50 and 73 days of recovery. The arguments `--pert_cells` and `--target_cell_day` indicate the day of data to perturb and the target day of transcriptomic state.  
+2. Do perturbation prediction on the specified time points. Here we predict inflammed spots after 30, 50 and 73 days of recovery. The arguments `--pert_cells` and `--target_cell_day` indicate the day of data to perturb and the target day of transcriptomic state.
+  
 After 30 days:
 <pre> 
   python python run_concert_gut.py \
