@@ -11,7 +11,9 @@ Specify the parameters in config.yaml/config_impute.yaml
   --wandb_project concert-map \
   --wandb_run train
 <pre>
+  
 2. conduct counterfactual prediction
+
 <pre> python run_concert_map.py \
   --config config.yaml \
   --stage eval \
@@ -19,6 +21,7 @@ Specify the parameters in config.yaml/config_impute.yaml
   --wandb_project concert-map \
   --wandb_run train
 <pre>
+  
 3. conduct imputation + CP
 <pre> python run_concert_map_impute.py \ 
   --config config_impute.yaml \
