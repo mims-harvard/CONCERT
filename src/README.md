@@ -9,7 +9,6 @@ run_concert_map_impute.py - do imputation and imputation + counterfactual predic
   --wandb_project concert-map \
   --wandb_run train
 
-  
 python run_concert_map_impute.py \
   --config config_impute.yaml \
   --wandb \
