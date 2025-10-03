@@ -1,63 +1,70 @@
+"""
+LORD Encoder module for CONCERT
+===============================
+"""
+
 import logging
+from typing import Dict, List, Optional
+
 import numpy as np
 import torch
-import torch.nn.functional as F
-from lord_utils import *
-from torch.distributions import kl_divergence as kl
-from torch import nn
+import torch.nn as nn
 from scvi.nn import FCLayers
-from typing import List
 
-def init_weights(m):
+
+# ---------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------
+def init_weights(m: nn.Module) -> None:
+    """Initialize linear layers with Xavier init."""
     if isinstance(m, nn.Linear):
         nn.init.xavier_uniform_(m.weight)
         if m.bias is not None:
             nn.init.zeros_(m.bias)
 
-class RegularizedEmbedding(nn.Module):
-    """Regularized embedding module."""
 
-    def __init__(
-        self,
-        n_input: int,
-        n_output: int,
-        sigma: float
-    ):
+class RegularizedEmbedding(nn.Module):
+    """Embedding layer with optional Gaussian noise for regularization."""
+
+    def __init__(self, n_input: int, n_output: int, sigma: float = 0.0) -> None:
         super().__init__()
-        self.embedding = nn.Embedding(
-            num_embeddings=n_input,
-            embedding_dim=n_output,
-        )
+        self.embedding = nn.Embedding(num_embeddings=n_input, embedding_dim=n_output)
         self.sigma = sigma
 
-    def forward(self, x):
-        """Forward pass."""
-        x_ = self.embedding(x)
-        if self.training and self.sigma != 0:
-            #print("Adding noise")
-            noise = torch.zeros_like(x_)
-            noise.normal_(mean=0, std=self.sigma)
-            x_ = x_ + noise
-        return x_
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        out = self.embedding(x)
+        if self.training and self.sigma > 0.0:
+            noise = torch.zeros_like(out).normal_(mean=0, std=self.sigma)
+            out = out + noise
+        return out
 
-def _move_inputs(*inputs, device="cuda"):
-    def mv_input(x):
-        if x is None:
-            return None
-        elif isinstance(x, torch.Tensor):
-            return x.to(device)
-        else:
-            return [mv_input(y) for y in x]
 
-    return [mv_input(x) for x in inputs]
+# ---------------------------------------------------------------------
+# LORD Encoder
+# ---------------------------------------------------------------------
+class LordEncoder(nn.Module):
+    """
+    LORD encoder for attribute-aware latent representations.
 
-def _nan2inf(x):
-    return torch.where(torch.isnan(x), torch.zeros_like(x) + np.inf, x)
-
-class Lord_encoder(torch.nn.Module):
-
-    num_drugs: int  # number of unique drugs in the dataset, including control
-    use_drugs_idx: bool  # whether to except drugs coded by index or by OneHotEncoding
+    Parameters
+    ----------
+    embedding_dim : List[int]
+        Dimensions for each covariate embedding (order matches attributes).
+    num_genes : int
+        Number of genes in the dataset.
+    attributes : List[str]
+        Names of covariates (e.g., ["tissue", "perturbation"]).
+    attributes_type : List[str]
+        Types of covariates ("categorical" or "ordinal").
+    labels : np.ndarray
+        Matrix of covariate labels, shape (n_cells, n_covariates).
+    device : str
+        Device to place the model on.
+    noise : float
+        Standard deviation of Gaussian noise for basal embedding.
+    append_layer_width : Optional[int]
+        Override number of genes if using appended layers.
+    """
 
     def __init__(
         self,
@@ -65,55 +72,40 @@ class Lord_encoder(torch.nn.Module):
         num_genes: int,
         attributes: List[str],
         attributes_type: List[str],
-        labels: List[List],
-        device="cuda:0",
-        append_layer_width=None,
+        labels: np.ndarray,
+        device: str = "cuda:0",
+        append_layer_width: Optional[int] = None,
         multi_task: bool = False,
         noise: float = 0.1,
     ):
-        super(Lord_encoder, self).__init__()
-        # set generic attributes
+        super().__init__()
         self.embedding_dim = embedding_dim
-        self.num_genes = num_genes
+        self.num_genes = append_layer_width or num_genes
         self.device = device
-        # early-stopping
-        self.best_score = -1e3
-        self.patience_trials = 0
         self.multi_task = multi_task
-        self.px_r = torch.nn.Parameter(torch.randn(num_genes))
         self.noise = noise
-        # set hyperparameters
+
         self.labels = labels
         self.num_covariates = labels.shape[1]
-        print("Number of covariates: ", self.num_covariates)
+        logging.info("Number of covariates: %d", self.num_covariates)
         assert self.num_covariates < 10, "Too many covariates"
-        self.unique_labels = [np.unique(labels[:,i]) for i in range(self.num_covariates)]
-        self.attribute = attributes
-        self.attribute_type = attributes_type
-        self.attribute_type_dic = {}
-        for i in range(self.num_covariates):
-            self.attribute_type_dic[attributes[i]] = attributes_type[i]
-        
-        self.embedding_dim_map = {} 
-        for i in range(self.num_covariates):
-            self.embedding_dim_map[self.attribute[i]] = self.embedding_dim[i]
 
-        self.categorical_attributes_list = attributes[attributes_type == "categorical"]
-        self.categorical_attributes_map = {}
-        for i in range(self.num_covariates):
-            self.categorical_attributes_map[self.categorical_attributes_list[i]] = self.unique_labels[i]
+        # Track unique values per covariate
+        self.unique_labels = [np.unique(labels[:, i]) for i in range(self.num_covariates)]
+        self.attributes = attributes
+        self.attributes_type = attributes_type
+        self.attribute_type_map = {a: t for a, t in zip(attributes, attributes_type)}
+        self.embedding_dim_map = {a: d for a, d in zip(attributes, embedding_dim)}
 
+        # Build encoders for each covariate
         self.s_encoder = nn.ModuleDict()
-        for i in range(self.num_covariates):
+        for i, attr in enumerate(attributes):
             if attributes_type[i] == "categorical":
-                self.s_encoder[attributes[i]] = torch.nn.Embedding(
-                    len(self.unique_labels[i]),
-                    self.embedding_dim[i],
-                )
+                self.s_encoder[attr] = nn.Embedding(len(self.unique_labels[i]), embedding_dim[i])
             elif attributes_type[i] == "ordinal":
-                self.s_encoder[attributes[i]] = FCLayers(
+                self.s_encoder[attr] = FCLayers(
                     n_in=1,
-                    n_out=self.embedding_dim[i],
+                    n_out=embedding_dim[i],
                     n_layers=3,
                     n_hidden=128,
                     dropout_rate=0.3,
@@ -121,154 +113,68 @@ class Lord_encoder(torch.nn.Module):
                     use_activation=True,
                 )
 
-        # for attribute_, unique_categories in self.categorical_attributes_map.items():
-        #     self.s_encoder[attribute_] = torch.nn.Embedding(
-        #             len(unique_categories),
-        #             self.embedding_dim,
-        #         ) 
-        
+        # Basal embedding per sample index
         self.z_encoder = RegularizedEmbedding(
-                    n_input = len(self.labels[:,0]),
-                    n_output=self.embedding_dim[-1],
-                    sigma=self.noise
-                    )
+            n_input=len(labels[:, 0]),
+            n_output=embedding_dim[-1],
+            sigma=self.noise,
+        )
 
-        if append_layer_width:
-            self.num_genes = append_layer_width
-        
+        # Init
         self.apply(init_weights)
-
         self.to(self.device)
-
         self.history = {"epoch": [], "stats_epoch": []}
 
+    # -----------------------------------------------------------------
+    # Forward utilities
+    # -----------------------------------------------------------------
     def predict(
         self,
-        sample_indices,
-        batch_size,
-        labels,
-    ):
-        #sample_indices = torch.tensor(sample_indices)
+        sample_indices: torch.Tensor,
+        batch_size: int,
+        labels: torch.Tensor,
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Compute attribute-aware latent representations.
 
-        #sample_indices = _move_inputs(
-        #    sample_indices, device=self.device
-        #)
-          
-        label_dic = {}
-        for i in range(self.num_covariates):
-            label_dic[self.attribute[i]] = labels[:,i]
-        
+        Returns dict with:
+            total_latent : concatenated basal + attribute embeddings
+            basal_latent : basal embedding only
+            {attr}: individual attribute embeddings
+        """
+        # Convert labels into dict by covariate
+        label_dict = {a: labels[:, i] for i, a in enumerate(self.attributes)}
+
+        # Basal embedding
         z = self.z_encoder(sample_indices)
         if torch.isnan(z).any():
-            print("nan in z")
+            logging.warning("NaN detected in basal embedding")
 
-        s = {}
-        for attribute_, embedding_ in self.s_encoder.items():
-            if self.attribute_type_dic[attribute_] == "ordinal":
-                input = label_dic[attribute_].unsqueeze(1).float()
-                s_ = embedding_(input)
+        # Attribute-specific embeddings
+        s: Dict[str, torch.Tensor] = {}
+        for attr, encoder in self.s_encoder.items():
+            if self.attribute_type_map[attr] == "ordinal":
+                input_ = label_dict[attr].unsqueeze(1).float()
+                s_val = encoder(input_)
             else:
-                s_ = embedding_(label_dic[attribute_])
-            s_ = s_.view(batch_size, self.embedding_dim_map[attribute_]).unsqueeze(0)
-            if torch.isnan(s_).any():
-                print(f"nan in {attribute_}")
-            s[attribute_] = s_
+                s_val = encoder(label_dict[attr])
+            s_val = s_val.view(batch_size, self.embedding_dim_map[attr])
+            s[attr] = s_val
+            if torch.isnan(s_val).any():
+                logging.warning("NaN detected in %s embedding", attr)
 
-        inference_output = {}
-        latent_basal = z.squeeze()
-        latent_vecs = [latent_basal]
-        for key_, latent_ in s.items():
-                latent_vecs.append(latent_.squeeze())
-                inference_output[key_] = latent_.squeeze()
+        # Concatenate all latents
+        latent_vecs = [z] + [s[attr] for attr in self.attributes]
         latent = torch.cat(latent_vecs, dim=-1)
-        #latent_tf = torch.stack(latent_vecs)   
-        inference_output["total_latent"] = latent
-        #inference_output["total_latent_TF"] = latent_tf
-        inference_output["basal_latent"] = latent_basal
-        return inference_output
-    
-    def get_latent(self, att, type, batch_size):
-        if type ==  "perturbation":
-            z = self.s_encoder['perturbation'](att)
-        elif type == "tissue":
-            z = self.s_encoder['tissue'](att)
-        elif type == "batch":
-            z = self.s_encoder['batch'](att)
-        else:
-            print("Attribute type not found")
-        return z
 
-    def early_stopping(self, score):
-        """
-        Possibly early-stops training.
-        """
-        if score is None:
-            # TODO don't really know what to do here
-            logging.warning("Early stopping score was None!")
-        elif score > self.best_score:
-            self.best_score = score
-            self.patience_trials = 0
-        else:
-            self.patience_trials += 1
+        return {
+            "total_latent": latent,
+            "basal_latent": z,
+            **s,
+        }
 
-        return self.patience_trials > self.patience
-    
-    def remove_ith_element(self, tensor, i):
-            return torch.cat([tensor[:i], tensor[i+1:]])
-
-    def random_sample(self, tensor, num_samples):
-            indices = torch.randperm(tensor.size(0))[:num_samples]
-            return tensor[indices]
-
-    def z_penalty_loss(self, z_latent: torch.Tensor) -> float:
-        """Computes the content penalty term in the loss."""
-        return torch.sum(z_latent**2, dim=1).mean()
-    
-    def counterfactualPrediction(self,
-                                 sample_indices,
-                                 batch_size,
-                                 labels,
-                                 perturb_cell_att = None,
-                                 target_cell_index = None,
-                                 perturb_cell_index = None
-                                 ):
-        import einops
-        self.eval()
-
-        # sample_indices = torch.tensor(sample_indices)
-
-        # sample_indices, labels = _move_inputs(
-        # sample_indices, labels, device=self.device
-        # )
-        
-        label_dic = {}
-        for i in range(self.num_covariates):
-            label_dic[self.categorical_attributes_list[i]] = labels[:,i]
-        
-        target_cell_class = np.unique(label_dic[perturb_cell_att][perturb_cell_index])
-
-        
-        z = self.z_encoder(sample_indices.long())
-
-        s = {}
-        for attribute_, embedding_ in self.s_encoder.items():
-            if self.attribute_type_dic[attribute_] == "ordinal":
-                input = label_dic[attribute_].unsqueeze(1).float()
-                s_ = embedding_(input)
-            else:
-                s_ = embedding_(label_dic[attribute_])
-            s_ = s_.view(batch_size, self.embedding_dim_map[attribute_]).unsqueeze(0)
-            s[attribute_] = s_
-        
-        inference_output = {}  
-        latent_vecs = [z]
-        for key_, latent_ in s.items():
-                latent_vecs.append(latent_.squeeze())
-                inference_output[key_] = latent_.squeeze()
-        latent = torch.cat(latent_vecs, dim=-1)
-               
-        gene_latent = self.decoder(latent)
-
-        d_mu = self.decoder_mean(gene_latent)
-
-        return d_mu
+    def get_latent(self, att: torch.Tensor, type_: str, batch_size: int) -> torch.Tensor:
+        """Get latent representation for a specific attribute."""
+        if type_ not in self.s_encoder:
+            raise ValueError(f"Unknown attribute type {type_}")
+        return self.s_encoder[type_](att)
