@@ -11,19 +11,23 @@ python run_concert_map.py \
   --wandb \
   --wandb_project concert-map \
   --wandb_run train
-<pre>
+</pre>
   
-3. **conduct counterfactual prediction**:  
+3. **conduct counterfactual prediction**:
+<pre>
 python run_concert_map.py \
   --config config.yaml \
   --stage eval \
   --wandb \
   --wandb_project concert-map \
   --wandb_run train
-  
-4. **conduct imputation + CP**:  
+ </pre>
+ 
+5. **conduct imputation + CP**:  
+<pre>
 python run_concert_map_impute.py \ 
   --config config_impute.yaml \
   --wandb \
   --wandb_project concert-map \
   --wandb_run impute
+</pre>
