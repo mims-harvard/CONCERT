@@ -3,6 +3,7 @@ CONCERT applied on gut DSS data with a single kernel for multi-slides.
 1. Train model.
 <pre> python run_concert_gut.py \
   --config config.yaml \
+  --stage train \
   --wandb \
   --wandb_project concert-gut \
   --wandb_run train \
