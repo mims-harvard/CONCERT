@@ -6,8 +6,6 @@ Features
 --------
 - YAML/JSON config file support (CLI flags only override what you pass)
 - Structured logging, deterministic preprocessing
-- Per-batch spatial scaling + batch one-hot appended to coordinates
-- Grid inducing points tiled across batches
 - Train or evaluate (counterfactual prediction)
 - Saves outputs to .h5ad
 
