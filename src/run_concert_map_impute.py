@@ -97,7 +97,7 @@ class ImputeConfig:
     data_file: str = "data.h5"
     outdir: str = "./outputs"
     sample: str = "sample"
-    data_index: str = "x"
+    project_index: str = "x"
 
     # Inducing points
     grid_inducing_points: bool = True
@@ -354,7 +354,7 @@ def run(cfg: ImputeConfig) -> None:
         n_samples=25,
     )
     sc.AnnData(imputed_counts).write(
-        Path(cfg.outdir) / f"{cfg.sample}_{cfg.data_index}_imputed_counts.h5ad"
+        Path(cfg.outdir) / f"{cfg.sample}_{cfg.project_index}_imputed_counts.h5ad"
     )
     logging.info("Wrote baseline imputed counts.")
 
@@ -392,7 +392,7 @@ def run(cfg: ImputeConfig) -> None:
             n_samples=25,
         )
         sc.AnnData(imputed_pert_counts).write(
-            Path(cfg.outdir) / f"{cfg.sample}_{cfg.data_index}_{cfg.target_cell_perturbation}_imputedPert_counts.h5ad"
+            Path(cfg.outdir) / f"{cfg.sample}_{cfg.project_index}_{cfg.target_cell_perturbation}_imputedPert_counts.h5ad"
         )
         logging.info("Wrote targeted imputed counts.")
     else:
@@ -418,7 +418,7 @@ def parse_args() -> ImputeConfig:
     p.add_argument("--data_file")
     p.add_argument("--outdir")
     p.add_argument("--sample")
-    p.add_argument("--data_index")
+    p.add_argument("--project_index")
 
     # Inducing / scaling
     def str2bool(v):
