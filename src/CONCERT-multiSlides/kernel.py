@@ -456,7 +456,7 @@ class BatchedCauchyKernel_CONCERT_flex(nn.Module):
             self.scale = torch.tensor(scale, dtype=dtype).to(device) #[B,D]
         else:
             self.scale = nn.Parameter(torch.tensor(scale, dtype=dtype).to(device),requires_grad=True)
-        print("scale: ", self.scale)
+        #print("scale: ", self.scale)
 
     def forward_samples(self, x, y, sample_x, sample_y, cutoff):
         scale = self.scale.clamp(min=1e-6, max=1e6)

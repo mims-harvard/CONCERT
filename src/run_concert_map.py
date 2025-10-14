@@ -34,7 +34,7 @@ try:
 except Exception:  # pragma: no cover
     yaml = None
 
-from concert_map_wandb import CONCERT
+from concert_map import CONCERT
 from preprocess import normalize, geneSelection
 
 
@@ -49,6 +49,66 @@ def setup_logging(verbosity: int = 1) -> None:
         level=level,
     )
 
+# -----------------------------------------------------------------------------
+# --- Reporting (kernel scales & cutoffs) --------------------------------
+# -----------------------------------------------------------------------------
+def _report_and_save_final(
+    *,
+    model,
+    cell_atts: np.ndarray,                # (N, 2) → [tissue_code, perturb_code]
+    perturb_name_map: Dict[int, str],     # e.g., {0: "background", 1: "Jak2", ...}
+    outdir: Path,
+    sample: str,
+    project_index: str,
+) -> None:
+    """Log final kernel scales and mean cutoffs per perturbation, and dump per-cell cutoffs to CSV."""
+    try:
+        with torch.no_grad():
+            # Kernel scale (detach to avoid printing a Parameter object)
+            scale = getattr(model.svgp.kernel, "scale", None)
+            if scale is not None:
+                scale_np = scale.detach().float().cpu().numpy()
+                if scale_np.ndim == 1:
+                    logging.info("[final] Kernel scale (shared): %s", np.array2string(scale_np, precision=4))
+                else:
+                    logging.info("[final] Kernel scales by perturbation:")
+                    for code in range(scale_np.shape[0]):
+                        name = perturb_name_map.get(code, f"pert={code}")
+                        logging.info("  • %-16s | scale=%s", name, np.array2string(scale_np[code], precision=4))
+            else:
+                logging.info("[final] Kernel has no `scale` attribute; skipping kernel report.")
+    except Exception as e:
+        logging.info("[final] Could not read kernel scales (%s); skipping kernel report.", e)
+
+    # Mean cutoff per perturbation
+    try:
+        cut = model.mask_cutoff.detach().float().cpu().numpy()
+        perts = cell_atts[:, 1].astype(int)
+        uniq = sorted(np.unique(perts).tolist())
+        logging.info("[final] Mean cutoff per perturbation:")
+        for code in uniq:
+            name = perturb_name_map.get(code, f"pert={code}")
+            m = float(np.mean(cut[perts == code])) if np.any(perts == code) else float("nan")
+            logging.info("  • %-16s | mean_cutoff=%.4f", name, m)
+    except Exception as e:
+        logging.info("[final] Could not compute mean cutoffs (%s).", e)
+
+    # Save per-sample cutoffs to CSV
+    try:
+        df = pd.DataFrame(
+            {
+                "index": np.arange(cell_atts.shape[0], dtype=int),
+                "tissue_code": cell_atts[:, 0].astype(int),
+                "perturbation_code": cell_atts[:, 1].astype(int),
+                "perturbation_name": [perturb_name_map.get(int(c), f"pert={int(c)}") for c in cell_atts[:, 1]],
+                "cutoff": cut,
+            }
+        )
+        csv_path = outdir / f"{sample}_{project_index}_cutoffs.csv"
+        df.to_csv(csv_path, index=False)
+        logging.info("Saved per-sample cutoffs to %s", csv_path)
+    except Exception as e:
+        logging.warning("Failed to save per-sample cutoffs CSV (%s).", e)
 
 # -----------------------------------------------------------------------------
 # Dataclasses / Config
@@ -175,33 +235,49 @@ def build_inducing_points(
     return np.concatenate([centers, onehot], axis=1).astype(np.float32)
 
 
-def load_h5_dataset(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def load_h5_dataset(path: str) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndarray], np.ndarray]:
+    """
+    Returns
+    -------
+    X : (N, G) float32
+    pos : (N, 2) float32
+    tissue_raw : (N,) str or None (if missing)
+    perturb_raw : (N,) str
+    """
     with h5py.File(path, "r") as f:
         X = np.array(f["X"], dtype=np.float32)
-        pos = np.array(f["pos"], dtype=np.float32).T  # expect (N, 2)
-        perturb = np.array(f["perturbation"], dtype=str)
-    return X, pos, perturb
+        pos = np.array(f["pos"], dtype=np.float32).T  # to (N, 2)
+        perturb_raw = np.array(f["perturbation"], dtype=str)
 
+        tissue_raw = None
+        if "tissue" in f:
+            tissue_raw = np.array(f["tissue"], dtype=str)
+
+    return X, pos, tissue_raw, perturb_raw
 
 def build_attributes(perturb_raw: np.ndarray):
     """
     Map tissue & perturbation strings to integer codes.
-    • Tissue: {"None"→"normal", {Jak2,Tgfbr2,Ifngr2}→"tumor", else unchanged}
+    • Tissue: {"None"→"normal", {Jak2,Tgfbr2,Ifngr2,KP}→"tumor", "periphery"->"periphery"}
     • Perturbation: {Jak2,Tgfbr2,Ifngr2}→1..K, background→0
     """
-    known_perts = ["Jak2", "Tgfbr2", "Ifngr2"]
+    known_types = ["Jak2", "Tgfbr2", "Ifngr2", "KP", "normal", "periphery"]
+    known_tumor = ["Jak2", "Tgfbr2", "Ifngr2", "KP"]
+    known_normal = "normal"
+    known_periphery = "periphery"
 
-    tissue_raw = np.where(np.isin(perturb_raw, known_perts), "tumor", perturb_raw)
-    tissue_raw = np.where(tissue_raw == "None", "normal", tissue_raw)
+    #initialize tissue_raw for all cells as "normal"
+    tissue_raw = np.full_like(perturb_raw, known_normal, dtype=object)
+    tissue_raw = np.where(np.isin(perturb_raw, known_tumor), "tumor", tissue_raw)
+    tissue_raw = np.where(perturb_raw == known_periphery, "periphery", tissue_raw)
     tissue_idx = strings_to_index(tissue_raw)
 
-    present = [p for p in known_perts if p in set(perturb_raw.tolist())]
+    present = [p for p in known_types if p in set(perturb_raw.tolist())]
     pert_map = {p: i + 1 for i, p in enumerate(present)}
     perturb_idx = np.vectorize(lambda s: pert_map.get(s, 0))(perturb_raw).astype(int)
 
     tissue_dict = {t: i for t, i in zip(tissue_raw, tissue_idx)}
     return tissue_idx, tissue_dict, perturb_idx, pert_map
-
 
 def load_config_file(path: Optional[str]) -> dict:
     """Load a YAML or JSON config into a dict. Returns {} if path is None."""
@@ -260,7 +336,7 @@ def run(cfg: RunConfig) -> None:
     outdir = ensure_dir(cfg.outdir)
 
     # Load
-    X, pos, perturb_raw = load_h5_dataset(cfg.data_file)
+    X, pos_raw, _, perturb_raw = load_h5_dataset(cfg.data_file)
     tissue_idx, tissue_dict, perturb_idx, pert_map = build_attributes(perturb_raw)
 
     cell_atts = np.c_[tissue_idx, perturb_idx].astype(int)
@@ -275,7 +351,7 @@ def run(cfg: RunConfig) -> None:
 
     # Scale spatial & append batch columns for kernel conditioning
     scaler = MinMaxScaler()
-    pos_scaled = scaler.fit_transform(pos) * cfg.loc_range
+    pos_scaled = scaler.fit_transform(pos_raw) * cfg.loc_range
     cutoff = np.full(pos_scaled.shape[0], 0.5, dtype=np.float32)  # learnable init (vector)
     pos_batched = np.concatenate([pos_scaled, batch], axis=1).astype(np.float32)
 
@@ -367,22 +443,48 @@ def run(cfg: RunConfig) -> None:
             perturb_name_map=pert_name,
         )
         logging.info("Training done in %.1fs", time.time() - t0)
+
+        _report_and_save_final(
+        model=model,
+        cell_atts=cell_atts,
+        perturb_name_map=pert_name,
+        outdir=outdir,
+        sample=cfg.sample,
+        project_index=cfg.project_index,
+    )
         return
 
     # Inference / export
     model.load_model(str(outdir / cfg.model_file))
     logging.info("Loaded weights: %s", outdir / cfg.model_file)
-
-    # Latent export
-    latent = model.batching_latent_samples(pos_batched, sample_indices, cell_atts, batch_size=512)
-    sc.AnnData(latent, obs=pd.DataFrame(cell_atts, columns=["tissue", "perturbation"])) \
-      .write(outdir / f"{cfg.sample}_final_latent.h5ad")
-    logging.info("Wrote latent embeddings: %s", outdir / f"{cfg.sample}_final_latent.h5ad")
+    _report_and_save_final(
+        model=model,
+        cell_atts=cell_atts,
+        perturb_name_map=pert_name,
+        outdir=outdir,
+        sample=cfg.sample,
+        project_index=cfg.project_index,
+    )
 
     # Counterfactuals
     pert_idx = (np.loadtxt(cfg.pert_cells, dtype=int) - 1).astype(int)
-    target_tissue_code = cell_atts[:, 0].max()  # or map from cfg.target_cell_tissue if desired
-    target_pert_code = max(pert_map.values()) if len(pert_map) else 0
+    if hasattr(model, "counterfactualPrediction"):
+        # build lookup for names → integer codes
+        tissue_code = None
+        if isinstance(cfg.target_cell_tissue, str):
+            # match exact name if present
+            if cfg.target_cell_tissue in tissue_dict:
+                tissue_code = int(tissue_dict[cfg.target_cell_tissue])
+            else: # error
+                raise ValueError(f"Target tissue '{cfg.target_cell_tissue}' not found in data; available: {list(tissue_dict.keys())}")
+                
+        else:
+            tissue_code = int(cfg.target_cell_tissue)
+
+        if cfg.target_cell_perturbation in pert_map:
+            pert_code = int(pert_map[cfg.target_cell_perturbation])
+        else: # error
+            raise ValueError(f"Target perturbation '{cfg.target_cell_perturbation}' not found in data; available: {list(pert_map.keys())}")
 
     perturbed_counts, pert_cell_att = model.counterfactualPrediction(
         X=pos_batched,
@@ -391,8 +493,8 @@ def run(cfg: RunConfig) -> None:
         batch_size=512,
         n_samples=25,
         perturb_cell_id=torch.tensor(pert_idx),
-        target_cell_tissue=target_tissue_code,
-        target_cell_perturbation=target_pert_code,
+        target_cell_tissue=tissue_code,
+        target_cell_perturbation=pert_code,
     )
 
     sc.AnnData(perturbed_counts, obs=pd.DataFrame(pert_cell_att, columns=["tissue", "perturbation"])) \
@@ -418,7 +520,7 @@ def parse_args() -> RunConfig:
     p.add_argument("--data_file")
     p.add_argument("--outdir")
     p.add_argument("--sample")
-    p.add_argument("--data_index")
+    p.add_argument("--project_index")
     p.add_argument("--model_file")
     p.add_argument("--config", help="YAML/JSON config file path. CLI overrides file.")
 

@@ -21,9 +21,9 @@ except Exception:  # pragma: no cover
     wandb = None
 
 from I_PID import PIDControl
-from SVGP_Batch_wandb import SVGP
+from SVGP_Batch import SVGP
 from VAE_utils import MeanAct, NBLoss, buildNetwork, DenseEncoder
-from lord_batch_wandb import LordEncoder
+from lord_batch import LordEncoder
 
 
 # ---------------------------------------------------------------------------
@@ -428,7 +428,7 @@ class CONCERT(nn.Module):
     # Imputation / counterfactuals
     # -------------------------
     @torch.no_grad()
-    def batching_predict_samples(
+    def imputation(
         self,
         X_test: np.ndarray,
         X_train: np.ndarray,
@@ -443,11 +443,14 @@ class CONCERT(nn.Module):
         def nearest_idx(array: torch.Tensor, value: torch.Tensor) -> torch.Tensor:
             return torch.argmin(torch.sum((array - value) ** 2, dim=1))
 
-        cuts = self.mask_cutoff
-        X_te = torch.tensor(X_test, dtype=torch.get_default_dtype())
+        cuts = self.mask_cutoff.to(self.device)
+        X_te = torch.tensor(X_test, dtype=torch.get_default_dtype()).to(self.device)
         X_tr = torch.tensor(X_train, dtype=torch.get_default_dtype()).to(self.device)
-        atts_tr = torch.tensor(Y_cell_atts, dtype=torch.int)
-        idx_tr = torch.tensor(Y_sample_index, dtype=torch.int)
+        pos_te, sample_te = X_te[:, :2], X_te[:, 2:]
+        pos_tr, sample_tr = X_tr[:, :2], X_tr[:, 2:]
+
+        atts_tr = torch.tensor(Y_cell_atts, dtype=torch.int).to(self.device)
+        idx_tr = torch.tensor(Y_sample_index, dtype=torch.int).to(self.device)
 
         # Precompute q_mu/q_var on train
         q_mu_all, q_var_all = [], []
@@ -461,8 +464,8 @@ class CONCERT(nn.Module):
             m, v = self.encoder(y_)
             q_mu_all.append(m)
             q_var_all.append(v)
-        q_mu = torch.cat(q_mu_all, dim=0)
-        q_var = torch.cat(q_var_all, dim=0)
+        q_mu = torch.cat(q_mu_all, dim=0).to(self.device)
+        q_var = torch.cat(q_var_all, dim=0).to(self.device)
 
         # Match each test to nearest train for Gaussian block; GP block via SVGP impute
         latents_out, means_out = [], []
@@ -470,15 +473,19 @@ class CONCERT(nn.Module):
         n_te_batches = int(math.ceil(N_te / batch_size))
         x_train_sel = []
         for e in range(N_te):
-            x_train_sel.append(nearest_idx(X_tr, X_te[e]))
+            x_train_sel.append(nearest_idx(pos_tr, pos_te[e]))
         x_train_sel = torch.stack(x_train_sel)
-        y_cutoff = cuts[x_train_sel.long()]
+        te_cutoff = cuts[x_train_sel.long()]
+        te_sample = sample_tr[x_train_sel.long()]
+
+        X_te = torch.cat([X_te, te_sample], dim=1)
 
         gp_mu_tr, gp_var_tr = q_mu[:, : self.GP_dim], q_var[:, : self.GP_dim]
 
         for b in range(n_te_batches):
             x_te_b = X_te[b * batch_size : min((b + 1) * batch_size, N_te)].to(self.device)
-            cut_te_b = y_cutoff[b * batch_size : min((b + 1) * batch_size, N_te)].to(self.device)
+            cut_te_b = te_cutoff[b * batch_size : min((b + 1) * batch_size, N_te)].to(self.device)
+            cut_te_b = cut_te_b.view(-1)
             # Gaussian block (copy from nearest train point)
             sel_b = x_train_sel[b * batch_size : min((b + 1) * batch_size, N_te)].long()
             gs_mu = q_mu[sel_b, self.GP_dim :]
@@ -487,13 +494,14 @@ class CONCERT(nn.Module):
             # GP block (impute)
             gp_p_m, gp_p_v = [], []
             for l in range(self.GP_dim):
+                assert x_te_b.shape[1] == X_tr.shape[1]
                 m_l, v_l, _, _ = self.svgp.approximate_posterior_params_impute(
                     index_points_test=x_te_b,
                     index_points_train=X_tr,
                     y=gp_mu_tr[:, l],
                     noise=gp_var_tr[:, l],
-                    x_cutoff=cuts[: gp_mu_tr.shape[0]].to(self.device),
-                    y_cutoff=cut_te_b,
+                    cutoff_test=cut_te_b,
+                    cutoff_train=cuts.to(self.device),
                 )
                 gp_p_m.append(m_l)
                 gp_p_v.append(v_l)
@@ -586,9 +594,243 @@ class CONCERT(nn.Module):
             means_out.append(torch.stack(mu_stack, dim=0).mean(dim=0).cpu())
 
         return torch.cat(means_out, dim=0).numpy(), pert_atts
+    
+    @torch.no_grad()
+    def impute_and_counterfactual_fun1(
+  	    self,
+        target: int,
+        tissue: int,
+        X_test: np.ndarray,
+        X_train: np.ndarray,
+        Y_sample_index: np.ndarray,
+        Y_cell_atts: np.ndarray,
+        n_samples: int = 1,
+        batch_size: int = 512,
+        *,
+        knn_k: int = 10,
+        knn_sample: int = 5,
+	) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Impute latents & denoised counts at unseen coords. For the Gaussian block,
+        pull neighbors *only from the specified perturbation* in the training set.
+        """
+        self.eval()
+        X_te = torch.tensor(X_test, dtype=torch.get_default_dtype()).to(self.device)
+        X_tr = torch.tensor(X_train, dtype=torch.get_default_dtype()).to(self.device)
+        atts_tr = torch.tensor(Y_cell_atts, dtype=torch.int).to(self.device)
+        idx_tr = torch.tensor(Y_sample_index, dtype=torch.int).to(self.device)
+        cut = self.mask_cutoff
+
+        N_tr = X_tr.shape[0]
+        N_te = X_te.shape[0]
+        n_tr_chunks = int(math.ceil(N_tr / batch_size))
+        n_te_chunks = int(math.ceil(N_te / batch_size))
+
+        target_mask = (Y_cell_atts[:, 1].astype(int) == int(target))
+        X_tr_target_np = X_train[target_mask]
+        X_tr_target = torch.tensor(X_tr_target_np, dtype=torch.get_default_dtype()).to(self.device)
+
+        pos_te, sample_te = X_te[:, :2], X_te[:, 2:]
+        pos_tr, sample_tr = X_tr[:, :2], X_tr[:, 2:]
+        pos_tr_target, sample_tr_target = X_tr_target[:, :2], X_tr_target[:, 2:]
+
+        def _nearest_idx(array: torch.Tensor, value: torch.Tensor) -> torch.Tensor:
+            return torch.argmin(torch.sum((array - value) ** 2, dim=1))
+
+        nn_train = [_nearest_idx(pos_tr_target, pos_te[i]) for i in range(N_te)]
+        nn_train = torch.stack(nn_train)
+        test_cutoff_nn = cut[nn_train.long()]
+
+        q_mu_list, q_var_list = [], []
+        for b in range(n_tr_chunks):
+            lo = b * batch_size
+            hi = min((b + 1) * batch_size, N_tr)
+            ca = atts_tr[lo:hi].to(self.device, dtype=torch.int)
+            si = idx_tr[lo:hi].to(self.device, dtype=torch.int)
+            lord = self.lord_encoder.predict(sample_indices=si, batch_size=hi - lo, labels=ca)
+            y_ = lord["total_latent"]
+            m, v = self.encoder(y_)
+            q_mu_list.append(m)
+            q_var_list.append(v)
+        q_mu = torch.cat(q_mu_list, dim=0)
+        q_var = torch.cat(q_var_list, dim=0)
+
+        gp_mu_tr = q_mu[:, : self.GP_dim]
+        gp_var_tr = q_var[:, : self.GP_dim]
+
+        def _knn_subset(array: torch.Tensor, value: torch.Tensor, k: int, sample_k: int) -> torch.Tensor:
+            d = torch.sum((array - value) ** 2, dim=1)
+            k = int(min(k, array.shape[0]))
+            sample_k = int(min(sample_k, k))
+            topk = torch.topk(d, k, largest=False).indices
+            if sample_k < k:
+                perm = torch.randperm(k, device=topk.device)[:sample_k]
+                return topk[perm]
+            return topk
+
+        latents_out, means_out = [], []
+        for b in range(n_te_chunks):
+            lo = b * batch_size
+            hi = min((b + 1) * batch_size, N_te)
+            x_te_b = X_te[lo:hi].to(self.device)
+            cutoff_test_b = test_cutoff_nn[lo:hi].to(self.device, dtype=torch.get_default_dtype())
+
+            g_mu_rows, g_var_rows = [], []
+            for i in range(x_te_b.shape[0]):
+                if X_tr_target.shape[0] == 0:
+                    idx = _nearest_idx(X_tr, x_te_b[i]).item()
+                    g_mu_rows.append(q_mu[idx, self.GP_dim :])
+                    g_var_rows.append(q_var[idx, self.GP_dim :])
+                else:
+                    inds = _knn_subset(X_tr_target, x_te_b[i], k=knn_k, sample_k=knn_sample)
+                    full_inds = torch.nonzero(torch.tensor(target_mask, device=self.device), as_tuple=False).squeeze(1)[inds]
+                    g_mu_rows.append(q_mu[full_inds, self.GP_dim :].mean(dim=0))
+                    g_var_rows.append(q_var[full_inds, self.GP_dim :].mean(dim=0))
+            g_mu = torch.stack(g_mu_rows, dim=0)
+            g_var = torch.stack(g_var_rows, dim=0)
+
+            gp_p_m_list, gp_p_v_list = [], []
+            for l in range(self.GP_dim):
+                m_l, v_l, _, _ = self.svgp.approximate_posterior_params_impute(
+                    index_points_test=x_te_b,
+                    index_points_train=X_tr,
+                    y=gp_mu_tr[:, l],
+                    noise=gp_var_tr[:, l],
+                    cutoff_test=cutoff_test_b,
+                    cutoff_train=cut.to(self.device),
+                )
+                gp_p_m_list.append(m_l)
+                gp_p_v_list.append(v_l)
+            gp_p_m = torch.stack(gp_p_m_list, dim=1)
+            gp_p_v = torch.stack(gp_p_v_list, dim=1)
+
+            p_m = torch.cat([gp_p_m, g_mu], dim=1)
+            latents_out.append(p_m.detach().cpu())
+            p_v = torch.cat([gp_p_v, g_var], dim=1)
+
+            dist = Normal(p_m, torch.sqrt(p_v))
+            mu_stack = []
+            for _ in range(max(1, n_samples)):
+                z = dist.sample()
+                h = self.decoder(z)
+                mu_stack.append(self.dec_mean(h))
+            means_out.append(torch.stack(mu_stack, dim=0).mean(dim=0).detach().cpu())
+
+        return torch.cat(latents_out, dim=0).numpy(), torch.cat(means_out, dim=0).numpy()
+
+    @torch.no_grad()
+    def impute_and_counterfactual_fun2(
+        self,
+        target: int,
+        tissue: int,
+        X_test: np.ndarray,
+        X_train: np.ndarray,
+        Y_sample_index: np.ndarray,
+        Y_cell_atts: np.ndarray,
+        n_samples: int = 1,
+        batch_size: int = 512,
+	) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Counterfactual impute:
+        • GP block: SVGP posterior from training GP latents.
+        • Gaussian block: replace tissue/perturbation with specified targets.
+        """
+        self.eval()
+        X_te = torch.tensor(X_test, dtype=torch.get_default_dtype()).to(self.device)
+        X_tr = torch.tensor(X_train, dtype=torch.get_default_dtype()).to(self.device)
+        atts_tr = torch.tensor(Y_cell_atts, dtype=torch.int).to(self.device)
+        idx_tr = torch.tensor(Y_sample_index, dtype=torch.int).to(self.device)
+        cut = self.mask_cutoff
+
+        N_tr = X_tr.shape[0]
+        N_te = X_te.shape[0]
+        n_tr_chunks = int(math.ceil(N_tr / batch_size))
+        n_te_chunks = int(math.ceil(N_te / batch_size))
+
+        target_mask = (Y_cell_atts[:, 1].astype(int) == int(target))
+        X_tr_target_np = X_train[target_mask]
+        X_tr_target = torch.tensor(X_tr_target_np, dtype=torch.get_default_dtype()).to(self.device)
+
+        pos_te, sample_te = X_te[:, :2], X_te[:, 2:]
+        pos_tr, sample_tr = X_tr[:, :2], X_tr[:, 2:]
+        pos_tr_target, sample_tr_target = X_tr_target[:, :2], X_tr_target[:, 2:]
+
+        def _nearest_idx(array: torch.Tensor, value: torch.Tensor) -> torch.Tensor:
+            return torch.argmin(torch.sum((array - value) ** 2, dim=1))
+
+        nn_train = [_nearest_idx(pos_tr_target, pos_te[i]) for i in range(N_te)]
+        nn_train = torch.stack(nn_train)
+        test_cutoff_nn = cut[nn_train.long()]
+
+        basal_list, q_mu_list, q_var_list = [], [], []
+        for b in range(n_tr_chunks):
+            lo = b * batch_size
+            hi = min((b + 1) * batch_size, N_tr)
+            ca = atts_tr[lo:hi].to(self.device, dtype=torch.int)
+            si = idx_tr[lo:hi].to(self.device, dtype=torch.int)
+            lord = self.lord_encoder.predict(sample_indices=si, batch_size=hi - lo, labels=ca)
+            basal_list.append(lord["basal_latent"])
+            y_ = lord["total_latent"]
+            m, v = self.encoder(y_)
+            q_mu_list.append(m)
+            q_var_list.append(v)
+
+        basal_tr = torch.cat(basal_list, dim=0)
+        q_mu = torch.cat(q_mu_list, dim=0)
+        q_var = torch.cat(q_var_list, dim=0)
+
+        latents_out, means_out = [], []
+        gp_mu_tr = q_mu[:, : self.GP_dim]
+        gp_var_tr = q_var[:, : self.GP_dim]
+
+        for b in range(n_te_chunks):
+            lo = b * batch_size
+            hi = min((b + 1) * batch_size, N_te)
+            x_te_b = X_te[lo:hi].to(self.device)
+            idx_te_b = nn_train[lo:hi].long()
+            test_cut_b = test_cutoff_nn[lo:hi].to(self.device, dtype=torch.get_default_dtype())
+
+            basal_cf = basal_tr[idx_te_b]
+            B = basal_cf.shape[0]
+            l_tissue = self.lord_encoder.get_latent(att=torch.tensor(tissue, device=self.device), type_="tissue", batch_size=B)
+            l_pert = self.lord_encoder.get_latent(att=torch.tensor(target, device=self.device), type_="perturbation", batch_size=B)
+            y_cf = torch.cat([basal_cf, l_tissue, l_pert], dim=1)
+
+            g_mu_all, g_var_all = self.encoder(y_cf)
+            g_mu = g_mu_all[:, self.GP_dim :]
+            g_var = g_var_all[:, self.GP_dim :]
+
+            gp_p_m_list, gp_p_v_list = [], []
+            for l in range(self.GP_dim):
+                m_l, v_l, _, _ = self.svgp.approximate_posterior_params_impute(
+                    index_points_test=x_te_b,
+                    index_points_train=X_tr,
+                    y=gp_mu_tr[:, l],
+                    noise=gp_var_tr[:, l],
+                    cutoff_test=test_cut_b,
+                    cutoff_train=cut.to(self.device),
+                )
+                gp_p_m_list.append(m_l)
+                gp_p_v_list.append(v_l)
+            gp_p_m = torch.stack(gp_p_m_list, dim=1)
+            gp_p_v = torch.stack(gp_p_v_list, dim=1)
+
+            p_m = torch.cat([gp_p_m, g_mu], dim=1)
+            latents_out.append(p_m.detach().cpu())
+            p_v = torch.cat([gp_p_v, g_var], dim=1)
+
+            dist = Normal(p_m, torch.sqrt(p_v))
+            mu_stack = []
+            for _ in range(max(1, n_samples)):
+                z = dist.sample()
+                h = self.decoder(z)
+                mu_stack.append(self.dec_mean(h))
+            means_out.append(torch.stack(mu_stack, dim=0).mean(dim=0).detach().cpu())
+
+        return torch.cat(latents_out, dim=0).numpy(), torch.cat(means_out, dim=0).numpy()
 
     # -------------------------
-    # Training (with optional wandb logging)
+    # Training
     # -------------------------
     def train_model(
         self,

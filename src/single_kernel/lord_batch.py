@@ -173,8 +173,13 @@ class LordEncoder(nn.Module):
             **s,
         }
 
+
     def get_latent(self, att: torch.Tensor, type_: str, batch_size: int) -> torch.Tensor:
         """Get latent representation for a specific attribute."""
         if type_ not in self.s_encoder:
             raise ValueError(f"Unknown attribute type {type_}")
-        return self.s_encoder[type_](att)
+        out = self.s_encoder[type_](att)
+        #repeat out for batch_size times
+        out = out.repeat(batch_size, 1)
+        return out
+

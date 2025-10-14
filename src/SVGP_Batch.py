@@ -317,22 +317,22 @@ class SVGP(nn.Module):
         index_points_train: torch.Tensor,
         y: torch.Tensor,
         noise: torch.Tensor,
-        x_cutoff: torch.Tensor | float = 0.0,
-        y_cutoff: torch.Tensor | float = 0.0,
+        cutoff_test: torch.Tensor | float = 0.0,
+        cutoff_train: torch.Tensor | float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Like `approximate_posterior_params` but supports different spatial cutoffs for train vs test domains.
         """
         b = index_points_train.shape[0]
 
-        K_mm = self.kernel_matrix_impute(self.inducing_index_points, self.inducing_index_points, x_cutoff=x_cutoff, y_cutoff=y_cutoff)
+        K_mm = self.kernel_matrix_impute(self.inducing_index_points, self.inducing_index_points, x_cutoff=None, y_cutoff=None)
         K_mm_inv = torch.linalg.inv(_add_diagonal_jitter(K_mm, self.jitter))
 
-        K_xx = self.kernel_matrix_impute(index_points_test, index_points_test, x_inducing=False, y_inducing=False, diag_only=True, x_cutoff=x_cutoff, y_cutoff=y_cutoff)
-        K_xm = self.kernel_matrix_impute(index_points_test, self.inducing_index_points, x_inducing=False, x_cutoff=x_cutoff, y_cutoff=y_cutoff)
+        K_xx = self.kernel_matrix_impute(index_points_test, index_points_test, x_inducing=False, y_inducing=False, diag_only=True, x_cutoff=cutoff_test, y_cutoff=cutoff_test)
+        K_xm = self.kernel_matrix_impute(index_points_test, self.inducing_index_points, x_inducing=False, x_cutoff=cutoff_test, y_cutoff=None)
         K_mx = K_xm.transpose(0, 1)
 
-        K_nm = self.kernel_matrix_impute(index_points_train, self.inducing_index_points, x_inducing=False, x_cutoff=x_cutoff, y_cutoff=y_cutoff)
+        K_nm = self.kernel_matrix_impute(index_points_train, self.inducing_index_points, x_inducing=False, x_cutoff=cutoff_train, y_cutoff=None)
         K_mn = K_nm.transpose(0, 1)
 
         sigma_l = K_mm + (self.N_train / b) * torch.matmul(K_mn, K_nm / noise[:, None])

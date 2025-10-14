@@ -8,7 +8,7 @@ Normal_dim: 8
 lr: 0.0002
 maxiter: 3000
 patience: 200
-pert_cells: "./pert_cells/patch_trans.txt"
+pert_cells: "select_cells/GSM5808054_whole_random_inpaint.txt"
 target_cell_tissue: "tumor"
 target_cell_perturbation: "Jak2"
 project_index: "map"

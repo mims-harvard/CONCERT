@@ -456,7 +456,7 @@ class BatchedCauchyKernel_CONCERT_flex(nn.Module):
             self.scale = torch.tensor(scale, dtype=dtype).to(device) #[B,D]
         else:
             self.scale = nn.Parameter(torch.tensor(scale, dtype=dtype).to(device),requires_grad=True)
-        print("scale: ", self.scale)
+        #print("scale: ", self.scale)
 
     def forward_samples(self, x, y, sample_x, sample_y, cutoff):
         scale = self.scale.clamp(min=1e-6, max=1e6)
@@ -518,6 +518,73 @@ class BatchedCauchyKernel_CONCERT_flex(nn.Module):
             res = res * cut_mask
         return res
     
+    def forward_diag_samples_impute(self, x, y, sample_x, sample_y, x_cutoff, y_cutoff):
+        # Stable positive scales (B, D)
+        scale = self.scale.clamp(min=1e-6, max=1e6)
+
+        # Project per-sample batch-weights into per-dimension scales
+        # (N, B) @ (B, D) -> (N, D)
+        scale_x = sample_x @ scale
+        scale_y = sample_y @ scale
+
+        inv_sqrt_scale_x = (1.0 / torch.sqrt(scale_x.clamp(min=1e-6)))
+        inv_sqrt_scale_y = (1.0 / torch.sqrt(scale_y.clamp(min=1e-6)))
+
+        # Per-dimension scaling
+        x_scaled = x * inv_sqrt_scale_x
+        y_scaled = y * inv_sqrt_scale_y
+
+        # Diagonal distance and Cauchy kernel
+        d = torch.norm(x_scaled - y_scaled, dim=1).clamp(min=1e-6)   # (N,)
+        res = 1.0 / (1.0 + d)                                       # (N,)
+
+        # Per-pair cutoff mask using separate x/y cutoffs
+        if (x_cutoff is not None) and (y_cutoff is not None):
+            x_cutoff = x_cutoff.view(-1, 1)
+            y_cutoff = y_cutoff.view(1, -1)
+            x_c = x_cutoff.to(res.dtype).to(res.device).clamp(min=0.1, max=0.9)
+            y_c = y_cutoff.to(res.dtype).to(res.device).clamp(min=0.1, max=0.9)
+            pair_cut = torch.diagonal((x_c + y_c) * 0.5)   # (N,)
+            # Smooth mask; clip argument to avoid extreme logits
+            cut_mask = torch.sigmoid((self.phi * (res - pair_cut).clamp(-1.0, 1.0))).clamp(min=0.01)
+            res = res * cut_mask
+
+        return res
+    
+    def forward_samples_impute(self, x, y, sample_x, sample_y, x_cutoff, y_cutoff):
+        # Stable positive scales (B, D)
+        scale = self.scale.clamp(min=1e-6, max=1e6)
+
+        # Project per-sample batch-weights into per-dimension scales
+        # (N_x, B) @ (B, D) -> (N_x, D), (N_y, B) @ (B, D) -> (N_y, D)
+        scale_x = sample_x @ scale
+        scale_y = sample_y @ scale
+
+        inv_sqrt_scale_x = 1.0 / torch.sqrt(scale_x.clamp(min=1e-6))
+        inv_sqrt_scale_y = 1.0 / torch.sqrt(scale_y.clamp(min=1e-6))
+
+        # Per-dimension scaling
+        x_scaled = x * inv_sqrt_scale_x                     # (N_x, D)
+        y_scaled = y * inv_sqrt_scale_y                     # (N_y, D)
+
+        # Pairwise squared distances in scaled space and Cauchy kernel
+        diff = x_scaled[:, None, :] - y_scaled[None, :, :]  # (N_x, N_y, D)
+        d2 = torch.sum(diff ** 2, dim=-1).clamp(min=1e-6)   # (N_x, N_y)
+        res = 1.0 / (1.0 + d2)                              # (N_x, N_y)
+
+        # Cutoff mask using separate vectors for X and Y: pair_cut = (x_i + y_j)/2
+        if (x_cutoff is not None) and (y_cutoff is not None):
+            x_cutoff = x_cutoff.view(-1, 1)
+            y_cutoff = y_cutoff.view(1, -1)
+            x_c = x_cutoff.to(res.dtype).to(res.device).clamp(min=0.1, max=0.9).view(-1, 1)  # (N_x, 1)
+            y_c = y_cutoff.to(res.dtype).to(res.device).clamp(min=0.1, max=0.9).view(1, -1)  # (1, N_y)
+            pair_cut = 0.5 * (x_c + y_c)                                                     # (N_x, N_y)
+            # Smooth gating; clip logits for numerical stability
+            cut_mask = torch.sigmoid((self.phi * (res - pair_cut).clamp(-1.0, 1.0))).clamp(min=0.01)
+            res = res * cut_mask
+
+        return res
+
     def print_params(self):
         print(f"Scale Parameters: {self.scale}")
         print(f"Scale Parameters: {self.cutoff}")

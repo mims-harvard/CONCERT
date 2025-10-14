@@ -8,15 +8,15 @@ Highlights
 - Structured logging and deterministic preprocessing
 - Auto batch size, clean inducing-point creation (grid or k-means)
 - Normalization via `preprocess.normalize`
-- Saves counterfactual (perturbed) counts as .h5ad
+- Optional Weights & Biases logging
+- Train/Eval stages (train stops after training; eval runs counterfactual export)
 
 Notes
 -----
 - Expects an HDF5 with keys:
   'X' (N x G), 'pos' (2 x N or N x 2; will be transposed to N x 2),
   'tissue' (str per cell), 'perturbation' (str per cell).
-- The model class is imported from `concert_sk.CONCERT` and is assumed to
-  accept the same arguments you used originally (e.g., input_dim=768).
+- The model class is imported from `concert_sk.CONCERT`.
 """
 
 from __future__ import annotations
@@ -31,6 +31,7 @@ from typing import Iterable, Optional, Tuple, Dict
 
 import h5py
 import numpy as np
+import pandas as pd
 import scanpy as sc
 import torch
 from sklearn.cluster import KMeans
@@ -41,6 +42,12 @@ try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
     yaml = None
+
+# Optional wandb
+try:
+    import wandb  # type: ignore
+except Exception:  # pragma: no cover
+    wandb = None
 
 from concert_sk import CONCERT
 from preprocess import normalize, geneSelection
@@ -73,9 +80,7 @@ def auto_batch_size(n: int) -> int:
 
 
 def strings_to_index(values: np.ndarray) -> np.ndarray:
-    """
-    Deterministically map strings to [0..K-1] integer codes (order-stable).
-    """
+    """Deterministically map strings to [0..K-1] integer codes (order-stable)."""
     hashed = np.array([sum(ord(c) for c in s) for s in values], dtype=int)
     uniq = np.unique(hashed)
     remap = {u: i for i, u in enumerate(uniq)}
@@ -165,6 +170,15 @@ class RunConfigSK:
     target_cell_tissue: str = "tumor"
     target_cell_perturbation: str = "Jak2"
 
+    # Stage
+    stage: str = "eval"  # {"train","eval"}
+
+    # Weights & Biases
+    wandb: bool = False
+    wandb_project: Optional[str] = None
+    wandb_run: Optional[str] = None
+    wandb_mode: str = "online"  # online|offline|disabled
+
     # Config file (YAML/JSON)
     config: Optional[str] = None
 
@@ -181,15 +195,28 @@ def load_h5_dataset(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
     return X, pos, tissue_raw, perturb_raw
 
 
-def build_attributes(tissue_raw: np.ndarray, perturb_raw: np.ndarray) -> Tuple[np.ndarray, np.ndarray, Dict[str, int], Dict[str, int]]:
+def build_attributes(perturb_raw: np.ndarray):
     """
-    Map raw strings to integer codes; return codes and name→code dicts.
+    Map tissue & perturbation strings to integer codes.
+    • Tissue: {"None"→"normal", {Jak2,Tgfbr2,Ifngr2,KP}→"tumor", "periphery"->"periphery"}
+    • Perturbation: {Jak2,Tgfbr2,Ifngr2}→1..K, background→0
     """
+    known_types = ["Jak2", "Tgfbr2", "Ifngr2", "KP", "normal", "periphery"]
+    known_tumor = ["Jak2", "Tgfbr2", "Ifngr2", "KP"]
+    known_normal = "normal"
+    known_periphery = "periphery"
+
+    tissue_raw = np.full_like(perturb_raw, known_normal, dtype=object)
+    tissue_raw = np.where(np.isin(perturb_raw, known_tumor), "tumor", tissue_raw)
+    tissue_raw = np.where(perturb_raw == known_periphery, "periphery", tissue_raw)
     tissue_idx = strings_to_index(tissue_raw)
-    perturb_idx = strings_to_index(perturb_raw)
-    tissue_dict = {name: int(code) for name, code in zip(tissue_raw, tissue_idx)}
-    pert_dict = {name: int(code) for name, code in zip(perturb_raw, perturb_idx)}
-    return tissue_idx, perturb_idx, tissue_dict, pert_dict
+
+    present = [p for p in known_types if p in set(perturb_raw.tolist())]
+    pert_map = {p: i + 1 for i, p in enumerate(present)}
+    perturb_idx = np.vectorize(lambda s: pert_map.get(s, 0))(perturb_raw).astype(int)
+
+    tissue_dict = {t: i for t, i in zip(tissue_raw, tissue_idx)}
+    return tissue_idx, tissue_dict, perturb_idx, pert_map
 
 
 # -----------------------------------------------------------------------------
@@ -218,19 +245,42 @@ def run(cfg: RunConfigSK) -> None:
     logging.info("Config: %s", asdict(cfg))
     outdir = ensure_dir(cfg.outdir)
 
+    # Optional Weights & Biases
+    wb = None
+    if cfg.wandb and cfg.wandb_mode != "disabled":
+        if wandb is None:
+            logging.warning("wandb not installed; continuing without wandb.")
+        else:
+            try:
+                wb = wandb
+                wandb.init(
+                    project=cfg.wandb_project or "concert-sk",
+                    name=cfg.wandb_run,
+                    mode=cfg.wandb_mode,
+                    config=asdict(cfg),
+                )
+            except Exception as e:  # pragma: no cover
+                logging.warning("wandb init failed (%s); continuing without wandb.", e)
+                wb = None
+
+    def _log(metrics: Dict, step: int) -> None:
+        if wb is not None:
+            try:
+                wb.log(metrics, step=step)
+            except Exception:
+                pass
+
     # Load dataset
-    X, pos, tissue_raw, perturb_raw = load_h5_dataset(cfg.data_file)
+    X, pos, _, perturb_raw = load_h5_dataset(cfg.data_file)
 
     # Attributes
-    tissue_idx, perturb_idx, tissue_dict, pert_dict = build_attributes(tissue_raw, perturb_raw)
+    tissue_idx, tissue_dict, perturb_idx, pert_dict = build_attributes(perturb_raw)
     cell_atts = np.c_[tissue_idx, perturb_idx].astype(int)
     sample_indices = torch.arange(X.shape[0], dtype=torch.int)
 
     # Show basic composition
-    (vals_t, cnt_t) = np.unique(tissue_raw, return_counts=True)
-    (vals_p, cnt_p) = np.unique(perturb_raw, return_counts=True)
-    logging.info("Tissue composition: %s", dict(zip(vals_t.tolist(), cnt_t.tolist())))
-    logging.info("Perturbation composition: %s", dict(zip(vals_p.tolist(), cnt_p.tolist())))
+    logging.info("Tissue dict: %s", tissue_dict)
+    logging.info("Perturbation dict: %s", pert_dict)
 
     # Batch size
     bs = auto_batch_size(X.shape[0]) if cfg.batch_size == "auto" else int(cfg.batch_size)
@@ -282,9 +332,9 @@ def run(cfg: RunConfigSK) -> None:
     )
     logging.info("Model initialized.")
 
-    # Train or load
-    if not os.path.isfile(cfg.model_file):
-        logging.info("Training...")
+    # Stage
+    if cfg.stage.lower() == "train":
+        logging.info("Stage=train: starting training...")
         model.train_model(
             cell_atts=cell_atts,
             sample_indices=sample_indices,
@@ -301,14 +351,26 @@ def run(cfg: RunConfigSK) -> None:
             patience=cfg.patience,
             save_model=True,
             model_weights=str(outdir / cfg.model_file),
+            # wandb hook
+            log_fn=_log,
         )
         logging.info("Training finished.")
+        return  # stop after training, like run_concert_map.py
+
+    # Otherwise eval/counterfactual
+    if not os.path.isfile(cfg.model_file):
+        # If model not present, try the one we just trained into outdir
+        candidate = outdir / cfg.model_file
+        if os.path.isfile(candidate):
+            model.load_model(str(candidate))
+            logging.info("Loaded weights: %s", candidate)
+        else:
+            raise FileNotFoundError(f"No model weights found: {cfg.model_file}")
     else:
         model.load_model(str(cfg.model_file))
         logging.info("Loaded existing weights: %s", cfg.model_file)
 
     # Counterfactual prediction
-    project_index = f"{cfg.sample}_{cfg.project_index}"
     pert_ind = (np.loadtxt(cfg.pert_cells, dtype=int) - 1).astype(int)
 
     target_tissue_code = tissue_dict.get(cfg.target_cell_tissue, None)
@@ -324,7 +386,7 @@ def run(cfg: RunConfigSK) -> None:
                  cfg.target_cell_tissue, target_tissue_code,
                  cfg.target_cell_perturbation, target_pert_code)
 
-    perturbed_counts = model.counterfactualPrediction(
+    perturbed_counts, pert_cell_att = model.counterfactualPrediction(
         X=pos_scaled,
         sample_index=sample_indices,
         cell_atts=cell_atts,
@@ -335,13 +397,12 @@ def run(cfg: RunConfigSK) -> None:
         target_cell_perturbation=target_pert_code,
     )
 
-    ad = sc.AnnData(perturbed_counts)
-    # mark perturbed cells (1/0)
-    pert_set = set(pert_ind.tolist() if isinstance(pert_ind, np.ndarray) else list(pert_ind))
-    ad.obs["perturbed"] = [1 if i in pert_set else 0 for i in range(ad.n_obs)]
-    out_path = outdir / f"{project_index}_{cfg.target_cell_tissue}_{cfg.target_cell_perturbation}_perturbed_counts.h5ad"
-    ad.write(out_path)
-    logging.info("Wrote perturbed counts: %s", out_path)
+    sc.AnnData(perturbed_counts, obs=pd.DataFrame(pert_cell_att, columns=["tissue", "perturbation"])) \
+      .write(outdir / f"{cfg.sample}_{cfg.project_index}_{cfg.target_cell_tissue}_{cfg.target_cell_perturbation}_perturbed_counts.h5ad")
+    logging.info(
+        "Wrote counterfactuals: %s",
+        outdir / f"{cfg.sample}_{cfg.project_index}_{cfg.target_cell_tissue}_{cfg.target_cell_perturbation}_perturbed_counts.h5ad",
+    )
 
 
 # -----------------------------------------------------------------------------
@@ -413,6 +474,13 @@ def parse_args() -> RunConfigSK:
     p.add_argument("--target_cell_tissue")
     p.add_argument("--target_cell_perturbation")
 
+    # --- NEW: Stage & wandb ---
+    p.add_argument("--stage", choices=["train", "eval"])
+    p.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging")
+    p.add_argument("--wandb_project")
+    p.add_argument("--wandb_run")
+    p.add_argument("--wandb_mode", choices=["online", "offline", "disabled"])
+
     a = p.parse_args()
 
     # 1) defaults
@@ -421,7 +489,6 @@ def parse_args() -> RunConfigSK:
     # 2) merge config file
     file_cfg = load_config_file(getattr(a, "config", None)) if getattr(a, "config", None) else {}
     if file_cfg:
-        # coerce lists for dataclass Iterable fields
         for k in ("encoder_layers", "decoder_layers"):
             if k in file_cfg and isinstance(file_cfg[k], list):
                 file_cfg[k] = tuple(file_cfg[k])

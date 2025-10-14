@@ -29,7 +29,6 @@ except Exception:  # pragma: no cover
 from concert_map import CONCERT
 from preprocess import normalize, geneSelection
 
-
 # --------------------------------------------------------------------------
 # Logging & small utils
 # --------------------------------------------------------------------------
@@ -145,11 +144,11 @@ class ImputeConfig:
     # SVGP options (must match your model expectations)
     fix_inducing_points: bool = True
     fixed_gp_params: bool = False
-    multi_kernel_mode: bool = True  # if your SVGP_Batch is multi-kernel
-    shared_dispersion: bool = False  # only used if you also decode
+    multi_kernel_mode: bool = True  
+    shared_dispersion: bool = False 
 
     # Weights
-    model_file: Optional[str] = None  # if present and exists, loads; else trains
+    model_file: Optional[str] = None
 
     # Misc
     verbosity: int = 1
@@ -180,56 +179,53 @@ def load_h5_dataset(path: str) -> Tuple[np.ndarray, np.ndarray, Optional[np.ndar
     return X, pos, tissue_raw, perturb_raw
 
 
-def build_attributes(tissue_raw: Optional[np.ndarray], perturb_raw: np.ndarray):
+def build_attributes(perturb_raw: np.ndarray):
     """
-    Map tissue & perturb strings to integer codes, plus name dicts.
-    If tissue is missing, infer: {"None"->"normal"; known perturbations -> "tumor"}.
+    Map tissue & perturbation strings to integer codes.
+    • Tissue: {"None"→"normal", {Jak2,Tgfbr2,Ifngr2,KP}→"tumor", "periphery"->"periphery"}
+    • Perturbation: {Jak2,Tgfbr2,Ifngr2}→1..K, background→0
     """
-    known_perts = ["Jak2", "Tgfbr2", "Ifngr2"]
-    if tissue_raw is None:
-        # infer tissue from perturbations
-        tissue_raw = np.where(np.isin(perturb_raw, known_perts), "tumor", perturb_raw)
-        tissue_raw = np.where(tissue_raw == "None", "normal", tissue_raw)
+    known_types = ["Jak2", "Tgfbr2", "Ifngr2", "KP", "normal", "periphery"]
+    known_tumor = ["Jak2", "Tgfbr2", "Ifngr2", "KP"]
+    known_normal = "normal"
+    known_periphery = "periphery"
 
+    #initialize tissue_raw for all cells as "normal"
+    tissue_raw = np.full_like(perturb_raw, known_normal, dtype=object)
+    tissue_raw = np.where(np.isin(perturb_raw, known_tumor), "tumor", tissue_raw)
+    tissue_raw = np.where(perturb_raw == known_periphery, "periphery", tissue_raw)
     tissue_idx = strings_to_index(tissue_raw)
-    # perturb 0 = background; known perts get 1..K in stable order
-    present = [p for p in known_perts if p in set(perturb_raw.tolist())]
+
+    present = [p for p in known_types if p in set(perturb_raw.tolist())]
     pert_map = {p: i + 1 for i, p in enumerate(present)}
     perturb_idx = np.vectorize(lambda s: pert_map.get(s, 0))(perturb_raw).astype(int)
 
-    tissue_dict = {name: int(code) for name, code in zip(tissue_raw, tissue_idx)}
+    tissue_dict = {t: i for t, i in zip(tissue_raw, tissue_idx)}
     return tissue_idx, tissue_dict, perturb_idx, pert_map
-
 
 # --------------------------------------------------------------------------
 # Inducing points
 # --------------------------------------------------------------------------
-def make_inducing_points(
-    pos: np.ndarray,
-    cfg: ImputeConfig,
+def build_inducing_points(
+    pos_batched: np.ndarray,
+    n_batch: int,
+    steps: int,
+    loc_range: float,
+    grid: bool,
+    k_clusters: int | None,
 ) -> np.ndarray:
-    """Create or load inducing points in the original (unbatched) 2D space."""
-    if cfg.inducing_point_file and os.path.isfile(cfg.inducing_point_file):
-        ip = np.loadtxt(cfg.inducing_point_file, delimiter=",")
-        logging.info("Loaded inducing points from %s (shape %s)", cfg.inducing_point_file, ip.shape)
-        return ip.astype(np.float32)
-
-    if cfg.grid_inducing_points:
-        # (steps x steps) grid in [0,1] then scale by loc_range
-        grid_xy = np.mgrid[0:1:complex(cfg.inducing_point_steps),
-                           0:1:complex(cfg.inducing_point_steps)].reshape(2, -1).T
-        ip = (grid_xy * float(cfg.loc_range)).astype(np.float32)
-        logging.info("Created grid inducing points: steps=%d -> %d points", cfg.inducing_point_steps, ip.shape[0])
-        return ip
-
-    # KMeans centroids
-    assert cfg.inducing_point_nums and cfg.inducing_point_nums > 0, \
-        "inducing_point_nums must be set when grid_inducing_points=False"
-    km = KMeans(n_clusters=cfg.inducing_point_nums, n_init=100).fit(pos)
-    ip = km.cluster_centers_.astype(np.float32)
-    logging.info("Created k-means inducing points: k=%d", cfg.inducing_point_nums)
-    return ip
-
+    """Return inducing points with appended one-hot batch column block (first batch active)."""
+    if grid:
+        grid_xy = np.mgrid[0:1:complex(steps), 0:1:complex(steps)].reshape(2, -1).T * loc_range
+        onehot = np.zeros((grid_xy.shape[0], n_batch), dtype=np.float32)
+        onehot[:, 0] = 1.0
+        return np.concatenate([grid_xy, onehot], axis=1).astype(np.float32)
+    assert k_clusters is not None and k_clusters > 0, "inducing_point_nums must be > 0 when grid_inducing_points=False"
+    km = KMeans(n_clusters=k_clusters, n_init=100).fit(pos_batched)
+    centers = km.cluster_centers_
+    onehot = np.zeros((centers.shape[0], n_batch), dtype=np.float32)
+    onehot[:, 0] = 1.0
+    return np.concatenate([centers, onehot], axis=1).astype(np.float32)
 
 # --------------------------------------------------------------------------
 # Orchestration
@@ -239,7 +235,7 @@ def run(cfg: ImputeConfig) -> None:
     ensure_dir(cfg.outdir)
 
     # Load core data
-    X, pos_raw, tissue_raw, perturb_raw = load_h5_dataset(cfg.data_file)
+    X, pos_raw, _, perturb_raw = load_h5_dataset(cfg.data_file)
 
     # Scale the train locations to [0, loc_range], then scale NEW coords with same transform
     # NEW coords file (the locations where we want imputed counts)
@@ -257,7 +253,7 @@ def run(cfg: ImputeConfig) -> None:
     pert_loc = pos_all[pos_raw.shape[0] :].astype(np.float32)
 
     # Attributes
-    tissue_idx, tissue_dict, perturb_idx, pert_map = build_attributes(tissue_raw, perturb_raw)
+    tissue_idx, tissue_dict, perturb_idx, pert_map = build_attributes(perturb_raw)
     cell_atts = np.c_[tissue_idx, perturb_idx].astype(int)
     sample_indices = torch.arange(X.shape[0], dtype=torch.int)
 
@@ -265,12 +261,23 @@ def run(cfg: ImputeConfig) -> None:
     code_to_name = {0: "background"}
     code_to_name.update({code: name for name, code in pert_map.items()})
 
-    # Batch one-hot from perturbation codes (used by the kernel)
+    # Scale spatial & append batch columns for kernel conditioning
     n_batch = int(len(np.unique(perturb_idx)))
     batch = np.eye(n_batch, dtype=np.float32)[perturb_idx]
+    scaler = MinMaxScaler()
+    pos_scaled = scaler.fit_transform(pos) * cfg.loc_range
+    cutoff = np.full(pos_scaled.shape[0], 0.5, dtype=np.float32)  # learnable init (vector)
+    pos_batched = np.concatenate([pos_scaled, batch], axis=1).astype(np.float32)
 
-    # Build inducing points (2D)
-    inducing_points = make_inducing_points(pos, cfg)
+    # Inducing points
+    inducing_points = build_inducing_points(
+        pos_batched=pos_batched,
+        n_batch=n_batch,
+        steps=cfg.inducing_point_steps,
+        loc_range=cfg.loc_range,
+        grid=cfg.grid_inducing_points,
+        k_clusters=cfg.inducing_point_nums,
+    )
 
     # Prepare AnnData + normalization, optional gene selection
     if cfg.select_genes and cfg.select_genes > 0:
@@ -311,7 +318,7 @@ def run(cfg: ImputeConfig) -> None:
         init_beta=cfg.init_beta,
         min_beta=cfg.min_beta,
         max_beta=cfg.max_beta,
-        mask_cutoff=np.full(pos.shape[0], 0.5, dtype=np.float32),
+        mask_cutoff=cutoff,
         dtype=torch.float32,
         device=cfg.device,
     )
@@ -321,71 +328,62 @@ def run(cfg: ImputeConfig) -> None:
     if cfg.model_file and os.path.isfile(cfg.model_file):
         model.load_model(cfg.model_file)
         logging.info("Loaded weights: %s", cfg.model_file)
-    else:
-        bs = auto_batch_size(X.shape[0]) if cfg.batch_size == "auto" else int(cfg.batch_size)
-        logging.info("Training (batch_size=%s)...", bs)
-        model.train_model(
-            pos=np.concatenate([pos, batch], axis=1).astype(np.float32),  # pos_batched if your kernel expects batch cols
-            ncounts=adata.X,
-            raw_counts=adata.raw.X,
-            size_factors=adata.obs.size_factors,
-            batch=batch,
-            lr=cfg.lr,
-            weight_decay=cfg.weight_decay,
-            batch_size=bs,
-            num_samples=cfg.num_samples,
-            train_size=cfg.train_size,
-            maxiter=cfg.maxiter,
-            patience=cfg.patience,
-            save_model=True,
-            model_weights=str(Path(cfg.outdir) / (cfg.model_file or "model.pt")),
-        )
-        logging.info("Training complete.")
+    else: #print error
+        logging.error("Model file not found: %s", cfg.model_file)
 
     # ---- Impute at NEW coordinates (baseline) ----
     bs = auto_batch_size(X.shape[0]) if cfg.batch_size == "auto" else int(cfg.batch_size)
     logging.info("Imputing counts at %d new coordinates...", pert_loc.shape[0])
-    _, imputed_counts = model.batching_predict_samples(
-        X_test=pert_loc,               # (M, 2) scaled
-        X_train=pos,                   # (N, 2) scaled
+    _, imputed_counts = model.imputation(
+        X_test=pert_loc,
+        X_train=pos_batched,
         Y_sample_index=sample_indices,
         Y_cell_atts=cell_atts,
         batch_size=bs,
         n_samples=25,
     )
+
     sc.AnnData(imputed_counts).write(
         Path(cfg.outdir) / f"{cfg.sample}_{cfg.project_index}_imputed_counts.h5ad"
     )
+
     logging.info("Wrote baseline imputed counts.")
 
-    # ---- Targeted (counterfactual) imputation, if supported by the model ----
-    if hasattr(model, "batching_predict_samples_target"):
+    # ---- Targeted (counterfactual) imputation ----
+    if hasattr(model, "impute_and_counterfactual_fun2"):
         # build lookup for names → integer codes
         tissue_code = None
         if isinstance(cfg.target_cell_tissue, str):
             # match exact name if present
             if cfg.target_cell_tissue in tissue_dict:
                 tissue_code = int(tissue_dict[cfg.target_cell_tissue])
-            else:
-                logging.warning("Target tissue '%s' not found; using max code.", cfg.target_cell_tissue)
-                tissue_code = int(np.max(list(tissue_dict.values())))
+            else: # error
+                raise ValueError(f"Target tissue '{cfg.target_cell_tissue}' not found in data; available: {list(tissue_dict.keys())}")
+                
         else:
             tissue_code = int(cfg.target_cell_tissue)
 
         if cfg.target_cell_perturbation in pert_map:
             pert_code = int(pert_map[cfg.target_cell_perturbation])
-        else:
-            logging.warning("Target perturbation '%s' not found; using background (0).",
-                            cfg.target_cell_perturbation)
-            pert_code = 0
+        else: # error
+            raise ValueError(f"Target perturbation '{cfg.target_cell_perturbation}' not found in data; available: {list(pert_map.keys())}")
+            
 
         logging.info("Imputing counterfactual: tissue=%s, perturbation=%s",
                      cfg.target_cell_tissue, cfg.target_cell_perturbation)
-        _, imputed_pert_counts = model.batching_predict_samples_target(
+        
+        # add one-hot batch column for target perturbation on pert_loc
+        if pert_code >= n_batch:
+            raise ValueError(f"Target perturbation code {pert_code} exceeds trained n_batch={n_batch}.")
+        onehot = np.zeros((pert_loc.shape[0], n_batch), dtype=np.float32)
+        onehot[:, pert_code] = 1.0
+        pert_loc = np.concatenate([pert_loc, onehot], axis=1).astype(np.float32)
+
+        _, imputed_pert_counts = model.impute_and_counterfactual_fun2(
             target=pert_code,
             tissue=tissue_code,
             X_test=pert_loc,
-            X_train=pos,
+            X_train=pos_batched,
             Y_sample_index=sample_indices,
             Y_cell_atts=cell_atts,
             batch_size=bs,

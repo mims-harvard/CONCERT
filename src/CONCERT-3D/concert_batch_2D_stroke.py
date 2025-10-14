@@ -399,10 +399,10 @@ class CONCERT(nn.Module):
         def nearest_idx(array: torch.Tensor, value: torch.Tensor) -> torch.Tensor:
             return torch.argmin(torch.sum((array - value) ** 2, dim=1))
 
-        X_te = torch.tensor(X_test, dtype=self.dtype)
+        X_te = torch.tensor(X_test, dtype=self.dtype).to(self.device)
         X_tr = torch.tensor(X_train, dtype=self.dtype).to(self.device)
-        atts_tr = torch.tensor(Y_cell_atts, dtype=torch.int)
-        idx_tr = torch.tensor(Y_sample_index, dtype=torch.int)
+        atts_tr = torch.tensor(Y_cell_atts, dtype=torch.int).to(self.device)
+        idx_tr = torch.tensor(Y_sample_index, dtype=torch.int).to(self.device)
 
         # Precompute q on train
         q_mu_all, q_var_all = [], []
