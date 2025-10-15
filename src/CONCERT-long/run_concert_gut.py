@@ -10,15 +10,7 @@ Features
 - Grid inducing points tiled across batches (with batch one-hot block)
 - Train or evaluate (counterfactual on a target day/perturbation)
 - Saves outputs to .h5ad
-
-Dataset expectations
---------------------
-HDF5 with keys:
-  X : (G x N) or (N x G) counts (this script expects stored as G x N and transposes)
-  pos : (2 x N) or (N x 2) positions (this script transposes to N x 2 and takes first 2 dims)
-  region : (N,) str (optional, currently unused in cell_atts here)
-  perturbation : (N,) str
-  day : (N,) str with values among {"D0","D12","D30","D73"} (see mapping below)
+- Optional Weights & Biases tracking (--wandb ...)
 """
 
 from __future__ import annotations
@@ -44,6 +36,12 @@ try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
     yaml = None
+
+# Optional wandb
+try:
+    import wandb  # type: ignore
+except Exception:  # pragma: no cover
+    wandb = None
 
 from concert_batch_gut import CONCERT
 from preprocess import normalize, geneSelection
@@ -100,10 +98,7 @@ def load_config_file(path: Optional[str]) -> dict:
 
 
 def strings_to_stable_index(values: np.ndarray) -> np.ndarray:
-    """
-    Deterministically map strings to contiguous integer codes (0..K-1),
-    stable across runs without looking at order in the array.
-    """
+    """Deterministically map strings to contiguous integer codes (0..K-1), stable across runs."""
     hashed = np.array([sum(ord(c) for c in s) for s in values], dtype=int)
     uniq = np.unique(hashed)
     remap = {u: i for i, u in enumerate(uniq)}
@@ -157,7 +152,7 @@ class RunConfigGut:
     fixed_gp_params: bool = False
     loc_range: float = 20.0
     kernel_scale: float = 20.0
-    allow_batch_kernel_scale: bool = False
+    multi_kernel_mode: bool = False
 
     # Dispersion
     shared_dispersion: bool = True
@@ -169,9 +164,15 @@ class RunConfigGut:
 
     # Eval / counterfactual
     stage: str = "train"  # {"train","eval"}
-    pert_cells: str = "D73"             # which day string to select cells for export/subset
-    target_cell_day: float = 13.0       # numeric "day" to impose in counterfactual
+    pert_cells: str = "D73"
+    target_cell_day: float = 13.0
     target_cell_perturbation: str = "0.0"
+
+    # Weights & Biases
+    wandb: bool = False
+    wandb_project: Optional[str] = None
+    wandb_run: Optional[str] = None
+    wandb_mode: str = "online"  # online|offline|disabled
 
     # Config file
     config: Optional[str] = None
@@ -201,34 +202,19 @@ def load_h5_dataset(path: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.n
 
 
 def map_days_to_numeric_and_batch(day_str: np.ndarray) -> Tuple[np.ndarray, np.ndarray, Dict[str, int]]:
-    """
-    Map day strings to (numeric_day, batch_index) using a fixed, explicit mapping
-    to preserve comparability with the original script.
-
-    Mapping:
-        "D0" -> (1.0, 0)
-        "D12"-> (12.0, 1)
-        "D30"-> (30.0, 2)
-        "D73"-> (73.0, 3)
-    """
     mapping = {"D0": (1.0, 0), "D12": (12.0, 1), "D30": (30.0, 2), "D73": (73.0, 3)}
-    numeric = []
-    batch_ids = []
+    numeric, batch_ids = [], []
     for d in day_str:
         if d not in mapping:
             raise ValueError(f"Unknown day label '{d}'. Supported: {list(mapping)}")
         num, bi = mapping[d]
         numeric.append(num)
         batch_ids.append(bi)
-    day_numeric = np.asarray(numeric, dtype=float)
-    batch_ids = np.asarray(batch_ids, dtype=int)
-    return day_numeric, batch_ids, {k: v for k, (_, v) in mapping.items()}
+    return np.asarray(numeric, dtype=float), np.asarray(batch_ids, dtype=int), {k: v for k, (_, v) in mapping.items()}
 
 
 def per_batch_scale_positions(pos: np.ndarray, batch_onehot: np.ndarray, loc_range: float) -> np.ndarray:
-    """
-    Independently min-max scale positions within each batch to [0, loc_range].
-    """
+    """Independently min-max scale positions within each batch to [0, loc_range]."""
     n_batch = batch_onehot.shape[1]
     pos_scaled = np.zeros_like(pos, dtype=np.float32)
     for i in range(n_batch):
@@ -239,10 +225,7 @@ def per_batch_scale_positions(pos: np.ndarray, batch_onehot: np.ndarray, loc_ran
 
 
 def build_inducing_points_grid_tiled(n_batch: int, steps: int, loc_range: float) -> np.ndarray:
-    """
-    Build a grid (steps x steps) of 2D points in [0, loc_range], then tile it over batches
-    and append an (M_total x n_batch) one-hot block so each batch has its own set of inducing points.
-    """
+    """Grid (steps x steps) in [0, loc_range], tiled across batches with one-hot block appended."""
     eps = 1e-5
     grid_xy = np.mgrid[0:(1 + eps):(1.0 / steps), 0:(1 + eps):(1.0 / steps)].reshape(2, -1).T * float(loc_range)
     grid_xy = grid_xy.astype(np.float32)  # (M, 2)
@@ -264,11 +247,27 @@ def run(cfg: RunConfigGut) -> None:
     logging.info("Config: %s", asdict(cfg))
     outdir = ensure_dir(cfg.outdir)
 
+    # --- Optional Weights & Biases ---
+    wb = None
+    if cfg.wandb and cfg.wandb_mode != "disabled":
+        if wandb is None:
+            logging.warning("wandb not installed; continuing without wandb.")
+        else:
+            try:
+                wb = wandb.init(
+                    project=cfg.wandb_project or "concert",
+                    name=cfg.wandb_run,
+                    mode=cfg.wandb_mode,
+                    config=asdict(cfg),
+                )
+            except Exception as e:  # pragma: no cover
+                logging.warning("wandb init failed (%s); continuing without wandb.", e)
+                wb = None
+
     # Load data
     X, loc, region_str, perturb_str, day_str = load_h5_dataset(cfg.data_file)
 
     # Encode attributes
-    region_idx = strings_to_stable_index(region_str)          # currently unused in cell_atts
     perturb_idx = strings_to_stable_index(perturb_str)
     day_numeric, day_batch_idx, day_batch_map = map_days_to_numeric_and_batch(day_str)
 
@@ -297,17 +296,15 @@ def run(cfg: RunConfigGut) -> None:
     loc_batched = np.concatenate([loc_scaled, batch_onehot], axis=1).astype(np.float32)
     logging.info("Shapes — X: %s, loc_batched: %s", X.shape, loc_batched.shape)
 
-    # Inducing points (grid tiled across batches; k-means path not used in original)
+    # Inducing points
     if cfg.grid_inducing_points:
         inducing = build_inducing_points_grid_tiled(n_classes, cfg.inducing_point_steps, cfg.loc_range)
         logging.info("Inducing points (grid tiled): %s", inducing.shape)
     else:
-        # Fallback: k-means on positions (without tiling one-hots) — rarely used here
         assert cfg.inducing_point_nums and cfg.inducing_point_nums > 0, \
             "inducing_point_nums must be set when grid_inducing_points=False"
         km = KMeans(n_clusters=cfg.inducing_point_nums, n_init=100).fit(loc_scaled)
         centers = km.cluster_centers_.astype(np.float32)
-        # append *first* batch one-hot by default (can adapt if desired)
         oh = np.zeros((centers.shape[0], n_classes), dtype=np.float32)
         oh[:, 0] = 1.0
         inducing = np.concatenate([centers, oh], axis=1).astype(np.float32)
@@ -335,7 +332,7 @@ def run(cfg: RunConfigGut) -> None:
         initial_inducing_points=inducing,
         fixed_gp_params=cfg.fixed_gp_params,
         kernel_scale=cfg.kernel_scale,
-        allow_batch_kernel_scale=cfg.allow_batch_kernel_scale,
+        multi_kernel_mode=cfg.multi_kernel_mode,
         N_train=adata.n_obs,
         KL_loss=cfg.KL_loss,
         dynamicVAE=cfg.dynamicVAE,
@@ -346,6 +343,14 @@ def run(cfg: RunConfigGut) -> None:
         device=cfg.device,
     )
     logging.info("Model initialized.")
+
+    # Helper for wandb logging
+    def _log(metrics: Dict, step: int) -> None:
+        if wb is not None:
+            try:
+                wb.log(metrics, step=step)
+            except Exception:
+                pass
 
     # Train or Evaluate (counterfactual)
     if cfg.stage.lower() == "train":
@@ -365,6 +370,7 @@ def run(cfg: RunConfigGut) -> None:
             patience=cfg.patience,
             save_model=True,
             model_weights=str(outdir / cfg.model_file),
+            log_fn=_log,  # <-- stream metrics to wandb if enabled
         )
         logging.info("Training finished.")
         return
@@ -401,7 +407,7 @@ def run(cfg: RunConfigGut) -> None:
         target_cell_perturbation=target_pert_code,
     )
 
-    # Keep only the subset cells in the output (consistent with original script)
+    # Keep only the subset cells in the output
     if pert_ind.size > 0:
         perturbed_counts = perturbed_counts[pert_ind, :]
         pert_atts = pert_atts[pert_ind, :]
@@ -411,7 +417,7 @@ def run(cfg: RunConfigGut) -> None:
     ad_out = sc.AnnData(perturbed_counts, obs=obs_df)
     out_path = (
         Path(cfg.outdir)
-        / f"res_gut_{cfg.pert_cells}_D{int(cfg.target_cell_day)}_P{cfg.target_cell_perturbation}_N{cfg.noise}_perturbed_counts.h5ad"
+        / f"res_gut_{cfg.project_index}_perturbed_counts.h5ad"
     )
     ad_out.write(out_path)
     logging.info("Wrote counterfactual counts to %s", out_path)
@@ -420,13 +426,13 @@ def run(cfg: RunConfigGut) -> None:
 # -----------------------------------------------------------------------------
 # CLI (config-first; CLI only overrides what you pass)
 # -----------------------------------------------------------------------------
-
 def str2bool(v):
     if v is None:
         return None
     if isinstance(v, bool):
         return v
     return v.lower() in ("1", "true", "yes", "y", "on")
+
 
 def parse_args() -> RunConfigGut:
     p = argparse.ArgumentParser(
@@ -475,7 +481,7 @@ def parse_args() -> RunConfigGut:
     p.add_argument("--fixed_gp_params", type=str2bool)
     p.add_argument("--loc_range", type=float)
     p.add_argument("--kernel_scale", type=float)
-    p.add_argument("--allow_batch_kernel_scale", type=str2bool)
+    p.add_argument("--multi_kernel_mode", type=str2bool)
     p.add_argument("--shared_dispersion", type=str2bool)
 
     # Runtime / persistence
@@ -488,6 +494,12 @@ def parse_args() -> RunConfigGut:
     p.add_argument("--pert_cells")
     p.add_argument("--target_cell_day", type=float)
     p.add_argument("--target_cell_perturbation")
+
+    # Weights & Biases
+    p.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging")
+    p.add_argument("--wandb_project")
+    p.add_argument("--wandb_run")
+    p.add_argument("--wandb_mode", choices=["online", "offline", "disabled"])
 
     a = p.parse_args()
 
@@ -502,7 +514,7 @@ def parse_args() -> RunConfigGut:
                 file_cfg[k] = tuple(file_cfg[k])
         cfg = replace(cfg, **{k: v for k, v in file_cfg.items() if hasattr(cfg, k)})
 
-    # 3) apply ONLY explicit CLI overrides (don’t clobber YAML with argparse defaults)
+    # 3) apply ONLY explicit CLI overrides
     import sys as _sys
     specified = set()
     for action in p._actions:

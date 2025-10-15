@@ -10,8 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal, kl_divergence
 from torch.utils.data import DataLoader, TensorDataset, random_split
-
-# Optional wandb import (safe if absent)
 try:
     import wandb  # type: ignore
 except Exception:  # pragma: no cover
@@ -20,7 +18,7 @@ except Exception:  # pragma: no cover
 from SVGP_Batch import SVGP
 from I_PID import PIDControl
 from VAE_utils import MeanAct, NBLoss, buildNetwork, DenseEncoder, gauss_cross_entropy
-from lord_batch import Lord_encoder  # keep original name for compatibility
+from lord_batch import LordEncoder
 
 
 # ---------------------------------------------------------------------
@@ -96,7 +94,7 @@ class CONCERT(nn.Module):
         initial_inducing_points: np.ndarray,  # shape (M*n_batch, 2 + n_batch) for batched kernel
         fixed_gp_params: bool,
         kernel_scale: float | np.ndarray,     # float or (n_batch, spatial_dims) if batched
-        allow_batch_kernel_scale: bool,
+        multi_kernel_mode: bool,
         N_train: int,
         KL_loss: float,
         dynamicVAE: bool,
@@ -108,9 +106,6 @@ class CONCERT(nn.Module):
     ) -> None:
         super().__init__()
         torch.set_default_dtype(dtype)
-
-        # Map legacy flag to SVGP_Batch interface: allow_batch_kernel_scale → multi_kernel_mode
-        multi_kernel_mode = bool(allow_batch_kernel_scale)
 
         self.svgp = SVGP(
             fixed_inducing_points=fixed_inducing_points,
@@ -141,7 +136,7 @@ class CONCERT(nn.Module):
         self.shared_dispersion = bool(shared_dispersion)
 
         # LORD encoder: attributes = ["perturbation"(categorical), "day"(ordinal)]
-        self.lord_encoder = Lord_encoder(
+        self.lord_encoder = LordEncoder(
             embedding_dim=[64, 64, 64],
             num_genes=self.num_genes,
             labels=cell_atts,
@@ -383,7 +378,7 @@ class CONCERT(nn.Module):
         return torch.cat(outs, dim=0).numpy()
 
     @torch.no_grad()
-    def batching_predict_samples(
+    def imputation(
         self,
         X_test: np.ndarray,
         X_train: np.ndarray,

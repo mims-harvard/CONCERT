@@ -16,10 +16,10 @@ def _add_diagonal_jitter(matrix, jitter=1e-8):
 
 
 class SVGP(nn.Module):
-    def __init__(self, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, allow_batch_kernel_scale, jitter, N_train, dtype, device):
+    def __init__(self, fixed_inducing_points, initial_inducing_points, fixed_gp_params, kernel_scale, multi_kernel_mode, jitter, N_train, dtype, device):
         super(SVGP, self).__init__()
         self.N_train = torch.tensor(N_train, dtype=dtype).to(device)
-        self.allow_batch_kernel_scale = allow_batch_kernel_scale
+        self.multi_kernel_mode = multi_kernel_mode
         self.jitter = jitter
         self.dtype = dtype
         self.device = device
@@ -32,7 +32,7 @@ class SVGP(nn.Module):
 
         # length scale of the kernel
 #        self.kernel = EQKernel(scale=kernel_scale, fixed_scale=fixed_gp_params, dtype=dtype, device=device).to(device)
-        if allow_batch_kernel_scale:
+        if self.multi_kernel_mode:
             self.kernel = BatchedCauchyKernel(scale=kernel_scale, fixed_scale=fixed_gp_params, dtype=dtype, device=device).to(device)
         else:
             self.kernel = CauchyKernel(scale=kernel_scale, fixed_scale=fixed_gp_params, dtype=dtype, device=device).to(device)
@@ -54,7 +54,7 @@ class SVGP(nn.Module):
         sample_x = x[:, 2:]
         sample_y = y[:, 2:]
 
-        if self.allow_batch_kernel_scale:
+        if self.multi_kernel_mode:
             if diag_only:
     #            matrix = torch.diagonal(self.sample_kernel(sample_x, sample_y) * self.kernel(pos_x, pos_y))
                 matrix_diag_1 = self.sample_kernel.forward_diag(sample_x, sample_y)

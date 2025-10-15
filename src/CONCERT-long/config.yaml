@@ -15,7 +15,7 @@ target_cell_perturbation: "0.0"
 project_index: "gut"
 model_file: "model.pt"
 wandb: true
-wandb_project: "concert"
+wandb_project: "concert-colon"
 wandb_run: "test"
 wandb_mode: "online"
 
