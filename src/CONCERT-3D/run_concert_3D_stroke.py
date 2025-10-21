@@ -1,23 +1,4 @@
 #!/usr/bin/env python3
-"""
-CONCERT (3D Stroke) driver — spatial counterfactual perturbation in 3D.
-
-Features
---------
-- YAML/JSON config file support (CLI flags only override what you pass)
-- Structured logging, deterministic preprocessing
-- 3D grid inducing points tiled across batches
-- Train or evaluate (counterfactual prediction), clean outputs to .h5ad
-
-Dataset expectations (as in original script):
-  X                : (N x G) or (G x N) → coerced to (N x G)
-  3D_pos_PT        : (3 x N_pt) or (N_pt x 3) → coerced and concatenated
-  3D_pos_sham      : (3 x N_sham) or (N_sham x 3)
-  Batch            : (N,) str — batch names (e.g., "PT...", "Sham...")
-  Celltype_coarse  : (N,) str — used to derive perturbation (ICA vs not)
-  Barcode          : (N,) str — optional (not used for modeling)
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -26,7 +7,7 @@ import logging
 import os
 from dataclasses import dataclass, asdict, replace
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, List
 
 import h5py
 import numpy as np
@@ -40,6 +21,14 @@ try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
     yaml = None
+
+# Optional W&B
+try:
+    import wandb  # type: ignore
+    _WANDB_AVAILABLE = True
+except Exception:
+    wandb = None
+    _WANDB_AVAILABLE = False
 
 from concert_batch_3D_stroke import CONCERT
 from preprocess import normalize, geneSelection
@@ -109,7 +98,7 @@ class RunConfigStroke3D:
     select_genes: int = 0
 
     # Training / runtime
-    stage: str = "train"   # {"train","eval"}; eval runs counterfactual after loading weights
+    stage: str = "train"   # {"train","eval"}
     batch_size: str = "auto"
     maxiter: int = 5000
     train_size: float = 0.95
@@ -141,7 +130,7 @@ class RunConfigStroke3D:
     inducing_point_steps: int = 6
     fixed_gp_params: bool = False
     loc_range: float = 60.0     # scales x & y
-    z_range: float = 20.0       # scales z
+    z_range: float = 20.0       # scales z for data only
     kernel_scale: float = 60.0
     allow_batch_kernel_scale: bool = False
 
@@ -153,15 +142,23 @@ class RunConfigStroke3D:
     device: str = "cuda"
     verbosity: int = 1
 
-    # Counterfactual selection & targeting
-    pert_cells: str = "./pert_cells/cells.txt"  # 1-based indices within the selected batch file
-    pert_batch: str = "Sham1"                   # which batch to target/subset for output
-    target_cell_perturbation: str = "ICA"       # map -> {ICA:1, else:0}
+    # Counterfactual
+    pert_cells: str = "./pert_cells/cells.txt"  # 1-based indices within selected batch
+    pert_batch: str = "Sham1"
+    target_cell_perturbation: str = "ICA"
 
-    # Output file adornments
-    final_latent_file: str = "final_latent.txt"        # optional (not saved by default)
-    denoised_counts_file: str = "denoised_counts.txt"  # optional (not saved by default)
+    # Outputs
+    final_latent_file: str = "final_latent.txt"
+    denoised_counts_file: str = "denoised_counts.txt"
     num_denoise_samples: int = 10000
+
+    # Inducing grid behavior
+    inducing_z_uses_loc_range: bool = True  # <<< important default to mirror old runner
+
+    # W&B
+    wandb_mode: Optional[str] = None      # "online" | "offline" | None
+    wandb_project: Optional[str] = None
+    wandb_run: Optional[str] = None
 
     # Config path
     config: Optional[str] = None
@@ -230,10 +227,16 @@ def per_batch_scale_positions_3d(pos3d: np.ndarray, batch_onehot: np.ndarray, lo
     return out.astype(np.float32)
 
 
-def build_inducing_grid3d_tiled(n_batch: int, steps: int, loc_range: float, z_range: float) -> np.ndarray:
+def build_inducing_grid3d_tiled(
+    n_batch: int,
+    steps: int,
+    loc_range: float,
+    z_range: float,
+    inducing_z_uses_loc_range: bool = True,
+) -> np.ndarray:
     """
     Build a (steps x steps x steps) 3D grid:
-      x,y ∈ [0, loc_range], z ∈ [0, z_range],
+      x,y ∈ [0, loc_range], z ∈ [0, {loc_range | z_range}],
     then tile across batches and append an (M_total x n_batch) one-hot.
     """
     eps = 1e-5
@@ -244,7 +247,11 @@ def build_inducing_grid3d_tiled(n_batch: int, steps: int, loc_range: float, z_ra
     ]
     grid = np.vstack((x.ravel(), y.ravel(), z.ravel())).T.astype(np.float32)
     grid[:, :2] *= float(loc_range)
-    grid[:, 2] *= float(z_range)
+    if inducing_z_uses_loc_range:
+        # IMPORTANT: mirror the old runner behavior (z scaled by loc_range)
+        grid[:, 2] *= float(loc_range)
+    else:
+        grid[:, 2] *= float(z_range)
 
     tiled_xyz = np.tile(grid, (n_batch, 1))
     onehots = []
@@ -288,22 +295,41 @@ def run(cfg: RunConfigStroke3D) -> None:
         X = X[:, important]
         np.savetxt(outdir / "selected_genes.txt", important, fmt="%d")
 
-    # Per-batch position scaling; append batch one-hot → (N, 3 + n_batch)
+    # Per-batch position scaling (data): x,y by loc_range; z by z_range
     pos3d_scaled = per_batch_scale_positions_3d(pos3d, batch_oh, cfg.loc_range, cfg.z_range)
+    # Append batch one-hot → (N, 3 + n_batch)
     pos3d_batched = np.concatenate([pos3d_scaled, batch_oh], axis=1).astype(np.float32)
 
     # Inducing points (3D grid tiled across batches)
     n_batch = batch_oh.shape[1]
     if cfg.grid_inducing_points:
-        inducing = build_inducing_grid3d_tiled(n_batch, cfg.inducing_point_steps, cfg.loc_range, cfg.z_range)
-        logging.info("Inducing points (3D grid tiled): %s", inducing.shape)
+        inducing = build_inducing_grid3d_tiled(
+            n_batch=n_batch,
+            steps=cfg.inducing_point_steps,
+            loc_range=cfg.loc_range,
+            z_range=cfg.z_range,
+            inducing_z_uses_loc_range=cfg.inducing_z_uses_loc_range,  # <<< key change
+        )
+        logging.info("Inducing points (3D grid tiled): %s  (z uses %s)",
+                     inducing.shape,
+                     "loc_range" if cfg.inducing_z_uses_loc_range else "z_range")
     else:
-        # For 3D, we stick with grid; k-means path intentionally omitted to match map-style scripts
         raise NotImplementedError("For 3D stroke, please use grid_inducing_points=true.")
 
     # AnnData + normalization
     adata = sc.AnnData(X, dtype="float32")
     adata = normalize(adata, size_factors=True, normalize_input=True, logtrans_input=True)
+
+    # W&B (optional)
+    wb_run = None
+    if _WANDB_AVAILABLE and cfg.wandb_mode:
+        wb_kwargs = dict(
+            project=cfg.wandb_project or "concert-3d",
+            name=cfg.wandb_run,
+            mode=cfg.wandb_mode,  # "online" or "offline"
+            config=asdict(cfg),
+        )
+        wb_run = wandb.init(**{k: v for k, v in wb_kwargs.items() if v is not None})
 
     # Model
     model = CONCERT(
@@ -353,8 +379,11 @@ def run(cfg: RunConfigStroke3D) -> None:
             patience=cfg.patience,
             save_model=True,
             model_weights=str(outdir / cfg.model_file),
+            wandb_run=wb_run,
         )
         logging.info("Training finished.")
+        if wb_run is not None:
+            wb_run.finish()
         return
 
     # ---- EVAL / COUNTERFACTUAL ----
@@ -369,7 +398,7 @@ def run(cfg: RunConfigStroke3D) -> None:
     batch_indices = np.where(batch_mask)[0]
     if batch_indices.size == 0:
         raise ValueError(f"No cells found for batch '{cfg.pert_batch}'.")
-    file_inds = np.loadtxt(cfg.pert_cells, dtype=int) - 1  # 0-based positions within that batch
+    file_inds = np.loadtxt(cfg.pert_cells, dtype=int) - 1  # 0-based within that batch
     if file_inds.ndim == 0:
         file_inds = np.array([int(file_inds)], dtype=int)
     if np.any((file_inds < 0) | (file_inds >= batch_indices.size)):
@@ -378,7 +407,7 @@ def run(cfg: RunConfigStroke3D) -> None:
     np.savetxt(outdir / f"stroke_3d_{cfg.pert_batch}_pert_ind.txt", pert_ind, fmt="%i")
 
     # Counterfactual prediction
-    target_code = int(pert_map.get(cfg.target_cell_perturbation, 0))
+    target_code = 1 if cfg.target_cell_perturbation == "ICA" else 0
     logging.info("Counterfactual → perturbation=%s (code=%d)", cfg.target_cell_perturbation, target_code)
     perturbed_counts, perturbed_atts = model.counterfactualPrediction(
         X=pos3d_batched,
@@ -395,10 +424,13 @@ def run(cfg: RunConfigStroke3D) -> None:
     ad_out = ad_out[ad_out.obs["batch"].str.startswith("Sham"), :]
     out_path = (
         Path(cfg.outdir)
-        / f"res_stroke3d_perturb_{cfg.pert_batch}_ks{cfg.kernel_scale}_zr{cfg.z_range}_is{cfg.inducing_point_steps}_counts.h5ad"
+        / f"res_stroke3d_perturb_{cfg.project_index}_counts.h5ad"
     )
     ad_out.write(out_path)
     logging.info("Wrote counterfactual counts to %s", out_path)
+
+    if wb_run is not None:
+        wb_run.finish()
 
 
 # -----------------------------------------------------------------------------
@@ -460,6 +492,7 @@ def parse_args() -> RunConfigStroke3D:
     p.add_argument("--kernel_scale", type=float)
     p.add_argument("--allow_batch_kernel_scale", type=str2bool)
     p.add_argument("--shared_dispersion", type=str2bool)
+    p.add_argument("--inducing_z_uses_loc_range", type=str2bool)
 
     # persistence / device
     p.add_argument("--model_file")
@@ -471,6 +504,11 @@ def parse_args() -> RunConfigStroke3D:
     p.add_argument("--pert_batch")
     p.add_argument("--target_cell_perturbation")
 
+    # W&B (explicit flags; no ambiguous --wandb)
+    p.add_argument("--wandb_mode", choices=["online", "offline"])
+    p.add_argument("--wandb_project")
+    p.add_argument("--wandb_run")
+
     a = p.parse_args()
 
     # 1) defaults
@@ -479,9 +517,9 @@ def parse_args() -> RunConfigStroke3D:
     # 2) merge config file
     file_cfg = load_config_file(getattr(a, "config", None)) if getattr(a, "config", None) else {}
     if file_cfg:
-        for k in ("encoder_layers", "decoder_layers"):
+        for k in ("encoder_layers", "decoder_layers", "wandb_tags"):
             if k in file_cfg and isinstance(file_cfg[k], list):
-                file_cfg[k] = tuple(file_cfg[k])
+                file_cfg[k] = tuple(file_cfg[k]) if k != "wandb_tags" else file_cfg[k]
         cfg = replace(cfg, **{k: v for k, v in file_cfg.items() if hasattr(cfg, k)})
 
     # 3) apply ONLY explicit CLI overrides (don’t clobber YAML with argparse defaults)

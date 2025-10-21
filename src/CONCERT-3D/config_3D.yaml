@@ -6,10 +6,11 @@ encoder_layers: [256, 64]
 decoder_layers: [64, 256]
 GP_dim: 2
 Normal_dim: 8
-z_range: 20
+z_range: 60
 kernel_scale: 60
 loc_range: 60
-lr: 0.0002
+allow_batch_kernel_scale: true
+lr: 0.0001
 maxiter: 3000
 patience: 200
 pert_cells: "pert_cells/pert_cells_stroke_sham1_CIA.txt"

@@ -18,7 +18,7 @@ python src/run_concert_map.py \
   --wandb_run train
 </pre>
   
-3. **conduct counterfactual prediction**:
+2. **conduct counterfactual prediction**:
 <pre>
 python src/run_concert_map.py  \
   --config src/config.yaml \
@@ -33,7 +33,7 @@ python src/run_concert_map.py  \
   --target_cell_perturbation Ifngr2
    </pre>
  
-5. **conduct imputation + CP**:  
+3. **conduct imputation + CP**:  
 <pre>
 python src/run_concert_map_impute.py \
   --config src/config_impute.yaml \

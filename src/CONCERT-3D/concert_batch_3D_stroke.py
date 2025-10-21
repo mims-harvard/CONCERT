@@ -17,15 +17,40 @@ try:
 except Exception:  # pragma: no cover
     wandb = None
 
-from SVGP_Batch_3d import SVGP
+from SVGP_Batch_3D import SVGP
 from I_PID import PIDControl
 from VAE_utils import MeanAct, NBLoss, buildNetwork, DenseEncoder, gauss_cross_entropy
-from lord_batch import Lord_encoder
+from lord_batch import LordEncoder
 
+_EPS = 1e-8
+_MAX_VAR = 1e6
+_MAX_EXP_CLAMP = 15.0
 
 # ---------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------
+
+def _finite_or_zero(t: torch.Tensor, name: str) -> torch.Tensor:
+    if not torch.is_tensor(t):
+        return t
+    bad = ~torch.isfinite(t)
+    if bad.any():
+        # zero-out bad entries but keep shapes/grad; also log once per call site
+        with torch.no_grad():
+            t = t.clone()
+            t[bad] = 0.0
+        print(f"[WARN] non-finite values in {name}: count={int(bad.sum())}")
+    return t
+
+def _safe_var(raw: torch.Tensor) -> torch.Tensor:
+    # softplus -> strictly positive; add epsilon
+    v = torch.nn.functional.softplus(raw)
+    return torch.clamp(v, min=1e-8, max=1e6)
+
+def _safe_sqrt(v: torch.Tensor) -> torch.Tensor:
+    v = torch.clamp(v, min=1e-8, max=1e6)
+    return torch.sqrt(v)
+
 def _unknown_attribute_penalty(latent_unknown: torch.Tensor) -> torch.Tensor:
     """Quadratic penalty to keep basal (unknown) attributes small."""
     return torch.sum(latent_unknown**2, dim=1).mean()
@@ -119,7 +144,7 @@ class CONCERT(nn.Module):
             fixed_gp_params=fixed_gp_params,
             kernel_scale=([kernel_scale] * n_batch) if allow_batch_kernel_scale and np.isscalar(kernel_scale) else kernel_scale,
             allow_batch_kernel_scale=bool(allow_batch_kernel_scale),
-            jitter=1e-6,
+            jitter=1e-6,  # <<< match old stable jitter
             N_train=N_train,
             dtype=dtype,
             device=device,
@@ -142,7 +167,7 @@ class CONCERT(nn.Module):
         self.shared_dispersion = bool(shared_dispersion)
 
         # LORD encoder: attributes = ["perturbation"(categorical)]
-        self.lord_encoder = Lord_encoder(
+        self.lord_encoder = LordEncoder(
             embedding_dim=[128, 128],
             num_genes=self.num_genes,
             labels=cell_atts,
@@ -166,7 +191,7 @@ class CONCERT(nn.Module):
 
         # NB dispersion
         if self.shared_dispersion:
-            self.dec_disp = nn.Parameter(torch.randn(self.num_genes), requires_grad=True)
+            self.dec_disp = nn.Parameter(torch.randn(self.num_genes), requires_grad=True)  # <<< match old init
         else:
             self.dec_disp = nn.Parameter(torch.randn(self.num_genes, self.n_batch), requires_grad=True)
 
@@ -175,9 +200,13 @@ class CONCERT(nn.Module):
         self.mse = nn.MSELoss(reduction="mean")
         self.to(device)
 
-    # -------------------------
-    # Persistence
-    # -------------------------
+    @staticmethod
+    def _gauss_cross_entropy(m_p: torch.Tensor, v_p: torch.Tensor, m_q: torch.Tensor, v_q: torch.Tensor) -> torch.Tensor:
+        """Cross-entropy of diagonal Gaussians N_p || N_q (elementwise)."""
+        v_q = torch.clamp(v_q, min=_EPS, max=_MAX_VAR)
+        term = 0.5 * (torch.log(2 * math.pi * v_q) + (v_p + (m_p - m_q) ** 2) / v_q)
+        return torch.sum(term, dim=-1)
+    
     def save_model(self, path: str) -> None:
         torch.save(self.state_dict(), path)
 
@@ -186,66 +215,81 @@ class CONCERT(nn.Module):
         filtered = {k: v for k, v in state.items() if k in self.state_dict()}
         self.load_state_dict({**self.state_dict(), **filtered})
 
-    # -------------------------
-    # Forward
-    # -------------------------
     def forward(
         self,
         *,
-        x: torch.Tensor,               # (N, 3 + n_batch) positions with batch one-hot appended
-        y: torch.Tensor,               # normalized counts
-        batch: torch.Tensor,           # (N, n_batch) one-hot
-        raw_y: torch.Tensor,           # raw counts
-        sample_index: torch.Tensor,    # indices for LORD
-        cell_atts: torch.Tensor,       # [perturb_code]
-        size_factors: torch.Tensor,    # NB scale factors
+        x: torch.Tensor,
+        y: torch.Tensor,
+        batch: torch.Tensor,
+        raw_y: torch.Tensor,
+        sample_index: torch.Tensor,
+        cell_atts: torch.Tensor,
+        size_factors: torch.Tensor,
         num_samples: int = 1,
+        sanitize: bool = True,
     ):
         self.train()
         bsz = y.shape[0]
 
-        # LORD latent → encoder
         lord = self.lord_encoder.predict(sample_indices=sample_index, labels=cell_atts, batch_size=bsz)
         y_ = lord["total_latent"]
-        q_mu, q_var = self.encoder(y_)
+        if sanitize:
+            y_ = _finite_or_zero(y_, "lord.total_latent")
+
+        q_mu, q_var_raw = self.encoder(y_)
+        if sanitize:
+            q_mu = _finite_or_zero(q_mu, "enc.mu")
+            q_var_raw = _finite_or_zero(q_var_raw, "enc.var_raw")
+
+        q_var = torch.nn.functional.softplus(q_var_raw) + 1e-8
+        if sanitize:
+            q_var = torch.clamp(q_var, min=1e-8, max=1e6)
 
         gp_mu, gp_var = q_mu[:, : self.GP_dim], q_var[:, : self.GP_dim]
         gs_mu, gs_var = q_mu[:, self.GP_dim :], q_var[:, self.GP_dim :]
+        if sanitize:
+            gp_mu = _finite_or_zero(gp_mu, "gp_mu")
+            gp_var = _finite_or_zero(gp_var, "gp_var")
+            gs_mu = _finite_or_zero(gs_mu, "gs_mu")
+            gs_var = _finite_or_zero(gs_var, "gs_var")
 
         inside_elbo_recon, inside_elbo_kl = [], []
-        gp_p_m, gp_p_v = [], []
+        gp_p_m_list, gp_p_v_list = [], []
         for l in range(self.GP_dim):
-            p_m_l, p_v_l, mu_hat_l, A_hat_l = self.svgp.approximate_posterior_params(x, x, gp_mu[:, l], gp_var[:, l])
-            rec_l, kl_l = self.svgp.variational_loss(x=x, y=gp_mu[:, l], noise=gp_var[:, l], mu_hat=mu_hat_l, A_hat=A_hat_l)
+            noise_l = torch.clamp(gp_var[:, l], min=1e-6, max=1e6)
+            p_m_l, p_v_l, mu_hat_l, A_hat_l = self.svgp.approximate_posterior_params(
+                index_points_test=x, index_points_train=x, y=gp_mu[:, l], noise=noise_l
+            )
+            rec_l, kl_l = self.svgp.variational_loss(
+                x=x, y=gp_mu[:, l], noise=noise_l, mu_hat=mu_hat_l, A_hat=A_hat_l
+            )
+            gp_p_m_list.append(p_m_l)
+            gp_p_v_list.append(p_v_l)
             inside_elbo_recon.append(rec_l)
             inside_elbo_kl.append(kl_l)
-            gp_p_m.append(p_m_l)
-            gp_p_v.append(p_v_l)
 
         inside_elbo_recon = torch.sum(torch.stack(inside_elbo_recon, dim=-1))
         inside_elbo_kl = torch.sum(torch.stack(inside_elbo_kl, dim=-1))
         inside_elbo = inside_elbo_recon - (bsz / self.svgp.N_train) * inside_elbo_kl
 
-        gp_p_m = torch.stack(gp_p_m, dim=1)
-        gp_p_v = torch.stack(gp_p_v, dim=1)
+        gp_p_m = torch.stack(gp_p_m_list, dim=1)
+        gp_p_v = torch.stack(gp_p_v_list, dim=1)
 
-        # KL terms
-        gp_ce_term = gauss_cross_entropy(gp_p_m, gp_p_v, gp_mu, gp_var).sum()
+        gp_ce_term = torch.sum(self._gauss_cross_entropy(gp_p_m, gp_p_v, gp_mu, gp_var))
         gp_KL_term = gp_ce_term - inside_elbo
 
         prior = Normal(torch.zeros_like(gs_mu), torch.ones_like(gs_var))
-        post = Normal(gs_mu, torch.sqrt(gs_var))
+        post = Normal(gs_mu, torch.sqrt(torch.clamp(gs_var, min=1e-8)))
         gaussian_KL_term = kl_divergence(post, prior).sum()
 
-        # Decoder sampling
         p_m = torch.cat([gp_p_m, gs_mu], dim=1)
         p_v = torch.cat([gp_p_v, gs_var], dim=1)
-        latent_dist = Normal(p_m, torch.sqrt(p_v))
+        if sanitize:
+            p_m = _finite_or_zero(torch.nan_to_num(p_m, nan=0.0, posinf=0.0, neginf=0.0), "p_m")
+            p_v = _finite_or_zero(torch.nan_to_num(p_v, nan=1e-8, posinf=1e6, neginf=1e-8), "p_v")
+        latent_dist = Normal(p_m, torch.sqrt(torch.clamp(p_v, min=1e-8)))
 
         recon_nb, recon_mse = 0.0, 0.0
-        mean_samples: List[torch.Tensor] = []
-        disp_samples: List[torch.Tensor] = []
-
         for _ in range(max(1, num_samples)):
             z = latent_dist.rsample()
             h = self.decoder(z)
@@ -253,43 +297,19 @@ class CONCERT(nn.Module):
             if self.shared_dispersion:
                 disp = torch.exp(torch.clamp(self.dec_disp, -15.0, 15.0)).unsqueeze(0).expand_as(mu)
             else:
-                # per-batch dispersion: (G, B) · (N, B)^T → (N, G)
                 disp = torch.exp(torch.clamp(torch.matmul(self.dec_disp, batch.T), -15.0, 15.0)).T
+            recon_nb += self.NB_loss(x=raw_y, mean=mu, disp=disp, scale_factor=size_factors)
+            recon_mse += self.mse(mu, raw_y)
 
-            mean_samples.append(mu)
-            disp_samples.append(disp)
-            recon_nb = recon_nb + self.NB_loss(x=raw_y, mean=mu, disp=disp, scale_factor=size_factors)
-            recon_mse = recon_mse + self.mse(mu, raw_y)
+        recon_nb /= max(1, num_samples)
+        recon_mse /= max(1, num_samples)
 
-        recon_nb = recon_nb / max(1, num_samples)
-        recon_mse = recon_mse / max(1, num_samples)
-
-        # LORD penalty
         unknown_pen = _unknown_attribute_penalty(lord["basal_latent"])
         lord_loss = unknown_pen + recon_mse
 
         elbo = recon_nb + self.beta * (gp_KL_term + gaussian_KL_term) + lord_loss
 
-        return (
-            elbo,
-            recon_nb,
-            gp_KL_term,
-            gaussian_KL_term,
-            inside_elbo,
-            gp_ce_term,
-            gp_p_m,
-            gp_p_v,
-            q_mu,
-            q_var,
-            mean_samples,
-            disp_samples,
-            inside_elbo_recon,
-            inside_elbo_kl,
-            None,  # latent_samples (omit to save memory)
-            torch.tensor(0.0, device=self.device),  # noise_reg placeholder
-            unknown_pen,
-            recon_mse,
-        )
+        return elbo, recon_nb, gp_KL_term, gaussian_KL_term, unknown_pen, recon_mse
 
     # -------------------------
     # Batch helpers
@@ -314,6 +334,9 @@ class CONCERT(nn.Module):
             lord = self.lord_encoder.predict(sample_indices=si, batch_size=xb.shape[0], labels=ca)
             y_ = lord["total_latent"]
             q_mu, q_var = self.encoder(y_)
+            # >>> conditional softplus
+            if torch.any(q_var < 0):
+                q_var = F.softplus(q_var) + 1e-8
 
             gp_mu, gp_var = q_mu[:, : self.GP_dim], q_var[:, : self.GP_dim]
             gs_mu = q_mu[:, self.GP_dim :]
@@ -349,6 +372,9 @@ class CONCERT(nn.Module):
             lord = self.lord_encoder.predict(sample_indices=si, batch_size=xb.shape[0], labels=ca)
             y_ = lord["total_latent"]
             q_mu, q_var = self.encoder(y_)
+            # >>> conditional softplus
+            if torch.any(q_var < 0):
+                q_var = F.softplus(q_var) + 1e-8
 
             gp_mu, gp_var = q_mu[:, : self.GP_dim], q_var[:, : self.GP_dim]
             gs_mu, gs_var = q_mu[:, self.GP_dim :], q_var[:, self.GP_dim :]
@@ -363,7 +389,7 @@ class CONCERT(nn.Module):
 
             p_m = torch.cat([gp_p_m, gs_mu], dim=1)
             p_v = torch.cat([gp_p_v, gs_var], dim=1)
-            dist = Normal(p_m, torch.sqrt(p_v))
+            dist = Normal(p_m, torch.sqrt(torch.clamp(p_v, min=1e-8)))  # <<< clamp
 
             mu_stack = []
             for _ in range(max(1, n_samples)):
@@ -387,7 +413,7 @@ class CONCERT(nn.Module):
         return torch.cat(outs, dim=0).numpy()
 
     @torch.no_grad()
-    def batching_predict_samples(
+    def imputation(
         self,
         X_test: np.ndarray,
         X_train: np.ndarray,
@@ -417,6 +443,9 @@ class CONCERT(nn.Module):
             lord = self.lord_encoder.predict(sample_indices=si, batch_size=ca.shape[0], labels=ca)
             y_ = lord["total_latent"]
             m, v = self.encoder(y_)
+            # >>> conditional softplus
+            if torch.any(v < 0):
+                v = F.softplus(v) + 1e-8
             q_mu_all.append(m)
             q_var_all.append(v)
         q_mu = torch.cat(q_mu_all, dim=0)
@@ -450,7 +479,7 @@ class CONCERT(nn.Module):
             p_v = torch.cat([gp_p_v, gs_var], dim=1)
             latents_out.append(p_m.cpu())
 
-            dist = Normal(p_m, torch.sqrt(p_v))
+            dist = Normal(p_m, torch.sqrt(torch.clamp(p_v, min=1e-8)))  # <<< clamp
             mu_stack = []
             for _ in range(max(1, n_samples)):
                 z = dist.sample()
@@ -460,14 +489,11 @@ class CONCERT(nn.Module):
 
         return torch.cat(latents_out, dim=0).numpy(), torch.cat(means_out, dim=0).numpy()
 
-    # -------------------------
-    # Training (concert_map style: logs, early stop, optional wandb)
-    # -------------------------
     def train_model(
         self,
         *,
-        pos: np.ndarray,                    # (N, 3 + n_batch)
-        batch: np.ndarray,                  # (N, n_batch) one-hot
+        pos: np.ndarray,
+        batch: np.ndarray,
         ncounts: np.ndarray,
         raw_counts: np.ndarray,
         size_factors: np.ndarray,
@@ -481,12 +507,13 @@ class CONCERT(nn.Module):
         save_model: bool = True,
         model_weights: str = "model.pt",
         print_kernel_scale: bool = True,
-        # logging hooks
         log_fn: Optional[Callable[[dict, int], None]] = None,
         wandb_run: Optional[object] = None,
         report_every: int = 50,
+        nan_policy: str = "skip",
+        lr_backoff: float = 0.8,
+        max_skips_per_epoch: int = 3,
     ) -> None:
-        """Train with early stopping on validation ELBO; periodic kernel-scale reporting."""
         self.train()
 
         dataset = TensorDataset(
@@ -499,7 +526,6 @@ class CONCERT(nn.Module):
             torch.tensor(batch, dtype=self.dtype),
         )
 
-        # split
         if train_size < 1.0:
             train_set, val_set = random_split(dataset=dataset, lengths=[train_size, 1.0 - train_size])
             val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True, drop_last=False)
@@ -511,13 +537,13 @@ class CONCERT(nn.Module):
         train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=drop_last)
 
         early = EarlyStopping(patience=patience, modelfile=model_weights)
-        optim = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, weight_decay=weight_decay)
-
+        opt = torch.optim.AdamW(filter(lambda p: p.requires_grad, self.parameters()), lr=lr, weight_decay=weight_decay)
         q = deque([], maxlen=10)
+
         logging.info("Training...")
         for epoch in range(maxiter):
             stats = dict(elbo=0.0, nb=0.0, gp_kl=0.0, g_kl=0.0, mse=0.0, basal=0.0)
-            n_seen = 0
+            n_seen, n_skips = 0, 0
 
             for xb, yb, yr, sf, si, ca, b_oh in train_loader:
                 xb = xb.to(self.device)
@@ -528,24 +554,48 @@ class CONCERT(nn.Module):
                 ca = ca.to(self.device, dtype=torch.int)
                 b_oh = b_oh.to(self.device)
 
-                (
-                    elbo, nb, gpkl, gskl, inside_elbo, gp_ce, p_m, p_v, q_mu, q_var,
-                    mean_s, disp_s, rec_in, kl_in, _, noise_reg, unknown_pen, mse
-                ) = self.forward(
-                    x=xb,
-                    y=yb,
-                    batch=b_oh,
-                    raw_y=yr,
-                    sample_index=si,
-                    cell_atts=ca,
-                    size_factors=sf,
-                    num_samples=num_samples,
-                )
+                try:
+                    elbo, nb, gpkl, gskl, unknown_pen, mse = self.forward(
+                        x=xb, y=yb, batch=b_oh, raw_y=yr,
+                        sample_index=si, cell_atts=ca, size_factors=sf,
+                        num_samples=num_samples, sanitize=False
+                    )
+                except Exception as e:
+                    if nan_policy == "raise":
+                        raise
+                    logging.warning(f"[epoch {epoch+1}] forward failed ({e}); skipping batch.")
+                    n_skips += 1
+                    continue
+
+                scalars = [elbo, nb, gpkl, gskl, mse, unknown_pen]
+                if any([not torch.isfinite(t).all() for t in scalars]):
+                    if nan_policy == "raise":
+                        raise RuntimeError("Non-finite loss terms")
+                    logging.warning(f"[epoch {epoch+1}] non-finite loss terms; skipping batch.")
+                    n_skips += 1
+                    continue
 
                 self.zero_grad(set_to_none=True)
-                elbo.backward(retain_graph=True)
+                elbo.backward()
+
+                bad_grad = any(
+                    p.grad is not None and not torch.isfinite(p.grad).all()
+                    for p in self.parameters()
+                )
+                if bad_grad:
+                    if nan_policy == "raise":
+                        raise RuntimeError("Non-finite gradients")
+                    logging.warning(f"[epoch {epoch+1}] non-finite grads; skipping optimizer step.")
+                    self.zero_grad(set_to_none=True)
+                    n_skips += 1
+                    continue
+
                 torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
-                optim.step()
+                opt.step()
+
+                if hasattr(self.svgp, "kernel") and hasattr(self.svgp.kernel, "scale"):
+                    with torch.no_grad():
+                        self.svgp.kernel.scale.data.clamp_(min=1e-6, max=1e6)
 
                 stats["elbo"] += float(elbo.item())
                 stats["nb"] += float(nb.item())
@@ -555,30 +605,25 @@ class CONCERT(nn.Module):
                 stats["basal"] += float(unknown_pen.item())
                 n_seen += xb.shape[0]
 
-                # PID beta update
                 if self.dynamicVAE:
                     KL_val = (gpkl.item() + gskl.item()) / max(1, xb.shape[0])
                     q.append(KL_val)
                     avg_KL = float(np.mean(q))
                     self.beta, _ = self.PID.pid(self.KL_loss_target * (self.GP_dim + self.Normal_dim), avg_KL)
 
-            # normalize stats
-            for k in list(stats.keys()):
+            if n_skips > max_skips_per_epoch:
+                for g in opt.param_groups:
+                    g["lr"] *= lr_backoff
+                logging.warning(f"[epoch {epoch+1}] skipped {n_skips} batches → LR backoff to {opt.param_groups[0]['lr']:.3g}")
+
+            for k in stats:
                 stats[k] /= max(1, n_seen)
 
             logging.info(
-                "Epoch %4d | ELBO %.6f | NB %.6f | GP_KL %.6f | G_KL %.6f | MSE %.6f | Basal %.6f | beta %.4f",
-                epoch + 1,
-                stats["elbo"],
-                stats["nb"],
-                stats["gp_kl"],
-                stats["g_kl"],
-                stats["mse"],
-                stats["basal"],
-                self.beta,
+                "Epoch %4d | ELBO %.6f | NB %.6f | GP_KL %.6f | G_KL %.6f | MSE %.6f | Basal %.6f | beta %.4f | skipped %d",
+                epoch + 1, stats["elbo"], stats["nb"], stats["gp_kl"], stats["g_kl"], stats["mse"], stats["basal"], self.beta, n_skips
             )
 
-            # Periodic kernel-scale report
             if print_kernel_scale and report_every > 0 and ((epoch + 1) % report_every == 0 or epoch == 0):
                 try:
                     scale = getattr(self.svgp.kernel, "scale", None)
@@ -590,67 +635,48 @@ class CONCERT(nn.Module):
                             logging.info("[epoch %d] Kernel scales by batch:", epoch + 1)
                             for i, row in enumerate(s_np):
                                 logging.info("  • batch=%d | scale=%s", i, np.array2string(row, precision=4))
-                except Exception:  # pragma: no cover
+                except Exception:
                     pass
 
-            # Optional logging
             if log_fn is not None:
                 log_fn(
-                    {
-                        "train/elbo": stats["elbo"],
-                        "train/nb": stats["nb"],
-                        "train/gp_kl": stats["gp_kl"],
-                        "train/gauss_kl": stats["g_kl"],
-                        "train/mse": stats["mse"],
-                        "train/basal": stats["basal"],
-                        "train/beta": float(self.beta),
-                    },
+                    {"train/elbo": stats["elbo"], "train/nb": stats["nb"], "train/gp_kl": stats["gp_kl"],
+                    "train/gauss_kl": stats["g_kl"], "train/mse": stats["mse"], "train/basal": stats["basal"],
+                    "train/beta": float(self.beta), "train/skips": n_skips},
                     step=epoch + 1,
                 )
             elif (wandb is not None) and (wandb_run is not None):
                 try:
                     wandb_run.log(
-                        {
-                            "train/elbo": stats["elbo"],
-                            "train/nb": stats["nb"],
-                            "train/gp_kl": stats["gp_kl"],
-                            "train/gauss_kl": stats["g_kl"],
-                            "train/mse": stats["mse"],
-                            "train/basal": stats["basal"],
-                            "train/beta": float(self.beta),
-                        },
+                        {"train/elbo": stats["elbo"], "train/nb": stats["nb"], "train/gp_kl": stats["gp_kl"],
+                        "train/gauss_kl": stats["g_kl"], "train/mse": stats["mse"], "train/basal": stats["basal"],
+                        "train/beta": float(self.beta), "train/skips": n_skips},
                         step=epoch + 1,
                     )
                 except Exception:
                     pass
 
-            # Validation
             if val_loader is not None:
                 val_elbo, val_n = 0.0, 0
-                for xb, yb, yr, sf, si, ca, b_oh in val_loader:
-                    xb = xb.to(self.device)
-                    yb = yb.to(self.device)
-                    yr = yr.to(self.device)
-                    sf = sf.to(self.device)
-                    si = si.to(self.device, dtype=torch.int)
-                    ca = ca.to(self.device, dtype=torch.int)
-                    b_oh = b_oh.to(self.device)
-
-                    velbo, *_ = self.forward(
-                        x=xb,
-                        y=yb,
-                        batch=b_oh,
-                        raw_y=yr,
-                        sample_index=si,
-                        cell_atts=ca,
-                        size_factors=sf,
-                        num_samples=num_samples,
-                    )
-                    val_elbo += float(velbo.item())
-                    val_n += xb.shape[0]
+                with torch.no_grad():
+                    for xb, yb, yr, sf, si, ca, b_oh in val_loader:
+                        xb = xb.to(self.device)
+                        yb = yb.to(self.device)
+                        yr = yr.to(self.device)
+                        sf = sf.to(self.device)
+                        si = si.to(self.device, dtype=torch.int)
+                        ca = ca.to(self.device, dtype=torch.int)
+                        b_oh = b_oh.to(self.device)
+                        velbo, *_rest = self.forward(
+                            x=xb, y=yb, batch=b_oh, raw_y=yr,
+                            sample_index=si, cell_atts=ca, size_factors=sf,
+                            num_samples=num_samples, sanitize=True
+                        )
+                        if torch.isfinite(velbo).all():
+                            val_elbo += float(velbo.item())
+                            val_n += xb.shape[0]
                 val_elbo /= max(1, val_n)
                 logging.info("          | Val ELBO %.6f", val_elbo)
-
                 if log_fn is not None:
                     log_fn({"val/elbo": val_elbo}, step=epoch + 1)
                 elif (wandb is not None) and (wandb_run is not None):
@@ -668,9 +694,6 @@ class CONCERT(nn.Module):
             torch.save(self.state_dict(), model_weights)
             logging.info("Saved weights to %s", model_weights)
 
-    # -------------------------
-    # Counterfactual prediction
-    # -------------------------
     @torch.no_grad()
     def counterfactualPrediction(
         self,
@@ -683,7 +706,7 @@ class CONCERT(nn.Module):
         n_samples: int = 1,
         batch_size: int = 512,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Counterfactual counts after modifying selected cells' perturbation."""
+        """Counterfactual counts after modifying selected cells' perturbation, with robust NaN/Inf scrubbing."""
         self.eval()
 
         X_t = torch.tensor(X, dtype=self.dtype)
@@ -705,27 +728,51 @@ class CONCERT(nn.Module):
             ca = atts_t[b * batch_size : min((b + 1) * batch_size, N)].to(self.device, dtype=torch.int)
 
             lord = self.lord_encoder.predict(sample_indices=si, batch_size=xb.shape[0], labels=ca)
-            y_ = lord["total_latent"]
+            y_ = _finite_or_zero(lord["total_latent"], "cf.lord.total_latent")
+
             q_mu, q_var = self.encoder(y_)
+            q_mu  = _finite_or_zero(q_mu,  "cf.enc.mu")
+            q_var = _finite_or_zero(q_var, "cf.enc.var")
+            if torch.any(q_var < 0):
+                q_var = F.softplus(q_var) + 1e-8
+            q_var = torch.clamp(q_var, min=1e-8, max=1e6)
 
             gp_mu, gp_var = q_mu[:, : self.GP_dim], q_var[:, : self.GP_dim]
             gs_mu, gs_var = q_mu[:, self.GP_dim :], q_var[:, self.GP_dim :]
 
+            gp_mu  = _finite_or_zero(gp_mu,  "cf.gp_mu")
+            gp_var = _finite_or_zero(gp_var, "cf.gp_var")
+            gs_mu  = _finite_or_zero(gs_mu,  "cf.gs_mu")
+            gs_var = _finite_or_zero(gs_var, "cf.gs_var")
+
             gp_p_m, gp_p_v = [], []
             for l in range(self.GP_dim):
-                m_l, v_l, _, _ = self.svgp.approximate_posterior_params(xb, xb, gp_mu[:, l], gp_var[:, l])
+                noise_l = torch.clamp(gp_var[:, l], min=1e-6, max=1e6)
+                m_l, v_l, _, _ = self.svgp.approximate_posterior_params(xb, xb, gp_mu[:, l], noise_l)
+                m_l = _finite_or_zero(torch.nan_to_num(m_l, nan=0.0, posinf=0.0, neginf=0.0), f"cf.gp_p_m[{l}]")
+                v_l = _finite_or_zero(torch.nan_to_num(v_l, nan=1e-6, posinf=1e6, neginf=1e-6), f"cf.gp_p_v[{l}]")
+                v_l = torch.clamp(v_l, min=1e-8, max=1e6)
                 gp_p_m.append(m_l)
                 gp_p_v.append(v_l)
+
             gp_p_m = torch.stack(gp_p_m, dim=1)
             gp_p_v = torch.stack(gp_p_v, dim=1)
+            gp_p_m = _finite_or_zero(torch.nan_to_num(gp_p_m, nan=0.0, posinf=0.0, neginf=0.0), "cf.gp_p_m.stack")
+            gp_p_v = _finite_or_zero(torch.nan_to_num(gp_p_v, nan=1e-6, posinf=1e6, neginf=1e-6), "cf.gp_p_v.stack")
+            gp_p_v = torch.clamp(gp_p_v, min=1e-8, max=1e6)
 
             p_m = torch.cat([gp_p_m, gs_mu], dim=1)
             p_v = torch.cat([gp_p_v, gs_var], dim=1)
+
+            p_m = _finite_or_zero(torch.nan_to_num(p_m, nan=0.0, posinf=0.0, neginf=0.0), "cf.p_m")
+            p_v = _finite_or_zero(torch.nan_to_num(p_v, nan=1e-6, posinf=1e6, neginf=1e-6), "cf.p_v")
+            p_v = torch.clamp(p_v, min=1e-8, max=1e6)
+
             dist = Normal(p_m, torch.sqrt(p_v))
 
             mu_stack = []
             for _ in range(max(1, n_samples)):
-                z = dist.sample()
+                z = dist.rsample()
                 h = self.decoder(z)
                 mu_stack.append(self.dec_mean(h))
             means.append(torch.stack(mu_stack, dim=0).mean(dim=0).cpu())
@@ -733,7 +780,7 @@ class CONCERT(nn.Module):
         return torch.cat(means, dim=0).numpy(), pert_atts
 
     @torch.no_grad()
-    def batching_predict_samples_cp(
+    def CounterfactualImputation(
         self,
         X_test: np.ndarray,
         X_train: np.ndarray,
@@ -745,10 +792,9 @@ class CONCERT(nn.Module):
         n_samples: int = 1,
         batch_size: int = 512,
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Counterfactual imputation at NEW coordinates (like batching_predict_samples + CF edits)."""
+        """Counterfactual imputation at NEW coordinates with full NaN/Inf scrubbing."""
         self.eval()
 
-        # Apply counterfactual edits on the training attributes used for Gaussian block NN
         pert_atts = np.array(Y_cell_atts, copy=True)
         if perturb_cell_id is not None and target_cell_perturbation is not None:
             for i in np.asarray(perturb_cell_id).tolist():
@@ -759,7 +805,6 @@ class CONCERT(nn.Module):
         atts_tr = torch.tensor(pert_atts, dtype=torch.int)
         idx_tr = torch.tensor(Y_sample_index, dtype=torch.int)
 
-        # Precompute q on train (with edited attributes)
         q_mu_all, q_var_all = [], []
         N_tr = X_tr.shape[0]
         n_tr_batches = int(math.ceil(N_tr / batch_size))
@@ -767,8 +812,13 @@ class CONCERT(nn.Module):
             ca = atts_tr[b * batch_size : min((b + 1) * batch_size, N_tr)].to(self.device, dtype=torch.int)
             si = idx_tr[b * batch_size : min((b + 1) * batch_size, N_tr)].to(self.device, dtype=torch.int)
             lord = self.lord_encoder.predict(sample_indices=si, batch_size=ca.shape[0], labels=ca)
-            y_ = lord["total_latent"]
+            y_ = _finite_or_zero(lord["total_latent"], "cfi.lord.total_latent")
             m, v = self.encoder(y_)
+            m = _finite_or_zero(m, "cfi.enc.mu")
+            v = _finite_or_zero(v, "cfi.enc.var")
+            if torch.any(v < 0):
+                v = F.softplus(v) + 1e-8
+            v = torch.clamp(v, min=1e-8, max=1e6)
             q_mu_all.append(m)
             q_var_all.append(v)
         q_mu = torch.cat(q_mu_all, dim=0)
@@ -793,16 +843,26 @@ class CONCERT(nn.Module):
 
             gp_p_m, gp_p_v = [], []
             for l in range(self.GP_dim):
+                noise_l = torch.clamp(gp_var_tr[:, l], min=1e-6, max=1e6)
                 m_l, v_l, _, _ = self.svgp.approximate_posterior_params(
-                    index_points_test=x_te_b, index_points_train=X_tr, y=gp_mu_tr[:, l], noise=gp_var_tr[:, l]
+                    index_points_test=x_te_b, index_points_train=X_tr, y=gp_mu_tr[:, l], noise=noise_l
                 )
+                m_l = _finite_or_zero(torch.nan_to_num(m_l, nan=0.0, posinf=0.0, neginf=0.0), f"cfi.gp_p_m[{l}]")
+                v_l = _finite_or_zero(torch.nan_to_num(v_l, nan=1e-6, posinf=1e6, neginf=1e-6), f"cfi.gp_p_v[{l}]")
+                v_l = torch.clamp(v_l, min=1e-8, max=1e6)
                 gp_p_m.append(m_l)
                 gp_p_v.append(v_l)
             gp_p_m = torch.stack(gp_p_m, dim=1)
             gp_p_v = torch.stack(gp_p_v, dim=1)
+            gp_p_m = _finite_or_zero(torch.nan_to_num(gp_p_m, nan=0.0, posinf=0.0, neginf=0.0), "cfi.gp_p_m.stack")
+            gp_p_v = _finite_or_zero(torch.nan_to_num(gp_p_v, nan=1e-6, posinf=1e6, neginf=1e-6), "cfi.gp_p_v.stack")
 
             p_m = torch.cat([gp_p_m, gs_mu], dim=1)
             p_v = torch.cat([gp_p_v, gs_var], dim=1)
+            p_m = _finite_or_zero(torch.nan_to_num(p_m, nan=0.0, posinf=0.0, neginf=0.0), "cfi.p_m")
+            p_v = _finite_or_zero(torch.nan_to_num(p_v, nan=1e-6, posinf=1e6, neginf=1e-6), "cfi.p_v")
+            p_v = torch.clamp(p_v, min=1e-8, max=1e6)
+
             latents_out.append(p_m.cpu())
 
             dist = Normal(p_m, torch.sqrt(p_v))

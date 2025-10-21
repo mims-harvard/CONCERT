@@ -35,8 +35,8 @@ sklearn==1.4.0
 scipy==1.12.0  
 pandas==2.2.0  
 numpy==1.23.5  
-scvi-tools  
-wandb  
+scvi-tools==1.3.3  
+wandb==0.22.1  
 
 ## 💻 Run CONCERT
 ### Example 1: train CONCERT on a single perturb-map data
