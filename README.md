@@ -1,4 +1,4 @@
-# CONCERT predicts spatial perturbation responses across tissue niches
+# CONCERT predicts niche-aware perturbation responses in spatial transcriptomics
 [![ProjectPage](https://img.shields.io/badge/project-CONCERT-red)](https://zitniklab.hms.harvard.edu/projects/CONCERT/) [![CodePage](https://img.shields.io/badge/Code-GitHub-green)](https://github.com/mims-harvard/CONCERT/) [![Data](https://img.shields.io/badge/Data-Links-purple)](https://github.com/mims-harvard/CONCERT/tree/main/datasets) ![License](https://img.shields.io/badge/license-MIT-blue)  
 
 [Xiang Lin](https://xianglin226.github.io/), [Zhenglun Kong](https://scholar.google.com/citations?hl=en&user=XYa4NVYAAAAJ), [Soumya Ghosh](https://scholar.google.com/citations?user=GEYQenQAAAAJ&hl=en), [Manolis Kellis](https://scholar.google.com/citations?user=lsYXBx8AAAAJ&hl=en), [Marinka Zitnik](https://scholar.google.com/citations?user=YtUDgPIAAAAJ&hl=en)  
