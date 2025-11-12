@@ -1,5 +1,5 @@
 # CONCERT predicts niche-aware perturbation responses in spatial transcriptomics
-[![ProjectPage](https://img.shields.io/badge/project-CONCERT-red)](https://zitniklab.hms.harvard.edu/projects/CONCERT/) [![CodePage](https://img.shields.io/badge/Code-GitHub-green)](https://github.com/mims-harvard/CONCERT/) [![Data](https://img.shields.io/badge/Data-Links-purple)](https://github.com/mims-harvard/CONCERT/tree/main/datasets) ![License](https://img.shields.io/badge/license-MIT-blue)  
+[![ProjectPage](https://img.shields.io/badge/project-CONCERT-red)](https://zitniklab.hms.harvard.edu/projects/CONCERT/) [![PaperPage](https://img.shields.io/badge/paper-CONCERT-orange)]([https://zitniklab.hms.harvard.edu/projects/CONCERT/](https://www.biorxiv.org/content/early/2025/11/10/2025.11.08.686890))[![CodePage](https://img.shields.io/badge/Code-GitHub-green)](https://github.com/mims-harvard/CONCERT/) [![Data](https://img.shields.io/badge/Data-Links-purple)](https://github.com/mims-harvard/CONCERT/tree/main/datasets) ![License](https://img.shields.io/badge/license-MIT-blue)  
 
 [Xiang Lin](https://xianglin226.github.io/), [Zhenglun Kong](https://scholar.google.com/citations?hl=en&user=XYa4NVYAAAAJ), [Soumya Ghosh](https://scholar.google.com/citations?user=GEYQenQAAAAJ&hl=en), [Manolis Kellis](https://scholar.google.com/citations?user=lsYXBx8AAAAJ&hl=en), [Marinka Zitnik](https://scholar.google.com/citations?user=YtUDgPIAAAAJ&hl=en)  
 
@@ -85,6 +85,16 @@ wandb==0.22.1
 The code in this package is licensed under the MIT License.
 
 #### 📝 Reference  
+@article {Lin2025.11.08.686890,
+	author = {Lin, Xiang and Kong, Zhenglun and Ghosh, Soumya and Kellis, Manolis and Zitnik, Marinka},
+	title = {CONCERT predicts niche-aware perturbation responses in spatial transcriptomics},
+	elocation-id = {2025.11.08.686890},
+	year = {2025},
+	doi = {10.1101/2025.11.08.686890},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2025/11/10/2025.11.08.686890},
+	journal = {bioRxiv}
+}
 
 #### 💬 Questions
 Please leave a Github issue or contact [Xiang Lin](mailto:xianglin226@gmail.com) or [Marinka Zitnik](mailto:marinka@zitnik.si)  
