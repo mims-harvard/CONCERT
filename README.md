@@ -85,16 +85,16 @@ wandb==0.22.1
 The code in this package is licensed under the MIT License.
 
 #### 📝 Reference  
-@article {Lin2025.11.08.686890,
-	author = {Lin, Xiang and Kong, Zhenglun and Ghosh, Soumya and Kellis, Manolis and Zitnik, Marinka},
-	title = {CONCERT predicts niche-aware perturbation responses in spatial transcriptomics},
-	elocation-id = {2025.11.08.686890},
-	year = {2025},
-	doi = {10.1101/2025.11.08.686890},
-	publisher = {Cold Spring Harbor Laboratory},
-	URL = {https://www.biorxiv.org/content/early/2025/11/10/2025.11.08.686890},
-	journal = {bioRxiv}
-}
+@article {Lin2025.11.08.686890,  
+	author = {Lin, Xiang and Kong, Zhenglun and Ghosh, Soumya and Kellis, Manolis and Zitnik, Marinka},  
+	title = {CONCERT predicts niche-aware perturbation responses in spatial transcriptomics},  
+	elocation-id = {2025.11.08.686890},  
+	year = {2025},  
+	doi = {10.1101/2025.11.08.686890},  
+	publisher = {Cold Spring Harbor Laboratory},  
+	URL = {https://www.biorxiv.org/content/early/2025/11/10/2025.11.08.686890},  
+	journal = {bioRxiv}  
+}  
 
 #### 💬 Questions
 Please leave a Github issue or contact [Xiang Lin](mailto:xianglin226@gmail.com) or [Marinka Zitnik](mailto:marinka@zitnik.si)  
