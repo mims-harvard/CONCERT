@@ -53,6 +53,7 @@ python src/run_concert_map.py \
   --wandb \
   --wandb_project concert-map \
   --wandb_run train
+```
 
 2. Define the spots for counterfactual prediction. Spots can be easily selected from the Shiny APP in the select_cells.R script in folder [select_cells](./select_cells/).
   
@@ -69,6 +70,7 @@ python src/run_concert_map.py  \
   --pert_cells select_cells/pert_cells_GSM5808054_patchclose_tumor_Jak2.txt \
   --target_cell_tissue tumor \
   --target_cell_perturbation Jak2
+```
 
 4. Visualized the intermediate and final outputs - see folder [outputs](./outputs/)
   
