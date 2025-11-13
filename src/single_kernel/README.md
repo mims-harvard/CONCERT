@@ -1,6 +1,6 @@
 Single kernel verion of CONCERT.
 ### Train. 
-<pre>
+```python
  python src/single_kernel/run_concert_sk.py  \
   --config src/single_kernel/config.yaml \
   --sample GSM5808054 \
@@ -11,10 +11,10 @@ Single kernel verion of CONCERT.
   --wandb \
   --wandb_project concert-map \
   --wandb_run train
-</pre>
+```
 
 ### Inference. 
-<pre>
+```python
 python src/single_kernel/run_concert_sk.py  \
   --config src/single_kernel/config.yaml \
   --sample GSM5808054 \
@@ -25,4 +25,4 @@ python src/single_kernel/run_concert_sk.py  \
   --pert_cells select_cells/pert_cells_GSM5808054_patchclose_tumor_Jak2.txt \
   --target_cell_tissue tumor \
   --target_cell_perturbation Jak2
-</pre>
+```
