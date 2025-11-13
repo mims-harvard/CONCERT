@@ -85,6 +85,7 @@ wandb==0.22.1
 The code in this package is licensed under the MIT License.
 
 #### 📝 Reference  
+```bibtex
 @article {Lin2025.11.08.686890,  
 	author = {Lin, Xiang and Kong, Zhenglun and Ghosh, Soumya and Kellis, Manolis and Zitnik, Marinka},  
 	title = {CONCERT predicts niche-aware perturbation responses in spatial transcriptomics},  
