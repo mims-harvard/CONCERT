@@ -41,6 +41,7 @@ wandb==0.22.1
 ## 💻 Run CONCERT
 ### Example 1: train CONCERT on a single perturb-map data
 1. Model training
+```python
 <pre> python src/run_concert_map.py \
   --config src/config.yaml \
   --sample GSM5808054 \
@@ -58,6 +59,7 @@ wandb==0.22.1
 2. Define the spots for counterfactual prediction. Spots can be easily selected from the Shiny APP in the select_cells.R script in folder [select_cells](./select_cells/).
   
 3. Do perturbation prediction on the specified spots. Here we predict response gene expression of the spots in spots.txt with perturbagen Jak2-KO (knockout gene Jak2). Arguments `--target_cell_tissue` and `--target_cell_perturbation` are the targert cell/spot type and perturbation state for counterfactual prediction.
+```python
 <pre> python src/run_concert_map.py  \
   --config src/config.yaml \
   --sample GSM5808054 \
