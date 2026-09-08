@@ -38,8 +38,8 @@ import pandas as pd
 from matplotlib.colors import ListedColormap
 from matplotlib.lines import Line2D
 
-sys.path.insert(0, "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase/"
-                   "experiments/03_dss_gut_case_study/figures")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
 DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")

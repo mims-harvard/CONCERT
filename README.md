@@ -238,6 +238,14 @@ execute a script directly with `bash` — nothing outside the headers depends on
 SPAC-seq evaluation, which reads `SLURM_ARRAY_TASK_ID` to pick a slide and can be given that
 variable by hand.
 
+### A note on paths
+
+`scripts/`, `notebooks/` and `config/paths.sh` resolve every root from an environment variable
+and need nothing edited beyond the exports above. The pipeline scripts under `experiments/`
+are the record of the runs that produced the reported results, and many of them carry the
+absolute paths those runs used inline rather than through `config/paths.sh`. They are kept as
+they ran; edit the paths at the top of a script before submitting it on another machine.
+
 ### Naming
 
 The code paths, output directories and CSV columns use `seen` and `unseen`. In the manuscript

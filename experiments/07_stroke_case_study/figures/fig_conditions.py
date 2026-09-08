@@ -22,8 +22,8 @@ import anndata as ad, h5py, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
-sys.path.insert(0, "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase/"
-                   "experiments/03_dss_gut_case_study/figures")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
 LABEL_FS, TICK_FS, CBAR_FS = 19, 15, 14

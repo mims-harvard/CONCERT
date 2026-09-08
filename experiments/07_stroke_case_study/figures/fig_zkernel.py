@@ -13,8 +13,8 @@ import anndata as ad, h5py, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import sys
-sys.path.insert(0, "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase/"
-                   "experiments/03_dss_gut_case_study/figures")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
 PANEL = ("Lcn2", "Gfap", "Vim", "Timp1", "Cd68")

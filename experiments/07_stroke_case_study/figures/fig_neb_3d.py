@@ -13,8 +13,8 @@ import anndata as ad, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from scipy.spatial import cKDTree
-sys.path.insert(0, "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase/"
-                   "experiments/03_dss_gut_case_study/figures")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style as ps
 ps.use()
 

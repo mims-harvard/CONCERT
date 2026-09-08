@@ -21,8 +21,8 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.stats import pearsonr, spearmanr
-sys.path.insert(0, "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase/"
-                   "experiments/03_dss_gut_case_study/figures")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
 NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")

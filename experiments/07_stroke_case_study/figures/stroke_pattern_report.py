@@ -34,8 +34,8 @@ from scipy.stats import pearsonr, spearmanr
 
 # Shared house style (repo copy is the source of truth) so this figure reads as one system with
 # the rest of the CONCERT figure set.
-sys.path.insert(0, "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase/"
-                   "experiments/03_dss_gut_case_study/figures")
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]
+                       / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
 # Reactive-injury panel verified on this data in Stage 0c (PIA/ICA score +1.69 / +0.45 in PT).
