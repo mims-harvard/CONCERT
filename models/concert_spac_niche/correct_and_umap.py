@@ -6,12 +6,12 @@ Strategy
 --------
 1. Load raw h5ad (integer UMI counts in X).
 2. Normalize + log1p.
-3. Compute baseline mean over ALL genes while X is still sparse → save as npy.
+3. Compute baseline mean over ALL genes while X is still sparse -> save as npy.
 4. Select HVGs while X is still sparse (seurat_v3 on CSR).
 5. Subset to HVGs (632k × 2k, ~5 GB sparse).
 6. Save a raw (uncorrected) copy of the HVG subset for the before/after plot.
 7. **Gene-space correction**: densify HVG subset and subtract baseline mean for HVGs.
-8. Scale → PCA (50 PCs).
+8. Scale -> PCA (50 PCs).
 9. Subsample ≤100 k cells for UMAP (speed).
 10. Build UMAP; save plots + corrected h5ad.
 
@@ -26,9 +26,9 @@ Why gene space rather than PCA/latent space?
 The perturbation-action effect is a systematic additive shift in log
 transcript abundance independent of which gene was KO'd.  Correcting
 directly in gene space:
-  • is lossless and reversible
-  • aligns with limma/edgeR/scran batch-correction assumptions
-  • avoids removing real biology (tissue gradients) that dominate top PCs
+  * is lossless and reversible
+  * aligns with limma/edgeR/scran batch-correction assumptions
+  * avoids removing real biology (tissue gradients) that dominate top PCs
 
 Usage
 -----
@@ -51,7 +51,7 @@ import matplotlib.patches as mpatches
 from pathlib import Path
 
 
-# ─── CLI ─────────────────────────────────────────────────────────────────────
+# --- CLI ---
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--h5ad",         required=True)
@@ -65,7 +65,7 @@ def parse_args():
     return p.parse_args()
 
 
-# ─── helpers ─────────────────────────────────────────────────────────────────
+# --- helpers ---
 SPECIAL = {"control", "unassigned", "multiple"}
 
 
@@ -167,7 +167,7 @@ def top_pert_palette(adata, n_top=12):
     return palette
 
 
-# ─── main ─────────────────────────────────────────────────────────────────────
+# --- main ---
 def main():
     args = parse_args()
     outdir = Path(args.outdir)
@@ -176,7 +176,7 @@ def main():
     sc.settings.verbosity = 2
     np.random.seed(args.seed)
 
-    # ── 1. Load ──────────────────────────────────────────────────────────────
+    # --- 1. Load ---
     print(f"\n[1] Loading {args.h5ad}")
     adata = sc.read_h5ad(args.h5ad)
     print(f"    Shape: {adata.shape[0]:,} cells × {adata.shape[1]:,} genes")
@@ -195,7 +195,7 @@ def main():
 
     baseline_mask = adata.obs["is_baseline"].values.astype(bool)
 
-    # ── 2. Normalize ─────────────────────────────────────────────────────────
+    # --- 2. Normalize ---
     print("\n[2] Normalise + log1p  (X stays sparse)")
     sc.pp.normalize_total(adata, target_sum=1e4)
     sc.pp.log1p(adata)
@@ -203,7 +203,7 @@ def main():
     if sp.issparse(adata.X) and not sp.isspmatrix_csr(adata.X):
         adata.X = adata.X.tocsr()
 
-    # ── 3. Compute baseline mean over ALL genes (sparse, no densification) ───
+    # --- 3. Compute baseline mean over ALL genes (sparse, no densification) ---
     print("\n[3] Computing baseline mean over all genes (sparse)")
     baseline_mean_all = compute_baseline_mean_sparse(adata.X, baseline_mask)
     np.save(outdir / f"{args.sample}_baseline_mean_all_genes.npy", baseline_mean_all)
@@ -212,28 +212,28 @@ def main():
           f"nonzero={np.sum(baseline_mean_all != 0):,}/{len(baseline_mean_all):,}")
     print("  Saved: baseline_mean_all_genes.npy  (use this for CONCERT training)")
 
-    # ── 4. HVG selection on sparse log-normalized data ───────────────────────
+    # --- 4. HVG selection on sparse log-normalized data ---
     print(f"\n[4] Selecting top {args.n_hvgs} HVGs  (on sparse X, no copy)")
     # seurat_v3 flavor uses variance on sparse matrix; works fine on CSR
     sc.pp.highly_variable_genes(adata, n_top_genes=args.n_hvgs, flavor="seurat_v3")
     hvg_mask = adata.var["highly_variable"].values
     print(f"    HVGs selected: {hvg_mask.sum()}")
 
-    # ── 5. Subset to HVGs while still sparse ─────────────────────────────────
+    # --- 5. Subset to HVGs while still sparse ---
     print(f"\n[5] Subsetting to HVGs  ({adata.shape[0]:,} × {hvg_mask.sum():,})")
     adata_hvg = adata[:, hvg_mask].copy()
-    # Free full-gene adata — no longer needed
+    # Free full-gene adata -- no longer needed
     del adata
     gc.collect()
 
     baseline_mean_hvg = baseline_mean_all[hvg_mask]
 
-    # ── 6. Save raw (uncorrected) HVG copy for before/after comparison ────────
+    # --- 6. Save raw (uncorrected) HVG copy for before/after comparison ---
     print("\n[6] Saving raw HVG matrix for before/after comparison")
     # Keep sparse for now; densify later only for the subsampled plot
     X_raw_sparse = adata_hvg.X.copy()   # sparse, ~0.5 GB for 632k × 2k
 
-    # ── 7. Gene-space correction on HVG subset ────────────────────────────────
+    # --- 7. Gene-space correction on HVG subset ---
     print("\n[7] Gene-space correction (densify HVG subset + subtract baseline)")
     print(f"    Dense HVG matrix size: "
           f"~{adata_hvg.shape[0] * adata_hvg.shape[1] * 4 / 1e9:.1f} GB")
@@ -242,7 +242,7 @@ def main():
     print(f"    Correction done.  X range: "
           f"[{adata_hvg.X.min():.3f}, {adata_hvg.X.max():.3f}]")
 
-    # ── 8. Scale + PCA ───────────────────────────────────────────────────────
+    # --- 8. Scale + PCA ---
     print(f"\n[8] Scale + PCA ({args.n_pcs} PCs)")
     sc.pp.scale(adata_hvg, max_value=10)
     sc.tl.pca(adata_hvg, n_comps=args.n_pcs, svd_solver="arpack")
@@ -253,12 +253,12 @@ def main():
     ax.plot(np.cumsum(var_exp) * 100)
     ax.axhline(80, ls="--", color="grey")
     ax.set_xlabel("PC"); ax.set_ylabel("Cumulative variance explained (%)")
-    ax.set_title(f"{args.sample} — PCA scree (corrected)")
+    ax.set_title(f"{args.sample} -- PCA scree (corrected)")
     fig.tight_layout()
     fig.savefig(outdir / f"{args.sample}_pca_scree.png", dpi=150)
     plt.close(fig)
 
-    # ── 9. UMAP (subsample for speed) ────────────────────────────────────────
+    # --- 9. UMAP (subsample for speed) ---
     print(f"\n[9] UMAP on ≤{args.n_umap_cells:,} cells")
     if adata_hvg.n_obs > args.n_umap_cells:
         rng = np.random.default_rng(args.seed)
@@ -276,10 +276,10 @@ def main():
                     random_state=args.seed)
     sc.tl.umap(adata_sub, random_state=args.seed)
 
-    # ── 10. Plots ─────────────────────────────────────────────────────────────
+    # --- 10. Plots ---
     print("\n[10] Saving UMAP plots")
 
-    # ── Plot A: is_perturbed ──────────────────────────────────────────────────
+    # --- Plot A: is_perturbed ---
     fig, ax = plt.subplots(figsize=(8, 7))
     colours = {False: "#2ca02c", True: "#d62728"}
     for flag, label, zorder in [(False, "baseline\n(ctrl+unassigned)", 2),
@@ -291,7 +291,7 @@ def main():
                    label=f"{label} (n={mask.sum():,})", rasterized=True,
                    zorder=zorder)
     ax.legend(markerscale=10, loc="upper right", fontsize=9)
-    ax.set_title(f"{args.sample} — gene-space corrected\nbaseline vs. perturbed")
+    ax.set_title(f"{args.sample} -- gene-space corrected\nbaseline vs. perturbed")
     ax.set_xlabel("UMAP 1"); ax.set_ylabel("UMAP 2")
     ax.set_aspect("equal")
     fig.tight_layout()
@@ -299,7 +299,7 @@ def main():
     plt.close(fig)
     print("    saved: umap_is_perturbed.png")
 
-    # ── Plot B: cell category ─────────────────────────────────────────────────
+    # --- Plot B: cell category ---
     cat_colours = {
         "control":    "#2ca02c",
         "unassigned": "#1f77b4",
@@ -316,7 +316,7 @@ def main():
                    s=0.3, alpha=0.5, color=cat_colours[cat],
                    label=f"{cat} (n={mask.sum():,})", rasterized=True)
     ax.legend(markerscale=10, loc="upper right", fontsize=9)
-    ax.set_title(f"{args.sample} — gene-space corrected\ncell categories")
+    ax.set_title(f"{args.sample} -- gene-space corrected\ncell categories")
     ax.set_xlabel("UMAP 1"); ax.set_ylabel("UMAP 2")
     ax.set_aspect("equal")
     fig.tight_layout()
@@ -324,7 +324,7 @@ def main():
     plt.close(fig)
     print("    saved: umap_cell_category.png")
 
-    # ── Plot C: top perturbations ─────────────────────────────────────────────
+    # --- Plot C: top perturbations ---
     palette = top_pert_palette(adata_sub, n_top=12)
     order = list(adata_sub.obs["pert_top"].cat.categories)
 
@@ -343,7 +343,7 @@ def main():
                for l in order if (adata_sub.obs["pert_top"]==l).sum() > 0]
     ax.legend(handles=handles, loc="upper right", fontsize=7,
               markerscale=4, ncol=2)
-    ax.set_title(f"{args.sample} — gene-space corrected\ntop 12 perturbations")
+    ax.set_title(f"{args.sample} -- gene-space corrected\ntop 12 perturbations")
     ax.set_xlabel("UMAP 1"); ax.set_ylabel("UMAP 2")
     ax.set_aspect("equal")
     fig.tight_layout()
@@ -351,7 +351,7 @@ def main():
     plt.close(fig)
     print("    saved: umap_top_perts.png")
 
-    # ── 11. Before/after comparison using saved raw HVG copy ──────────────────
+    # --- 11. Before/after comparison using saved raw HVG copy ---
     print("\n[11] Before/after comparison  (re-using saved raw HVG matrix)")
 
     # Build raw sub AnnData for the same subsample indices
@@ -393,7 +393,7 @@ def main():
     plt.close(fig)
     print("    saved: umap_before_after.png")
 
-    # ── 12. Save corrected subsampled h5ad ────────────────────────────────────
+    # --- 12. Save corrected subsampled h5ad ---
     print("\n[12] Saving outputs")
     adata_sub.write_h5ad(outdir / f"{args.sample}_corrected_umap_sub.h5ad",
                          compression="gzip")
@@ -416,7 +416,7 @@ def main():
           f"perturbed={pc1_corr_pert.mean():.3f}  p={pval_c:.3e}")
 
     print(f"\n[Done] All outputs in {outdir}/")
-    print("  baseline_mean_all_genes.npy  — subtract this per-gene when loading "
+    print("  baseline_mean_all_genes.npy  -- subtract this per-gene when loading "
           "batches in CONCERT training")
 
 

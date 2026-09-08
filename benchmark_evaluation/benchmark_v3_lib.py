@@ -415,7 +415,7 @@ def _readme_text(dataset: str, out_root: Path, panel: dict) -> str:
     ]
     for u in units:
         lines.append(
-            f"- **{u['gene']}**: learn on {u['donor_slides']} → mask+predict on slide **{u['target_slide']}** "
+            f"- **{u['gene']}**: learn on {u['donor_slides']} -> mask+predict on slide **{u['target_slide']}** "
             f"({u['n_ko_by_slide'].get(u['target_slide'], u.get('n_ko_target', '?'))} KO cells held out)"
         )
     lines.append("")

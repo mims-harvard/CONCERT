@@ -1,5 +1,5 @@
 """Early-stage sanity: load mid-training checkpoints and confirm the f_pert field
-is LEARNING — i.e. the zero-init residual MLP departed from init (std 1e-3) and,
+is LEARNING -- i.e. the zero-init residual MLP departed from init (std 1e-3) and,
 for svgp, the lengthscale/inducing points moved. No data load; weights only."""
 import torch, glob, os, math
 BASE = "/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT/outputs"
@@ -39,4 +39,4 @@ for v in ["constant", "rff", "svgp", "hybrid"]:
         except Exception as e:
             print(f"[{s} {v}] ERR {e}")
 print("\nGate: resid_last_w_absmean >> 1e-3 (init) => spatial residual is LEARNING.")
-print("      constant has no fpert_field (resid keys absent) — expected.")
+print("      constant has no fpert_field (resid keys absent) -- expected.")

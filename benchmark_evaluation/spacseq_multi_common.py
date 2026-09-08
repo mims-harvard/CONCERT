@@ -258,7 +258,7 @@ def _attach_counts_layer(adata: ad.AnnData, prepared_dir: Path, slide_id: str) -
     rc = np.load(rc_path, mmap_mode="r")
     if rc.shape[0] != adata.n_obs or rc.shape[1] != adata.n_vars:
         log.warning(
-            "Slide %s: raw counts shape %s != adata %s — skip counts layer",
+            "Slide %s: raw counts shape %s != adata %s -- skip counts layer",
             slide_id, rc.shape, adata.shape,
         )
         return
@@ -283,7 +283,7 @@ def load_prepared_slide(
     if exclude_holdout:
         mask = load_holdout_mask(prepared_dir, slide_id, holdout_dir)
         if mask is None:
-            log.warning("exclude_holdout=True but no mask (%s) for slide %s — using all cells",
+            log.warning("exclude_holdout=True but no mask (%s) for slide %s -- using all cells",
                         holdout_dir, slide_id)
         else:
             held = np.asarray(mask["union_holdout_idx"], dtype=int)
@@ -489,8 +489,8 @@ def niche_lfc_cross_slide_loop(
     """Score cross-slide transfer: model on target unassigned vs donor-reference LFC.
 
     If ``pred_basal`` (predicted basal on the source cells, aligned with global_src_idx)
-    is given, predicted LFC = DELTA pred_KO − pred_basal (cancels basal reconstruction
-    error) instead of pred_KO − observed source."""
+    is given, predicted LFC = DELTA pred_KO - pred_basal (cancels basal reconstruction
+    error) instead of pred_KO - observed source."""
     eu, sa = import_eval_utils()
     unpredictable_genes = set(unpredictable_genes or [])
     if scoring_method:
@@ -530,7 +530,7 @@ def niche_lfc_cross_slide_loop(
     for g in eval_genes:
         o_lfc_ref = donor_reference_lfc(adata_donor, g, hvg_mask, args.min_g_cells)
         if o_lfc_ref is None:
-            log.warning("[L2/%s] insufficient donor reference — worst-case", g)
+            log.warning("[L2/%s] insufficient donor reference -- worst-case", g)
             for b in eval_bins:
                 una_b = np.where(una_mask & (bin_id == b))[0]
                 if len(una_b) < args.min_g_cells:
@@ -686,8 +686,8 @@ def niche_lfc_seen_holdout_loop(
     """Analysis 2 holdout scoring: each seen KO scored only in its most-abundant niche.
 
     If ``pred_basal`` (predicted basal counterfactual on the same source cells, aligned
-    with src_idx) is given, the predicted LFC uses the DELTA pred_KO − pred_basal (cancels
-    basal reconstruction error, isolates μ_action + f_pert) instead of pred_KO − observed
+    with src_idx) is given, the predicted LFC uses the DELTA pred_KO - pred_basal (cancels
+    basal reconstruction error, isolates μ_action + f_pert) instead of pred_KO - observed
     source. This is how counterfactual models are meant to be scored.
 
     Source = held-out unassigned cells (passed as src_idx). For gene g with niche b*,
@@ -696,7 +696,7 @@ def niche_lfc_seen_holdout_loop(
 
     If ``without_noise_out`` (a dict) is passed, ALSO compute the without-noise flavour
     per niche where NTC (control) cells exist: observed = KO vs NTC, predicted = with-noise
-    m_lfc + empirical offset log(mean_una_src) − log(mean_NTC) (mirrors the CF eval,
+    m_lfc + empirical offset log(mean_una_src) - log(mean_NTC) (mirrors the CF eval,
     eval_spatial_counterfactual.py:557). Results land in without_noise_out['L2'][g].
     """
     eu, sa = import_eval_utils()
@@ -815,7 +815,7 @@ def niche_lfc_seen_holdout_loop(
         scores["L2"][g].append(sc_)
         mlfc["L2"][g][b] = m_lfc.tolist()
 
-        # Without-noise (KO vs NTC) via empirical re-reference — only where NTC exists.
+        # Without-noise (KO vs NTC) via empirical re-reference -- only where NTC exists.
         if compute_wo:
             ntc_b = np.where(ntc_mask & (bin_id == b))[0]
             if len(ntc_b) >= args.min_g_cells:
@@ -891,7 +891,7 @@ def holdout_patch_groups_spacseq(
     """
     path = patch_holdout_path(prepared_dir, slide_id)
     if not path.exists():
-        log.warning("No patch holdout file for slide %s — cannot build _sp patches", slide_id)
+        log.warning("No patch holdout file for slide %s -- cannot build _sp patches", slide_id)
         return []
     d = np.load(path, allow_pickle=True)
     role = _align_patch_npz_field(d, "role", adata_target)

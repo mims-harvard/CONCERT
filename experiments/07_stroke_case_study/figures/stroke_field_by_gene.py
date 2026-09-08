@@ -106,7 +106,7 @@ def main() -> None:
     out = Path(a.outdir); figdir = out / "figures"; figdir.mkdir(parents=True, exist_ok=True)
     paper_style.use()
 
-    # ── predictions (stroke ON vs matched control) over the Sham spots ──────
+    # --- predictions (stroke ON vs matched control) over the Sham spots ---
     on_pat = a.on_glob or f"stroke_{a.arm}_on_*"
     P_on = ad.read_h5ad(next(out.glob(f"{on_pat}_perturbed_counts.h5ad")))
     P_off = ad.read_h5ad(next(out.glob(f"stroke_{a.arm}_off_*_perturbed_counts.h5ad")))
@@ -125,7 +125,7 @@ def main() -> None:
     Lpt = log1p_cpm(np.asarray(A_pt.X.todense(), np.float32))
     genes_slide = np.asarray(A_pt.var_names)
 
-    # ── observed ICA / PIA labels, recovered from the delivery h5 ───────────
+    # --- observed ICA / PIA labels, recovered from the delivery h5 ---
     with h5py.File(DEL / "benchmark_artifacts/data/Mouse_brain_stroke_all_data.h5", "r") as f:
         bc = np.array([b.decode() for b in f["Barcode"][:]])
         region_all = np.array([b.decode() for b in f["Celltype_coarse"][:]])
@@ -140,7 +140,7 @@ def main() -> None:
         obs_core, obs_rim = obs_core & in_sec, obs_rim & in_sec
     rim_core_ratio = obs_rim.sum() / max(obs_core.sum(), 1)
 
-    # ── predicted region: fixed across genes, from the pooled injury score ──
+    # --- predicted region: fixed across genes, from the pooled injury score ---
     pidx = [int(np.where(genes_pred == g)[0][0]) for g in POOLED if g in set(genes_pred.tolist())]
     pooled_delta = (Lon[:, pidx] - Loff[:, pidx]).mean(1)
     lesion_rate = float((obs_core | obs_rim).mean())

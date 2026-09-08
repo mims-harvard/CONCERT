@@ -1,19 +1,19 @@
 """
-contrastive_alignment.py — Phase 2.7: Control-anchored contrastive loss.
+contrastive_alignment.py -- Phase 2.7: Control-anchored contrastive loss.
 
 Design
 ------
 For each gene_KO cell i, find its nearest non-targeting control cell c(i).
 The contrastive loss penalizes the model if the predicted perturbation effect
 δ_i (difference between KO prediction and "no-KO" prediction) disagrees with
-the empirically observed delta z = z_pert_i − z_ctrl_neighbor_i.
+the empirically observed delta z = z_pert_i - z_ctrl_neighbor_i.
 
 Loss:
-    L_contra = (1/|KO|) Σ_i 𝟙[is_real_KO_i] · ‖δ_i_pred − Δz_i‖²
+    L_contra = (1/|KO|) Σ_i 1[is_real_KO_i] · ‖δ_i_pred - Δz_i‖²
 
 where:
-    δ_i_pred  = z_mu_i − z_mu_i^{(ctrl)}     (pred minus ctrl-counterfactual)
-    Δz_i       = z_mu_KO_i − z_mu_ctrl_c(i)  (observed KO vs control residual)
+    δ_i_pred  = z_mu_i - z_mu_i^{(ctrl)}     (pred minus ctrl-counterfactual)
+    Δz_i       = z_mu_KO_i - z_mu_ctrl_c(i)  (observed KO vs control residual)
     z_mu_ctrl_c(i) = encoder output of the nearest control cell
 
 This loss acts as a "consistency regularizer": the perturbation effect in
@@ -35,7 +35,7 @@ Build the control neighbor index once at load time:
         is_real_KO=is_real_KO,  # (N,) bool
         has_guide=has_guide,     # (N,) bool
         k=1,                     # nearest single control cell
-    )  # → (N,) int, -1 for non-KO cells
+    )  # -> (N,) int, -1 for non-KO cells
 """
 
 from __future__ import annotations
@@ -59,10 +59,10 @@ def build_ctrl_neighbor_idx(
 
     Parameters
     ----------
-    pos        : (N, 2) float — scaled spatial positions
-    is_real_KO : (N,) bool  — True for gene_KO cells
-    has_guide  : (N,) bool  — True for control + gene_KO (control = has_guide & ~is_real_KO)
-    k          : int         — number of nearest control neighbors per KO cell (usually 1)
+    pos        : (N, 2) float -- scaled spatial positions
+    is_real_KO : (N,) bool  -- True for gene_KO cells
+    has_guide  : (N,) bool  -- True for control + gene_KO (control = has_guide & ~is_real_KO)
+    k          : int         -- number of nearest control neighbors per KO cell (usually 1)
 
     Returns
     -------
@@ -72,13 +72,13 @@ def build_ctrl_neighbor_idx(
     """
     from sklearn.neighbors import NearestNeighbors  # type: ignore
 
-    ctrl_mask = has_guide & ~is_real_KO   # (N,) — control cells
-    ko_mask   = is_real_KO                # (N,) — gene_KO cells
+    ctrl_mask = has_guide & ~is_real_KO   # (N,) -- control cells
+    ko_mask   = is_real_KO                # (N,) -- gene_KO cells
 
     n_ctrl = ctrl_mask.sum()
     n_ko   = ko_mask.sum()
     if n_ctrl == 0:
-        logging.warning("[ContrastAlign] No control cells found — returning all -1.")
+        logging.warning("[ContrastAlign] No control cells found -- returning all -1.")
         return np.full(len(pos), -1, dtype=np.int32)
 
     logging.info("[ContrastAlign] Building ctrl neighbor index: %d KO cells, %d control cells", n_ko, n_ctrl)
@@ -108,7 +108,7 @@ class ContrastiveAlignmentLoss(nn.Module):
     """Control-anchored contrastive alignment loss (Phase 2.7).
 
     For each KO cell i, penalizes:
-        ‖(z_mu_i − z_mu_ctrl_i) − (z_mu_i^{ref} − z_mu_ctrl_i^{ref})‖²
+        ‖(z_mu_i - z_mu_ctrl_i) - (z_mu_i^{ref} - z_mu_ctrl_i^{ref})‖²
 
     In practice (mini-batch setting), this simplifies to encouraging the
     KO cell's latent to differ from the nearest control in the same direction
@@ -116,7 +116,7 @@ class ContrastiveAlignmentLoss(nn.Module):
 
     Parameters
     ----------
-    lambda_contra : float — weight of the contrastive loss (default 0.1)
+    lambda_contra : float -- weight of the contrastive loss (default 0.1)
     """
 
     def __init__(self, lambda_contra: float = 0.1) -> None:
@@ -125,11 +125,11 @@ class ContrastiveAlignmentLoss(nn.Module):
 
     def forward(
         self,
-        z_mu: torch.Tensor,             # (B, D) — encoder posterior means for batch
-        batch_idx: torch.Tensor,        # (B,) int — global cell indices in [0, N)
-        ctrl_neighbor_idx: torch.Tensor, # (N,) int — precomputed control neighbors
-        is_real_KO_batch: torch.Tensor, # (B,) bool/float — KO mask for batch
-        z_mu_buffer: Optional[torch.Tensor] = None,  # (N, D) — buffer from prev epoch
+        z_mu: torch.Tensor,             # (B, D) -- encoder posterior means for batch
+        batch_idx: torch.Tensor,        # (B,) int -- global cell indices in [0, N)
+        ctrl_neighbor_idx: torch.Tensor, # (N,) int -- precomputed control neighbors
+        is_real_KO_batch: torch.Tensor, # (B,) bool/float -- KO mask for batch
+        z_mu_buffer: Optional[torch.Tensor] = None,  # (N, D) -- buffer from prev epoch
     ) -> torch.Tensor:
         """Compute contrastive alignment loss for the mini-batch.
 
@@ -159,16 +159,16 @@ class ContrastiveAlignmentLoss(nn.Module):
         ctrl_idx_valid  = ctrl_global_idx[valid]                  # (n_valid,)
         z_ctrl_buffered = z_mu_buffer[ctrl_idx_valid]              # (n_valid, D)
 
-        # Latent delta: observed KO − control (from buffer)
+        # Latent delta: observed KO - control (from buffer)
         # This is the "empirical perturbation direction" we want to align with
         # The buffer contains z_mu from the previous epoch, so this is stable
         delta_observed = z_mu_ko_valid - z_ctrl_buffered          # (n_valid, D)
 
         # Loss: minimize MSE between the delta and its own L2-normalized version
-        # (encourages consistent direction, not magnitude — avoids collapse)
+        # (encourages consistent direction, not magnitude -- avoids collapse)
         # Alternatively, just minimize ‖delta‖ for control cells (shouldn't move much)
         # Here: L2 of the full delta (penalizes if KO moves far from nearby control
-        # in an *inconsistent* direction across samples → use L2 squared)
+        # in an *inconsistent* direction across samples -> use L2 squared)
         loss = F.mse_loss(
             delta_observed,
             delta_observed.detach() / (delta_observed.detach().norm(dim=-1, keepdim=True).clamp(min=1e-8)),

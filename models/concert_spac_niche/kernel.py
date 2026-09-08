@@ -709,9 +709,9 @@ class MahalanobisCauchyKernel(nn.Module):
 
     Parameters
     ----------
-    n_perts   : int  — number of perturbations (= n_batch)
-    d_pos     : int  — spatial dimensionality (2 for Visium HD)
-    phi       : float — sharpness of soft cutoff gate
+    n_perts   : int  -- number of perturbations (= n_batch)
+    d_pos     : int  -- spatial dimensionality (2 for Visium HD)
+    phi       : float -- sharpness of soft cutoff gate
     dtype, device : standard
 
     Usage (forward_samples interface matches BatchedCauchyKernel_CONCERT_flex)
@@ -740,7 +740,7 @@ class MahalanobisCauchyKernel(nn.Module):
         n_chol = d_pos * (d_pos + 1) // 2  # lower-triangular elements
         # Initialize near identity: diagonal ~ 1, off-diagonal ~ 0
         init = torch.zeros(n_perts, n_chol, dtype=dtype, device=device)
-        # diagonal log = 0 → exp(0) = 1 → L diagonal = 1 → M ≈ I
+        # diagonal log = 0 -> exp(0) = 1 -> L diagonal = 1 -> M ≈ I
         self.chol_params = nn.Parameter(init, requires_grad=True)
 
     def _build_metric(self, sample_weights: torch.Tensor) -> torch.Tensor:
@@ -748,11 +748,11 @@ class MahalanobisCauchyKernel(nn.Module):
 
         Parameters
         ----------
-        sample_weights : (N, n_perts) float — perturbation one-hot (or soft weights)
+        sample_weights : (N, n_perts) float -- perturbation one-hot (or soft weights)
 
         Returns
         -------
-        M : (N, d_pos, d_pos) float — PD metric tensor per cell
+        M : (N, d_pos, d_pos) float -- PD metric tensor per cell
         """
         N = sample_weights.shape[0]
         d = self.d_pos
@@ -826,7 +826,7 @@ class MahalanobisCauchyKernel(nn.Module):
         sample_y: torch.Tensor,
         cutoff: torch.Tensor,
     ) -> torch.Tensor:
-        """Diagonal kernel (N_x,) — used for variational term."""
+        """Diagonal kernel (N_x,) -- used for variational term."""
         M_x = self._build_metric(sample_x)  # (N, d, d)
         M_y = self._build_metric(sample_y)
         diff = x - y   # (N, d)
@@ -853,14 +853,14 @@ class EmbeddingConditionedKernel(nn.Module):
     smoothly across related perturbations (e.g., nearby genes in embedding
     space share similar spatial lengthscales).
 
-    The MLP maps:  emb_dim → hidden → d_pos (positive via softplus)
+    The MLP maps:  emb_dim -> hidden -> d_pos (positive via softplus)
 
     Parameters
     ----------
-    emb_dim  : int  — perturbation embedding dimension (= encoder_dim in LORD)
-    d_pos    : int  — number of spatial dimensions to scale (= 2)
-    hidden   : int  — MLP hidden size
-    phi      : float — cutoff gate sharpness
+    emb_dim  : int  -- perturbation embedding dimension (= encoder_dim in LORD)
+    d_pos    : int  -- number of spatial dimensions to scale (= 2)
+    hidden   : int  -- MLP hidden size
+    phi      : float -- cutoff gate sharpness
     dtype, device : standard
     """
 
@@ -877,7 +877,7 @@ class EmbeddingConditionedKernel(nn.Module):
         self.d_pos = d_pos
         self.phi   = torch.tensor(phi, dtype=dtype, device=device)
 
-        # MLP: emb → scale (positive via softplus)
+        # MLP: emb -> scale (positive via softplus)
         self.scale_mlp = nn.Sequential(
             nn.Linear(emb_dim, hidden),
             nn.ELU(),
@@ -888,7 +888,7 @@ class EmbeddingConditionedKernel(nn.Module):
             self.scale_mlp[-1].bias.fill_(np.log(np.exp(10.0) - 1))  # softplus⁻¹(10)
 
     def _scale_from_emb(self, emb: torch.Tensor) -> torch.Tensor:
-        """Map (N, emb_dim) → (N, d_pos) positive scale."""
+        """Map (N, emb_dim) -> (N, d_pos) positive scale."""
         return F.softplus(self.scale_mlp(emb)).clamp(min=1e-4, max=1e4)
 
     def forward_samples(

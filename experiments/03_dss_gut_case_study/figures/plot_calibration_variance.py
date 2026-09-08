@@ -8,10 +8,10 @@ the individual mouse points, so the population curve is visibly consistent with 
 per-mouse plot.
 
 Both curves are mean log1p DSS-marker expression (17 core markers, count space):
-  observed (GT): per_mouse_observed.csv  — each mouse measured at ONE day; per-day
+  observed (GT): per_mouse_observed.csv  -- each mouse measured at ONE day; per-day
       line = cell-weighted pooled mean (reproduces the committed obs_by_day exactly),
       band = +/-SD across the replicate mice sampled at that day, dots = those mice.
-  predicted:     per_mouse_trajectories.csv — every mouse imputed at t=0/3/9/21; line
+  predicted:     per_mouse_trajectories.csv -- every mouse imputed at t=0/3/9/21; line
       = cell-weighted pooled mean (= C1_population_pred), band = +/-SD across all 15
       mice, thin lines = per-mouse imputed trajectories (the 3 flat d9 mice are the
       documented under-fit).

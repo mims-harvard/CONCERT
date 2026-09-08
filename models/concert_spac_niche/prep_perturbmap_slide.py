@@ -1,13 +1,13 @@
-"""Convert a perturbmap slide (0..3) → spac-format .h5ad for CONCERT-spac.
+"""Convert a perturbmap slide (0..3) -> spac-format .h5ad for CONCERT-spac.
 
 The ONE prep script for every perturbmap slide, including slide 0 (`--slide 0`).
 Run all four via sub_prep_perturbmap_multi.sh (SLURM array 0-3).
 
 Two ORTHOGONAL axes (perturbmap has NO NTC; KP/periphery are tissue regions, not guides):
-  perturbation ∈ {Jak2, Tgfbr2, Ifngr2, unperturbed}  — only the 3 real KO genes are guides;
-                 unassigned/KP/periphery all → "unperturbed" (basal).
-  tissue       ∈ {tumor, normal, periphery}    — region axis (feeds basal path):
-                 raw=="periphery"→periphery; raw=="KP"→tumor (KP = unperturbed tumor genotype,
+  perturbation ∈ {Jak2, Tgfbr2, Ifngr2, unperturbed}  -- only the 3 real KO genes are guides;
+                 unassigned/KP/periphery all -> "unperturbed" (basal).
+  tissue       ∈ {tumor, normal, periphery}    -- region axis (feeds basal path):
+                 raw=="periphery"->periphery; raw=="KP"->tumor (KP = unperturbed tumor genotype,
                  forced to override any mislabeled obs.tissue); else original obs.tissue.
 No cells are excluded.
 
@@ -41,7 +41,7 @@ tissue0 = a.obs["tissue"].astype(str).values
 
 # perturbation axis: the 3 real KO genes are the only guides; everything else = basal
 pert = np.where(np.isin(canon, list(KO)), canon, "unperturbed")
-# tissue axis (region), independent of perturbation. KP = unperturbed tumor: force → tumor
+# tissue axis (region), independent of perturbation. KP = unperturbed tumor: force -> tumor
 # (source obs.tissue mislabels 22 KP cells as normal); periphery its own region.
 tissue = tissue0.astype(object).copy()
 tissue[raw == "KP"] = "tumor"
@@ -74,7 +74,7 @@ print("tissue:", dict(collections.Counter(tissue)))
 a.write_h5ad(OUT)
 print("wrote", OUT)
 
-# ── verify via driver loader + attribute builder ────────────────────────────
+# --- verify via driver loader + attribute builder ---
 import run_concert_spac as R
 una = frozenset({"unperturbed"})
 ctrl = frozenset({"__NONE__"})  # no NTC in perturbmap
@@ -98,5 +98,5 @@ assert int((pi == 0).sum()) == int((~is_real_KO).sum()), "basal-slot cells must 
 ko_cells = np.isin(perturb_raw, ["Jak2", "Tgfbr2", "Ifngr2"]).sum()
 assert int(is_real_KO.sum()) == ko_cells, "is_real_KO mismatch"
 assert int(has_guide.sum()) == ko_cells, "has_guide should be KO-only (no NTC in perturbmap)"
-print(f"[verify] OK — slide {SLIDE}: real perts {real_pm}, tissue classes {set(td)}, "
+print(f"[verify] OK -- slide {SLIDE}: real perts {real_pm}, tissue classes {set(td)}, "
       f"{ko_cells} KO / {int((~is_real_KO).sum())} basal, KO-only guides")

@@ -174,7 +174,7 @@ def aggregate_unseen_v3(outdir: Path, panel: dict) -> None:
         target = unit["target_slide"]
         path = outdir / "unseen_pert" / f"{gene}__slide_{target}" / "lfc_scores.json"
         if not path.exists():
-            log.warning("Missing %s — skip aggregate", path)
+            log.warning("Missing %s -- skip aggregate", path)
             continue
         rec = json.loads(path.read_text())["L2"][gene]
         scores_by_gene.setdefault(gene, []).extend(rec)

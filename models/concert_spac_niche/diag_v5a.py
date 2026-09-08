@@ -89,13 +89,13 @@ def main():
                  int((cls[sub] == "control").sum()), int((cls[sub] == "gene_KO").sum()),
                  int((cls[sub] == "unassigned").sum()))
 
-    # ── H5: latent variance per dim ──────────────────────────────────────────
+    # --- H5: latent variance per dim ---
     Z = model.batching_latent_samples(pos[sub], idx[sub], atts[sub],
                                        batch_size=a.batch_size, Y=Y_enc[sub])
     z_std = Z.std(axis=0)
     logging.info("[H5 latent] per-dim std (GP first): %s", np.array2string(z_std, precision=4))
 
-    # ── predictions: basal (clean) and full (with shifts) ────────────────────
+    # --- predictions: basal (clean) and full (with shifts) ---
     pred_basal = model.batching_denoise_counts(
         X=pos[sub], sample_index=idx[sub], cell_atts=atts[sub], force_basal=True,
         n_samples=10, batch_size=a.batch_size, Y=Y_enc[sub])[0]
@@ -105,7 +105,7 @@ def main():
         n_samples=10, batch_size=a.batch_size, Y=Y_enc[sub])[0]
     obs = Y_obs[sub]
 
-    # ── H1: decoder output variance vs observed ──────────────────────────────
+    # --- H1: decoder output variance vs observed ---
     g_std_basal = pred_basal.std(axis=0)
     g_std_full = pred_full.std(axis=0)
     g_std_obs = obs.std(axis=0)
@@ -113,11 +113,11 @@ def main():
                  "ratio(full/obs)=%.3g", np.median(g_std_basal), np.median(g_std_full),
                  np.median(g_std_obs), np.median(g_std_full) / (np.median(g_std_obs) + 1e-12))
 
-    # ── H6: sparsity ─────────────────────────────────────────────────────────
+    # --- H6: sparsity ---
     zero_frac = float((obs == 0).mean())
     logging.info("[H6 sparsity] observed raw-count zero fraction = %.3f", zero_frac)
 
-    # ── C + baseline: per-gene-across-cells Spearman ─────────────────────────
+    # --- C + baseline: per-gene-across-cells Spearman ---
     base = eu.spatial_knn_mean(coords[sub], coords[rest], Y_obs[rest], k=a.knn_k)
     pg_basal = E._per_gene_spearman_mean(pred_basal, obs)
     pg_full = E._per_gene_spearman_mean(pred_full, obs)
@@ -125,7 +125,7 @@ def main():
     logging.info("[per-gene/cells] basal=%.3f full=%.3f  kNN-baseline=%.3f  (eval's axis)",
                  pg_basal, pg_full, pg_knn)
 
-    # ── H2: per-cell-across-genes + pseudobulk profile ───────────────────────
+    # --- H2: per-cell-across-genes + pseudobulk profile ---
     pc_basal = per_cell_spearman_mean(pred_basal, obs)
     pc_full = per_cell_spearman_mean(pred_full, obs)
     pb_s_basal, pb_p_basal = pseudobulk_corr(pred_basal, obs)
@@ -134,7 +134,7 @@ def main():
     logging.info("[H2 pseudobulk profile] basal: spearman=%.3f pearson=%.3f | "
                  "full: spearman=%.3f pearson=%.3f", pb_s_basal, pb_p_basal, pb_s_full, pb_p_full)
 
-    # ── H6: recompute per-gene on top-expressed genes (fewer zero ties) ──────
+    # --- H6: recompute per-gene on top-expressed genes (fewer zero ties) ---
     top = np.argsort(-obs.mean(axis=0))[:a.top_genes]
     pg_basal_top = E._per_gene_spearman_mean(pred_basal[:, top], obs[:, top])
     pg_knn_top = E._per_gene_spearman_mean(base[:, top], obs[:, top])
@@ -142,7 +142,7 @@ def main():
     logging.info("[H6 top-%d genes] per-gene/cells basal=%.3f kNN=%.3f (zero-frac=%.3f)",
                  a.top_genes, pg_basal_top, pg_knn_top, top_zero)
 
-    # ── Verdict ───────────────────────────────────────────────────────────────
+    # --- Verdict ---
     logging.info("================= VERDICT =================")
     gp_flat = z_std[:2].mean() < 1e-2
     out_flat = (np.median(g_std_full) / (np.median(g_std_obs) + 1e-12)) < 0.05

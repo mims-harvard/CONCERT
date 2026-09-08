@@ -96,7 +96,7 @@ def main() -> None:
                              slide=a.target_slide, **meta))
         print(f"  {scenario:12s} {name:28s} n={len(idx):5d} {meta}")
 
-    # ── A. multi-region, and their union ────────────────────────────────────
+    # --- A. multi-region, and their union ---
     chosen = big[:a.max_regions]
     per_region = {}
     for r in chosen:
@@ -109,7 +109,7 @@ def main() -> None:
              region="+".join(per_region), patch_n=a.region_patch_n,
              components=[f"region_{r}" for r in per_region])
 
-    # ── B. lesion size sweep, one fixed centre ──────────────────────────────
+    # --- B. lesion size sweep, one fixed centre ---
     surf = next((r for r in SURFACE_REGIONS if r in set(regions.tolist())), chosen[0])
     pool_s = np.where(tissue == surf)[0]
     centre = region_centroid_spot(xy, pool_s)
@@ -120,7 +120,7 @@ def main() -> None:
         emit(f"size_{n:04d}", "size", patch_around(xy, all_spots, centre, n),
              requested_n=n, centre_region=surf)
 
-    # ── C. surface vs deep, same size ───────────────────────────────────────
+    # --- C. surface vs deep, same size ---
     deep = next((r for r in DEEP_REGIONS if r in set(big)), None)
     if deep is None:
         print("[sets] no deep region above the size floor; skipping the depth scenario")

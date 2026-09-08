@@ -53,7 +53,7 @@ def main():
     hvg_mask = eu.select_hvgs(Y_obs, n_top=2000)
     logging.info("HVGs: %d", int(hvg_mask.sum()))
 
-    # ── 1. Split-half LFC reliability ──────────────────────────────────────
+    # --- 1. Split-half LFC reliability ---
     logging.info("Computing split-half LFC reliability...")
     reliability = {}
     for g in panel:
@@ -73,13 +73,13 @@ def main():
                                   split_half_mean=float(np.nanmean([x[0] for x in rels])),
                                   spearman_brown_mean=float(np.nanmean([x[1] for x in rels])))
 
-    # ── 2. Cell-state consistency ───────────────────────────────────────────
+    # --- 2. Cell-state consistency ---
     logging.info("Computing cell-state consistency (same-pert vs cross-state pairs)...")
     cell_cons = eu.cell_state_consistency_test(
         Y_obs, perturb_raw, bin_id, panel,
         ntc_label="control", gene_mask=hvg_mask, n_pairs=500, n_seeds=5)
 
-    # ── Summary table ───────────────────────────────────────────────────────
+    # --- Summary table ---
     print("\n{:<10} {:>8} {:>12} {:>10} {:>10} {:>8}".format(
         "gene", "niches", "SB-ceiling", "same-ρ", "cross-ρ", "p-med"))
     print("-" * 62)

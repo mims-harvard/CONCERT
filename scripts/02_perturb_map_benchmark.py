@@ -2,8 +2,7 @@
 """Spatial Perturb-map held-out perturbation benchmark, from a trained checkpoint.
 
 The script form of `notebooks/02_perturb_map_benchmark.ipynb`. The question and the two
-metrics are the ones described in `scripts/01_spac_seq_benchmark.py`; read that first. What
-differs here is the assay -- four sections of a lung tumour model carrying a small, balanced
+metrics are defined in `scripts/01_spac_seq_benchmark.py`. What differs here is the assay -- four sections of a lung tumour model carrying a small, balanced
 knockout panel, with unambiguous guide assignment and explicit control spots -- and, in
 consequence, three settings of the protocol:
 

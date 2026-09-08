@@ -38,7 +38,7 @@ EVAL_DIR="${CODEBASE_ROOT}/benchmark_evaluation"
 MODEL="${OUTPUT_ROOT}/perturb_seq_${REGIME}/model.pt"
 OUT="${OUTPUT_ROOT}/perturb_seq_${REGIME}_eval"
 
-[ -f "$MODEL" ] || { echo "[FATAL] checkpoint missing: $MODEL — run train/ first"; exit 1; }
+[ -f "$MODEL" ] || { echo "[FATAL] checkpoint missing: $MODEL -- run train/ first"; exit 1; }
 mkdir -p "$OUT"
 cd "$EVAL_DIR"
 

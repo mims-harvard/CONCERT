@@ -1,6 +1,6 @@
 """LOTO-D9 evaluation for the CONCERT-spac-niche-temporal gut DSS case study.
 
-Rebuts the reviewer critique "the temporal prediction is just interpolation — the mean
+Rebuts the reviewer critique "the temporal prediction is just interpolation -- the mean
 between two observed timepoints." We hold out DSS9 (the acute, NON-MONOTONE injury peak)
 entirely from training and test whether CONCERT predicts the day-9 inflammation program
 BETTER than linear interpolation of DSS3 and DSS21.
@@ -8,10 +8,10 @@ BETTER than linear interpolation of DSS3 and DSS21.
 See docs/LOTO_D9_EVAL_DESIGN.md for the full design. Key points implemented here:
 
   * Leakage-free: day-9 predictions are produced by taking NON-day-9 source cells and
-    re-decoding them at t = target_day/denom via counterfactualPrediction(time_t=…). No
+    re-decoding them at t = target_day/denom via counterfactualPrediction(time_t=...). No
     day-9 expression ever touches a day-9 prediction.
   * Perturbation-state-STRATIFIED pseudobulk (control-only / perturbed-only) is the PRIMARY
-    metric — it isolates the INTENSITY dynamics the time×pert term actually models. The
+    metric -- it isolates the INTENSITY dynamics the time×pert term actually models. The
     whole-tissue (composition-conflated) number is reported alongside for honesty.
   * States are decoded in SEPARATE counterfactualPrediction calls: rk_b (the f_pert/time
     gate) is batch-uniform from target_cell_perturbation, so perturbed and control source
@@ -45,9 +45,9 @@ EPS = 1e-3
 CP_TARGET = 1e4  # counts-per-CP_TARGET library normalization for pseudobulks
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 # helpers
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 def _dense(M) -> np.ndarray:
     return M.toarray() if sp.issparse(M) else np.asarray(M)
 
@@ -61,7 +61,7 @@ def _cp_normalize(counts: np.ndarray, target: float = CP_TARGET) -> np.ndarray:
 
 
 def _pseudobulk(counts: np.ndarray) -> np.ndarray:
-    """Mean CP-normalized expression over a set of cells → (genes,) pseudobulk vector."""
+    """Mean CP-normalized expression over a set of cells -> (genes,) pseudobulk vector."""
     if counts.shape[0] == 0:
         raise ValueError("empty cell set for pseudobulk")
     return _cp_normalize(counts).mean(axis=0)
@@ -88,13 +88,13 @@ def _spearman(a: np.ndarray, b: np.ndarray) -> float:
     return _pearson(ra.astype(float), rb.astype(float))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 # ground truth loading (held-out day-9 files)
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 def _load_holdout_pseudobulks(
     files: List[str], gene_names: np.ndarray, pert_col: str = "perturbation",
 ) -> Tuple[np.ndarray, np.ndarray, int, int]:
-    """Pool held-out (day-9) slice files → CP-normalized pseudobulks for perturbed & control.
+    """Pool held-out (day-9) slice files -> CP-normalized pseudobulks for perturbed & control.
 
     Returns (pb_pert, pb_ctrl, n_pert, n_ctrl). Genes are reindexed to `gene_names` order
     (the model's output column order) by symbol.
@@ -127,9 +127,9 @@ def _load_holdout_pseudobulks(
     return _pseudobulk(Xp), _pseudobulk(Xc), Xp.shape[0], Xc.shape[0]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 # CONCERT day-t prediction (leakage-free counterfactual re-decode)
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 def _predict_state_at_t(
     model, *, pos_batched, sample_indices, cell_atts, Y_expr, subset_idx,
     target_pert_code, target_t, n_samples, batch_size, is_real_KO: bool,
@@ -166,9 +166,9 @@ def _predict_state_at_t(
     return np.asarray(mu, dtype=np.float64)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 # main entry point
-# ─────────────────────────────────────────────────────────────────────────────
+# ---
 def run_loto_eval(
     model, adata, cell_atts, pos_batched, sample_indices, sample_id_all,
     multi_paths, gene_names, pert_map, cfg, outdir,
@@ -185,7 +185,7 @@ def run_loto_eval(
     gene_names = np.asarray(gene_names)
     G = gene_names.size
 
-    # per-cell source day_norm (each slide-file = one timepoint) ────────────────
+    # per-cell source day_norm (each slide-file = one timepoint) ---
     day_by_file = np.array([
         float(_ad.read_h5ad(p, backed="r").obs[cfg.time_col].iloc[0]) for p in multi_paths
     ], dtype=np.float32)
@@ -194,7 +194,7 @@ def run_loto_eval(
     logging.info("[loto] target_t=%.4f (day %.1f/%.1f); source day_norms=%s",
                  target_t, cfg.loto_target_day, cfg.loto_day_denom, uniq_days.tolist())
 
-    # source expression matrices ────────────────────────────────────────────────
+    # source expression matrices ---
     Y_expr = _dense(adata.X).astype(np.float32)          # normalized (expr encoder input)
     raw_src = _dense(adata.raw.X).astype(np.float64)     # raw counts (for real pseudobulks)
     state = np.asarray(cell_atts)[:, 1].astype(int)      # 0=control/basal, 1=perturbed
@@ -204,7 +204,7 @@ def run_loto_eval(
     n_samples = int(getattr(cfg, "loto_n_samples", 10))
     bs = int(getattr(cfg, "loto_batch_size", 512))
 
-    # ── 1. CONCERT day-9 predictions (leakage-free), per state ──────────────────
+    # --- 1. CONCERT day-9 predictions (leakage-free), per state ---
     pert_src = np.where(state == pert_code)[0]
     ctrl_src = np.where(state != pert_code)[0]
     logging.info("[loto] source cells: %d perturbed, %d control", pert_src.size, ctrl_src.size)
@@ -222,12 +222,12 @@ def run_loto_eval(
     concert_pb_ctrl = _pseudobulk(pred_ctrl)
     concert_lfc = _lfc(concert_pb_pert, concert_pb_ctrl)
 
-    # ── 2. Ground-truth day-9 (held out) ───────────────────────────────────────
+    # --- 2. Ground-truth day-9 (held out) ---
     y9_pert, y9_ctrl, n9p, n9c = _load_holdout_pseudobulks(cfg.loto_holdout_files, gene_names)
     real_lfc = _lfc(y9_pert, y9_ctrl)
     logging.info("[loto] real DSS9: %d perturbed, %d control cells", n9p, n9c)
 
-    # ── 3. Baselines from observed timepoints (D3, D21) ─────────────────────────
+    # --- 3. Baselines from observed timepoints (D3, D21) ---
     def _day_state_pb(day_val_norm: float, want_pert: bool) -> Optional[np.ndarray]:
         want = pert_code if want_pert else None
         m = np.isclose(src_day, day_val_norm, atol=1e-3)
@@ -261,7 +261,7 @@ def run_loto_eval(
     if pooled_p.shape[0] and pooled_c.shape[0]:
         baselines["global_pooled"] = _lfc(_pseudobulk(pooled_p), _pseudobulk(pooled_c))
 
-    # ── 4. Metrics: LFC-RMSE (primary) + per-gene expression ────────────────────
+    # --- 4. Metrics: LFC-RMSE (primary) + per-gene expression ---
     methods = {"CONCERT": concert_lfc, **baselines}
     lfc_metrics = {
         name: {"lfc_rmse": _rmse(v, real_lfc),
@@ -285,8 +285,8 @@ def run_loto_eval(
         ic = pb["d3"][1] + w * (pb["d21"][1] - pb["d3"][1])
         expr_metrics["linear_interp"] = _expr_stats(ip, ic)
 
-    # ── 5. Whole-tissue (composition-conflated) honesty metric ──────────────────
-    # Predict every source cell at its OWN state at t=9, pool all → compare to real D9 pooled.
+    # --- 5. Whole-tissue (composition-conflated) honesty metric ---
+    # Predict every source cell at its OWN state at t=9, pool all -> compare to real D9 pooled.
     concert_pool = np.concatenate([pred_pert, pred_ctrl], axis=0)
     concert_pool_pb = _pseudobulk(concert_pool)
     # real D9 pooled (weight pert/ctrl by their real cell counts)
@@ -303,12 +303,12 @@ def run_loto_eval(
         whole_tissue["linear_interp_rmse"] = _rmse(interp_pool, real_pool_pb)
         whole_tissue["linear_interp_pearson"] = _pearson(interp_pool, real_pool_pb)
 
-    # ── 6. Learned time-function curve (non-linearity evidence) ─────────────────
+    # --- 6. Learned time-function curve (non-linearity evidence) ---
     marker_idx = np.array([i for i, g in enumerate(gene_names) if g in set(INFLAMMATION_MARKERS)], dtype=int)
     markers_present = [gene_names[i] for i in marker_idx]
     ts = np.linspace(0.0, 1.0, 15)
     # decode the perturbed source cells at each t; track mean marker CP-expression.
-    # subsample for speed — the curve only needs the MEAN trajectory, not per-cell.
+    # subsample for speed -- the curve only needs the MEAN trajectory, not per-cell.
     TC_CAP = 30000
     if pert_src.size > TC_CAP:
         sub = np.sort(np.random.default_rng(0).choice(pert_src, TC_CAP, replace=False))
@@ -324,7 +324,7 @@ def run_loto_eval(
         time_curve.append(float(pb_t[marker_idx].mean()) if marker_idx.size else float("nan"))
     time_curve = np.array(time_curve)
 
-    # ── 7. Persist ──────────────────────────────────────────────────────────────
+    # --- 7. Persist ---
     win = None
     if "linear_interp" in lfc_metrics:
         win = bool(lfc_metrics["CONCERT"]["lfc_rmse"] < lfc_metrics["linear_interp"]["lfc_rmse"])
@@ -366,7 +366,7 @@ def run_loto_eval(
     _plot_summary(outdir, ts, time_curve, real_lfc, concert_lfc,
                   baselines.get("linear_interp"), lfc_metrics, target_t)
 
-    # ── console report ──────────────────────────────────────────────────────────
+    # --- console report ---
     logging.info("=" * 68)
     logging.info("LOTO-D9 RESULT (PRIMARY = stratified perturbed-vs-control LFC-RMSE):")
     for name, m in lfc_metrics.items():

@@ -27,5 +27,5 @@ for d in sorted(B.glob("gate_fix*")):
         ok = all(v[g] > 0 for g in KEY if g in v)
         print(f"{d.name.replace('gate_',''):16s} {s:17s} {len(idx):5d} " +
               " ".join(f"{v[g]:+9.3f}" for g in gi) + f"   {'PASS' if ok else 'FAIL'}")
-print("\nreference — ORIGINAL broken 2dpara, f_pert only (paracrine off), real lesion:")
+print("\nreference -- ORIGINAL broken 2dpara, f_pert only (paracrine off), real lesion:")
 print("   Gm42418 +1.369  Scgb1a1 -0.122  Lcn2 -0.574  Vim -0.460  Gfap -1.248  Timp1 -0.209  FAIL")

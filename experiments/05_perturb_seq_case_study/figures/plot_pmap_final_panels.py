@@ -126,7 +126,7 @@ def panel_propagation(interp):
     labels = list(bins.keys())
     vals = [bins[k]["shift_change"] for k in labels]
     ns = [bins[k]["n_cells"] for k in labels]
-    pretty = [k.replace("_edited_neighbours", "").replace("-", "–") for k in labels]
+    pretty = [k.replace("_edited_neighbours", "").replace("-", "-") for k in labels]
     fig, ax = plt.subplots(figsize=(7.2, 4.8))
     xs = np.arange(len(labels))
     cols = [MUTED] + [ACCENT] * (len(labels) - 1)
@@ -183,7 +183,7 @@ def panel_pathways(csv_path):
     ax.axvline(0, color=MUTED, lw=0.9)
     ax.set_yticks(y)
     ax.set_yticklabels([s.replace("Epithelial Mesenchymal Transition",
-                                  "Epithelial–mesenchymal\ntransition") for s in sets],
+                                  "Epithelial-mesenchymal\ntransition") for s in sets],
                        fontsize=13)
     ax.set_xlabel("Dependence of the response\non the microenvironment", fontsize=14)
     ax.tick_params(labelsize=12)

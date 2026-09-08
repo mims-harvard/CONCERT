@@ -117,7 +117,7 @@ def main() -> None:
     figdir = out / "figures"
     figdir.mkdir(parents=True, exist_ok=True)
 
-    # ── predictions: stroke ON vs OFF over the same Sham cells ──────────────
+    # --- predictions: stroke ON vs OFF over the same Sham cells ---
     on = next(out.glob(f"stroke_{a.arm}_on_*_perturbed_counts.h5ad"))
     off = next(out.glob(f"stroke_{a.arm}_off_*_perturbed_counts.h5ad"))
     P_on, P_off = ad.read_h5ad(on), ad.read_h5ad(off)
@@ -144,7 +144,7 @@ def main() -> None:
     delta, used = pred_delta(MARKERS)
     delta_lcn2, _ = pred_delta(("Lcn2",))
 
-    # ── observed sides ──────────────────────────────────────────────────────
+    # --- observed sides ---
     A_sham, xy_sham, sec_sham = load_slides(Path(a.slides), a.arm_prefix, "Sham")
     A_pt, xy_pt, sec_pt = load_slides(Path(a.slides), a.arm_prefix, "PT")
     if A_sham.n_obs != len(delta):
@@ -157,7 +157,7 @@ def main() -> None:
     n_sham = stack_norm(xy_sham)
     n_pt = stack_norm(xy_pt)
 
-    # ── perturbed fraction per section, on matched effective rates ──────────
+    # --- perturbed fraction per section, on matched effective rates ---
     # The observed side is an annotation, so its rate is fixed; the predicted side is a continuous
     # response with no natural cutoff. Setting the cutoff so the POOLED predicted rate equals the
     # pooled real lesion rate makes the two profiles comparable in shape, which is the claim --
@@ -187,7 +187,7 @@ def main() -> None:
     prof_r = float(pearsonr(tab.observed_lesion_frac, tab.predicted_pert_frac)[0])
     r_all_p, r_all_s, nb_all = binned_agreement(n_pt, pt_score, n_sham, delta, a.nbins)
 
-    # ── figure: observed PT field (top) beside predicted Sham field (bottom) ─
+    # --- figure: observed PT field (top) beside predicted Sham field (bottom) -
     nsec = len(tab)
     fig, axes = plt.subplots(2, nsec, figsize=(2.6 * nsec + 1.4, 5.6))
     v_pt = np.quantile(pt_score, [0.03, 0.97])
@@ -225,7 +225,7 @@ def main() -> None:
     fig.savefig(figdir / f"fig_stroke_field_{a.arm}.pdf")
     plt.close(fig)
 
-    # ── figure: perturbed fraction per section ──────────────────────────────
+    # --- figure: perturbed fraction per section ---
     fig, ax = plt.subplots(figsize=(4.6, 3.6))
     w, x = 0.38, np.arange(nsec)
     ax.bar(x - w / 2, 100 * tab.observed_lesion_frac, w, color=paper_style.MUTED, label="Observed")

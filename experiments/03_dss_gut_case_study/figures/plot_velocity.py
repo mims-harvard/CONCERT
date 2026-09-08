@@ -30,7 +30,7 @@ CS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
 DAYS = np.array([0, 3, 9, 21], float)
 DDAY = np.diff(DAYS)                                   # [3,6,12]
 SEG = np.arange(3, dtype=float)                        # categorical segment x
-SEGLAB = ["Day 0 → 3", "Day 3 → 9", "Day 9 → 21"]
+SEGLAB = ["Day 0 -> 3", "Day 3 -> 9", "Day 9 -> 21"]
 PRED = ps.DAY_COLORS[9.0]                              # light-orange prediction colour
 GT = ps.INK
 

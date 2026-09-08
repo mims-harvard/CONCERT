@@ -362,8 +362,7 @@ def step_compare(env, out):
     and Steamboat all of them, GEARS 80, CelComen 15, CellAgentChat 11 -- so intersecting all
     of them at once leaves nothing to compare. The reported comparison instead takes, per
     competitor, the records that competitor and CONCERT both cover. Comparing unpaired means
-    is the trap this avoids: a method that skipped the hard records would look better for
-    having skipped them.
+    would instead reward a method for skipping the hard records.
 
     (The Perturb-map benchmark is the other way round -- there the methods overlap enough that
     an all-method intersection is the rule. See scripts/02_perturb_map_benchmark.py.)

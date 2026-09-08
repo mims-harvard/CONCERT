@@ -28,7 +28,7 @@ def suggest_r_max(pos: np.ndarray, is_real_KO: np.ndarray, target_degree: int = 
     """
     emit = pos[is_real_KO.astype(bool)]
     if emit.shape[0] <= target_degree:
-        # too few emitters — fall back to a generous fraction of the field
+        # too few emitters -- fall back to a generous fraction of the field
         return float(0.5)
     nn = NearestNeighbors(n_neighbors=target_degree).fit(emit)
     rng = np.random.default_rng(seed)

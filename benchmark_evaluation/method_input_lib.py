@@ -1,8 +1,8 @@
 """Per-method expression preprocessing and scoring-space conversion.
 
 Prepared slides store:
-  - ``layers['counts']`` / raw cache  → integer raw counts
-  - ``adata.X``                       → log-CP10K (CP10K + log1p) for generic scoring
+  - ``layers['counts']`` / raw cache  -> integer raw counts
+  - ``adata.X``                       -> log-CP10K (CP10K + log1p) for generic scoring
 
 Tutorial input formats (``adata_for_method``):
 
@@ -10,14 +10,14 @@ Tutorial input formats (``adata_for_method``):
       log-CP10K from prepared ``adata.X``.
 
   CelComen
-      raw counts → CPM (1e6) + log1p.
+      raw counts -> CPM (1e6) + log1p.
 
   Steamboat
-      raw counts → ``prep_adatas(norm=True, log1p=True)`` (scanpy default target_sum=1e4).
+      raw counts -> ``prep_adatas(norm=True, log1p=True)`` (scanpy default target_sum=1e4).
 
 Scoring (LFC + energy distance) expects **predictions in log-CP10K** matching
 prepared ``adata.X``.  Ground-truth e-dist uses raw counts; ``aligned_energy_distance``
-maps log-CP10K → counts via each source cell's library size before PCA.
+maps log-CP10K -> counts via each source cell's library size before PCA.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ def with_raw_counts(adata: ad.AnnData, copy_data: bool = True) -> ad.AnnData:
     """Return AnnData with ``.X`` set to raw counts."""
     out = adata.copy() if copy_data else adata
     if "counts" not in out.layers:
-        raise ValueError("prepared adata missing layers['counts'] — cannot recover raw counts")
+        raise ValueError("prepared adata missing layers['counts'] -- cannot recover raw counts")
     out.X = out.layers["counts"].copy()
     return out
 
@@ -59,7 +59,7 @@ def celcomen_preds_to_logcp10k(log_cpm: np.ndarray) -> np.ndarray:
 
 
 def raw_counts_to_logcp10k(counts: np.ndarray, eps: float = 1e-9) -> np.ndarray:
-    """Raw integer counts → log-CP10K (per-cell library size normalization)."""
+    """Raw integer counts -> log-CP10K (per-cell library size normalization)."""
     x = np.clip(np.asarray(counts, dtype=np.float64), 0.0, None)
     ls = x.sum(axis=1, keepdims=True) + eps
     return np.log1p(x / ls * 1e4)

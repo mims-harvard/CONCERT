@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-filter_spac.py — Add filtering obs columns to SPAC-seq h5ad files.
+filter_spac.py -- Add filtering obs columns to SPAC-seq h5ad files.
 
 Adds the following obs columns in-place (no cells removed, just annotated):
   filter_pass       bool   True = included in CONCERT training
@@ -10,9 +10,9 @@ Adds the following obs columns in-place (no cells removed, just annotated):
   is_perturbed_pad  bool   True for spots that received a guide (PAD denoiser group)
 
 Rules (see SPAC_FILTERING_RULES.md):
-  1. Remove "multiple"           — UMI-tie noise, target is unresolvable
-  2. Remove rare gene-KO targets — fewer than --min_spots_per_target spots
-  3. Remove low-expression spots — fewer than --min_counts or --min_genes (optional)
+  1. Remove "multiple"           -- UMI-tie noise, target is unresolvable
+  2. Remove rare gene-KO targets -- fewer than --min_spots_per_target spots
+  3. Remove low-expression spots -- fewer than --min_counts or --min_genes (optional)
 
   "unassigned" (no guide captured) is a CLEAR unperturbed state and PASSES the filter.
   It is treated identically to "control" as an unperturbed reference.
@@ -39,7 +39,7 @@ import numpy as np
 import pandas as pd
 
 
-# ─── constants ────────────────────────────────────────────────────────────────
+# --- constants ---
 LABEL_MULTIPLE   = "multiple"
 LABEL_UNASSIGNED = "unassigned"
 LABEL_CONTROL    = "control"
@@ -50,7 +50,7 @@ REASON_RARE      = "rare_target"
 REASON_LOW_EXPR  = "low_expr"
 
 
-# ─── core filter logic ────────────────────────────────────────────────────────
+# --- core filter logic ---
 def compute_filter_vectors(
     perturbation: np.ndarray,      # (N,) str array of perturbation labels
     n_counts: np.ndarray,          # (N,) int/float total UMI per spot
@@ -64,7 +64,7 @@ def compute_filter_vectors(
 
     Parameters
     ----------
-    perturbation : str array of perturbation labels (e.g. "Tgfbr2", "control", …)
+    perturbation : str array of perturbation labels (e.g. "Tgfbr2", "control", ...)
     n_counts     : total UMI count per spot
     n_genes      : number of detected genes per spot
     min_spots_per_target : minimum spots to keep a gene-KO target (removes singletons)
@@ -72,15 +72,15 @@ def compute_filter_vectors(
     min_genes    : minimum genes detected to pass expression QC
 
     Filter rules:
-      1. "multiple"   → always removed (ambiguous UMI tie, target unresolvable)
-      2. gene-KO with < min_spots_per_target → removed (too rare for inference)
-      3. n_counts < min_counts or n_genes < min_genes → removed (low expression QC)
-      "unassigned" and "control" always pass — both are clear unperturbed states.
+      1. "multiple"   -> always removed (ambiguous UMI tie, target unresolvable)
+      2. gene-KO with < min_spots_per_target -> removed (too rare for inference)
+      3. n_counts < min_counts or n_genes < min_genes -> removed (low expression QC)
+      "unassigned" and "control" always pass -- both are clear unperturbed states.
     """
     N = len(perturbation)
     assert len(n_counts) == N and len(n_genes) == N
 
-    # ── count spots per target (gene-KO targets only) ─────────────────────────
+    # --- count spots per target (gene-KO targets only) ---
     # "unassigned" is a valid clear label, not a gene-KO target, so exclude from count
     NON_GENE_KO = {LABEL_MULTIPLE, LABEL_UNASSIGNED, LABEL_CONTROL}
     gene_ko_mask = ~np.isin(perturbation, list(NON_GENE_KO))
@@ -93,10 +93,10 @@ def compute_filter_vectors(
     for i, lbl in enumerate(perturbation):
         target_n_spots[i] = target_counts.get(lbl, 0)
 
-    # ── assign filter_reason (first failing rule wins) ────────────────────────
+    # --- assign filter_reason (first failing rule wins) ---
     filter_reason = np.full(N, REASON_PASS, dtype=object)
 
-    # Rule 1: multiple — unclear state, always removed
+    # Rule 1: multiple -- unclear state, always removed
     filter_reason[perturbation == LABEL_MULTIPLE] = REASON_MULTIPLE
 
     # Rule 2: rare gene-KO targets (only among gene-KO spots not already filtered)
@@ -109,10 +109,10 @@ def compute_filter_vectors(
     low_expr = still_pass & ((n_counts < min_counts) | (n_genes < min_genes))
     filter_reason[low_expr] = REASON_LOW_EXPR
 
-    # ── derived columns ───────────────────────────────────────────────────────
+    # --- derived columns ---
     filter_pass = (filter_reason == REASON_PASS).astype(bool)
 
-    # is_baseline: clear unperturbed reference — both control and unassigned
+    # is_baseline: clear unperturbed reference -- both control and unassigned
     # unassigned = no guide captured = definitively unperturbed
     is_baseline = np.isin(perturbation, [LABEL_CONTROL, LABEL_UNASSIGNED])
 
@@ -150,8 +150,8 @@ def print_filter_summary(sample: str, perturbation: np.ndarray,
     print(f"  {sample}")
     print(f"{'='*60}")
     print(f"  Total spots       : {N:>10,}")
-    print(f"  ✅ filter_pass    : {n_pass:>10,}  ({100*n_pass/N:.1f}%)")
-    print(f"  ❌ filtered out   : {n_fail:>10,}  ({100*n_fail/N:.1f}%)")
+    print(f"  filter_pass    : {n_pass:>10,}  ({100*n_pass/N:.1f}%)")
+    print(f"  filtered out   : {n_fail:>10,}  ({100*n_fail/N:.1f}%)")
     print()
     print(f"  Filter reasons (removed):")
     for reason, cnt in sorted(reasons.items()):
@@ -173,7 +173,7 @@ def print_filter_summary(sample: str, perturbation: np.ndarray,
     print()
 
 
-# ─── h5ad I/O ─────────────────────────────────────────────────────────────────
+# --- h5ad I/O ---
 def read_perturbation_and_qc(h5ad_path: Path):
     """Read perturbation labels, n_counts, n_genes from h5ad via h5py (no full X load)."""
     with h5py.File(h5ad_path, "r") as f:
@@ -213,7 +213,7 @@ def write_filter_columns(h5ad_path: Path, df: pd.DataFrame) -> None:
                            data=df["is_perturbed_pad"].values.astype(np.uint8))
 
 
-# ─── CLI ─────────────────────────────────────────────────────────────────────
+# --- CLI ---
 def parse_args():
     p = argparse.ArgumentParser(
         description="Add SPAC-seq filter columns to h5ad files.",

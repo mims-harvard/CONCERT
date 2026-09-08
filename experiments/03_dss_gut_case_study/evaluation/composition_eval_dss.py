@@ -1,14 +1,14 @@
 """Descriptive-reconstruction validation for the DSS composition model (spec §6).
 
 Trained on ALL 4 timepoints. Validates that the membership field π reproduces the observed
-inflammation COMPOSITION over time, is spatially contiguous, and is individualized per mouse —
+inflammation COMPOSITION over time, is spatially contiguous, and is individualized per mouse --
 the capabilities the fixed-state (intensity-only) model lacked. NOT a held-out-peak test.
 
 Metrics written to <outdir>/composition_eval/:
-  1. composition_calibration.csv  — predicted π-fraction vs observed label-fraction, per day
-  2. spatial_moran.csv            — Moran's I of predicted π vs observed label, per slice/day
-  3. heterogeneity.csv            — cross-mouse variance of π at a common projected day
-  4. counterfactual_flip.json     — π→0 collapses the inflammation program (mechanism/identifiability)
+  1. composition_calibration.csv  -- predicted π-fraction vs observed label-fraction, per day
+  2. spatial_moran.csv            -- Moran's I of predicted π vs observed label, per slice/day
+  3. heterogeneity.csv            -- cross-mouse variance of π at a common projected day
+  4. counterfactual_flip.json     -- π->0 collapses the inflammation program (mechanism/identifiability)
   + composition_summary.png
 """
 from __future__ import annotations
@@ -59,7 +59,7 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
     bs = int(getattr(cfg, "loto_batch_size", 512))
     denom = float(getattr(cfg, "loto_day_denom", 21.0))
 
-    # ── π at each cell's OWN observed day (calibration should match observed fractions) ──
+    # --- π at each cell's OWN observed day (calibration should match observed fractions) ---
     pi_obs = model.predict_membership(
         X=pos_batched, sample_index=sample_indices, cell_atts=cell_atts,
         Y=Y_expr, time_t=src_day, batch_size=bs)
@@ -146,8 +146,8 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
 
     Re-decode each cell at target days using counterfactualPrediction(time_t=...) and read the
     predicted DSS marker composition. SUCCESS = inflammation MOVES with time under re-decode:
-      • day0 (healthy) cells decoded at t=9 RISE above the same cells decoded at t=0
-      • day9 cells decoded at t=21 FALL below the same cells decoded at t=9
+      * day0 (healthy) cells decoded at t=9 RISE above the same cells decoded at t=0
+      * day9 cells decoded at t=21 FALL below the same cells decoded at t=9
 
     counterfactualPrediction slices self.mask_cutoff positionally, so we decode the FULL cell
     set at each target day (constant time_t) and subset the OUTPUT by source day afterward.
@@ -190,7 +190,7 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
         tier1_codes = None
         arch_codes = None
 
-    # DSS marker panel → indices in the model gene axis (gene_names order == counterfactual output)
+    # DSS marker panel -> indices in the model gene axis (gene_names order == counterfactual output)
     DSS_MARKERS = ['Isg15', 'Ifit1', 'Tnf', 'Cxcl1', 'Nos2', 'Il11', 'Il1b', 'Mmp3', 'Mmp10',
                    'Mmp13', 'Plau', 'Igfbp5', 'Col18a1', 'Mmp2', 'S100a8', 'S100a9', 'Osm',
                    'Cxcl10', 'Cxcl5', 'Ly6a']
@@ -198,7 +198,7 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
     mk_idx = [gnames.index(g) for g in DSS_MARKERS if g in gnames]
     logging.info("[traj] %d/%d marker genes present in model gene axis", len(mk_idx), len(DSS_MARKERS))
 
-    # ── shift-sign diagnostic ────────────────────────────────────────────────
+    # --- shift-sign diagnostic ---
     # a(t) = softplus(...) >= 0 only scales the MAGNITUDE of `shift` (= Φ·f_pert), which is
     # SIGNED (clamped to ±f_pert_clamp). So the gate can be passed two ways:
     #   shift > 0  -> basal is healthy and a(t)·shift ADDS inflammation      (intended)
@@ -239,11 +239,11 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
     model._pert_log_shift_from_lord = _instrumented_shift_fn
 
     def _decode_marker_score(t_day: float) -> np.ndarray:
-        """Full-set re-decode at target day → per-cell mean log1p predicted marker expression."""
+        """Full-set re-decode at target day -> per-cell mean log1p predicted marker expression."""
         _cur_t[0] = float(t_day)
         tt = np.full(N, float(t_day) / denom, dtype=np.float32)
-        # Same cell_atts + Y + arch_desc every call → identical basal across t (the basal path
-        # takes no time input at all); ONLY time_t (→ a(t)) varies,
+        # Same cell_atts + Y + arch_desc every call -> identical basal across t (the basal path
+        # takes no time input at all); ONLY time_t (-> a(t)) varies,
         # so any change in the marker score is attributable purely to the field s(coords,niche,t).
         # tissue kept per-cell (target_cell_tissue=None); pert code set to the shared inflamed
         # program (INT) so f_pert is the inflammation signature that s scales.
@@ -282,7 +282,7 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
         _mag = [abs(v["mean_shift"]) for v in shift_diag.values()]
         if bool(getattr(model, "marker_sign_positive", False)):
             # The marker columns are softplus-constrained, so frac>0 == 1.0 BY CONSTRUCTION
-            # and "INTENDED" here would be a tautology, not evidence — this project has
+            # and "INTENDED" here would be a tautology, not evidence -- this project has
             # already banked four false gate passes, do not add a fifth. The constraint
             # removes the INVERTED failure mode and leaves exactly one: the model can go
             # INERT, driving the marker shift to ~0 and keeping inflammation in basal.
@@ -290,7 +290,7 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
             verdict = ("INERT (marker shift ~0: constraint satisfied by switching the pert "
                        "path OFF; inflammation still lives in basal)" if max(_mag) < INERT_SHIFT_TOL else
                        "ACTIVE (marker shift > 0 with real magnitude; sign is constrained, "
-                       "so this is NOT independent evidence the mechanism is right — read the "
+                       "so this is NOT independent evidence the mechanism is right -- read the "
                        "trajectory gate alongside it)")
         else:
             verdict = ("INTENDED (shift>0: a(t) ADDS inflammation)" if min(_p) > 0.5 else
@@ -371,13 +371,13 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
     never the cell's own expression; only time_t varies), so the predicted DSS-marker score
     at a target day is attributable purely to Phi(x,t).
 
-      C1 per_mouse_trajectories.csv  — each mouse's cells re-decoded at t=0/3/9/21 -> its own
+      C1 per_mouse_trajectories.csv  -- each mouse's cells re-decoded at t=0/3/9/21 -> its own
                                        virtual longitudinal inflammation curve (impossible from
                                        raw data: each mouse is one terminal timepoint).
-      C2 spatial_moran.csv           — Moran's I of the predicted DIAGONAL field (each cell at
+      C2 spatial_moran.csv           -- Moran's I of the predicted DIAGONAL field (each cell at
                                        its own day) per slice, vs observed marker score + label;
                                        expect the observed 0.06->0.3 rise reproduced.
-      C3 heterogeneity.csv           — every mouse projected to the peak day (t=9); cross-mouse
+      C3 heterogeneity.csv           -- every mouse projected to the peak day (t=9); cross-mouse
                                        spread of predicted inflammation (interp baseline = 0).
 
     NOT here: the held-out-interpolable-day check (deliverable 2) is a RETRAIN, run separately.
@@ -462,7 +462,7 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
         m = np.isclose(src_day, d, atol=1e-3)
         diag[m] = pred[d][m]
 
-    # ── C1: per-mouse virtual longitudinal trajectories ──────────────────────
+    # --- C1: per-mouse virtual longitudinal trajectories ---
     mice = sorted(set(mouse.tolist()))
     traj_rows = []
     for mid in mice:
@@ -476,7 +476,7 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
         w = csv.DictWriter(fh, fieldnames=list(traj_rows[0].keys())); w.writeheader(); w.writerows(traj_rows)
     logging.info("[case] C1 wrote %d per-mouse trajectories", len(traj_rows))
 
-    # ── C2: spatial Moran of the predicted diagonal field, per slice ─────────
+    # --- C2: spatial Moran of the predicted diagonal field, per slice ---
     moran_rows = []
     for s in np.unique(sid):
         m = sid == s
@@ -500,7 +500,7 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
     logging.info("[case] C2 Moran(pred_diag) by day: %s",
                  {d: round(v["moran_pred_diag"], 3) for d, v in moran_by_day.items()})
 
-    # ── C3: per-mouse heterogeneity at the peak day (t=9) ────────────────────
+    # --- C3: per-mouse heterogeneity at the peak day (t=9) ---
     het_rows = []
     for mid in mice:
         mm = mouse == mid
@@ -574,25 +574,25 @@ def _plot_case_study(outdir, traj_rows, moran_rows, moran_by_day, het_rows, targ
 def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
                            sample_id_all, multi_paths, gene_names, pert_map, cfg, outdir,
                            tier1_id=None, arch_desc=None) -> Dict:
-    """Deliverable 2 — leave-one-mouse-out GROUND-TRUTH reconstruction (interpolation rebuttal).
+    """Deliverable 2 -- leave-one-mouse-out GROUND-TRUTH reconstruction (interpolation rebuttal).
 
     The model is trained with whole mice HELD OUT (HOLDOUT_MICE). This eval is run on ONLY the
     held-out mice's slices (multi_sample_files = the held-out files); the ckpt loads with its
     basal / field / f_pert intact and slide_bias truncated to a reference batch (load_model's
     "target slide row 0" convention). Each held-out cell is re-decoded at ITS OWN (still-SEEN)
-    day from its own Tier1 + architecture + niche geometry — a genuine unseen-INDIVIDUAL
+    day from its own Tier1 + architecture + niche geometry -- a genuine unseen-INDIVIDUAL
     reconstruction, with ground truth available because the day itself was in training.
 
     Because the day is seen, the sharpest "just interpolation" baseline is the population MEAN
     marker profile at that day (what any interpolation collapses to for an unseen individual).
-    CONCERT must beat it by using the individual's spatial structure — per-cell / spatial
+    CONCERT must beat it by using the individual's spatial structure -- per-cell / spatial
     variation the population mean gives as a constant (per-cell corr 0 by construction).
 
     Metrics (per held-out mouse + pooled), written to <outdir>/heldout_eval/:
-      • pseudobulk calibration — predicted vs observed mouse-mean marker score (right level?)
-      • per-cell spatial — Pearson(pred, obs) marker score; population-mean baseline = 0
-      • per-cell RMSE — model vs day-mean-constant vs healthy-mean baselines (model lowest?)
-      • spatial Moran — predicted field vs observed field per slice
+      * pseudobulk calibration -- predicted vs observed mouse-mean marker score (right level?)
+      * per-cell spatial -- Pearson(pred, obs) marker score; population-mean baseline = 0
+      * per-cell RMSE -- model vs day-mean-constant vs healthy-mean baselines (model lowest?)
+      * spatial Moran -- predicted field vs observed field per slice
     """
     import torch, csv
     outdir = Path(outdir) / "heldout_eval"
@@ -627,7 +627,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
     gnames = list(map(str, gene_names))
     mk_idx = [gnames.index(g) for g in DSS_MARKERS if g in gnames]
 
-    # ── observed ground truth in RAW-COUNT space ──────────────────────────────
+    # --- observed ground truth in RAW-COUNT space ---
     # adata.X reaching this fn is normalized (negative after scaling), so re-read each held-out
     # file's raw counts and build the per-cell observed marker score in file/concat order (run()
     # concatenates multi_paths in order; cells with sample_id==i are contiguous in file-i order).
@@ -640,7 +640,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
         Xi = Xi.toarray() if sp.issparse(Xi) else np.asarray(Xi)
         if Xi.shape[0] != int(m.sum()):
             raise ValueError(f"heldout_eval: file {Path(p).name} has {Xi.shape[0]} cells but "
-                             f"{int(m.sum())} in concat — order/alignment broke.")
+                             f"{int(m.sum())} in concat -- order/alignment broke.")
         obs_score[m] = np.log1p(Xi[:, mk_idx]).mean(1) if mk_idx else 0.0
 
     if bool(getattr(model, "use_shared_basal", False)):
@@ -651,11 +651,11 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
     else:
         tier1_codes = arch_codes = None
 
-    Y_expr = _dense(adata.X).astype(np.float32)   # model input (normalized) — decoder consumes it
+    Y_expr = _dense(adata.X).astype(np.float32)   # model input (normalized) -- decoder consumes it
 
     # The decoder's mu is in SIZE-FACTOR-NORMALIZED space: the likelihood is
     # NB(x | mean = mu * size_factor) (VAE_utils.py:96-100). Comparing log1p(mu) against
-    # log1p(RAW counts) therefore mis-scales every cell by its own library size — and DSS
+    # log1p(RAW counts) therefore mis-scales every cell by its own library size -- and DSS
     # lowers library size (median counts/slice: day0 99 -> day9 61), so the mis-scaled cells
     # are exactly the late ones the calibration is judged on. Multiply mu back into COUNT
     # space before scoring so pred and obs are the same quantity.
@@ -680,7 +680,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
         m = np.isclose(src_day, d, atol=1e-3)
         pred_diag[m] = _decode_score(float(d))[m]
 
-    # ── per-cell dump for spatial figures (viz 1-3): coords, obs, and the leakage-free
+    # --- per-cell dump for spatial figures (viz 1-3): coords, obs, and the leakage-free
     # re-decode of EVERY held-out cell at t0/t3/t9/t21 (virtual longitudinal on unseen tissue).
     if bool(getattr(cfg, "dump_percell", False)):
         pc_days = [0.0, 3.0, 9.0, 21.0]
@@ -812,7 +812,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
             return float("nan")
         return float(np.corrcoef(a, b)[0, 1])
 
-    # ── per held-out mouse metrics ────────────────────────────────────────────
+    # --- per held-out mouse metrics ---
     rows = []
     for mid in sorted(set(mouse.tolist())):
         mm = mouse == mid
@@ -836,7 +836,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
     with open(outdir / "heldout_per_mouse.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
 
-    # ── spatial Moran per held-out slice: predicted field vs observed field ────
+    # --- spatial Moran per held-out slice: predicted field vs observed field ---
     srows = []
     for s in np.unique(sid):
         m = sid == s

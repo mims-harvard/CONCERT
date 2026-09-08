@@ -84,7 +84,7 @@ def parse_args():
     p.add_argument("--fpert_hidden", type=int, default=256)
     p.add_argument("--fpert_svgp_inducing", type=int, default=16)
     p.add_argument("--fpert_svgp_ls_init", type=float, default=5.0)
-    # v4 gp_pp lengthscale band — MUST match the trained checkpoint (v4 used [3,18]).
+    # v4 gp_pp lengthscale band -- MUST match the trained checkpoint (v4 used [3,18]).
     # Left as None => CONCERT construction defaults (3,8); pass explicitly for v4 models.
     p.add_argument("--ls_prior_min", type=float, default=None)
     p.add_argument("--ls_prior_max", type=float, default=None)
@@ -162,7 +162,7 @@ def build_pm_ctx(args, sid: str) -> dict:
         log.warning("could not auto-detect inducing count from checkpoint: %s", _e)
     # Niche-FiLM auto-detect: if the checkpoint carries the FiLM head, build with it and turn the
     # legacy additive niche interaction OFF (matching training). niche_film_k / gcap are plain-float
-    # attrs NOT saved in the state_dict, so pin them to the training defaults — they MUST match or
+    # attrs NOT saved in the state_dict, so pin them to the training defaults -- they MUST match or
     # gamma renders differently at inference (silent corruption, same class as the ls-band bug).
     try:
         import torch as _t2
@@ -270,7 +270,7 @@ def _v3_units_by_slide(args) -> dict:
     """Map target_slide -> [gene] from the v3 eval_panel. Panel-driven UNSEEN units:
     each gene is MASKED on its target slide (GT = same-slide masked KO) and KEPT on
     >=1 donor slide (so the model learns it). ONLY these (gene,target_slide) pairs are
-    valid unseen units — nothing else may be scored as unseen."""
+    valid unseen units -- nothing else may be scored as unseen."""
     panel_path = pm.DEFAULT_PREPARED / "benchmark_v3" / "eval_panel.json"
     ep = json.load(open(panel_path))
     out: dict[str, list[str]] = {}
@@ -285,7 +285,7 @@ def run_seen(args, sid: str, v3_units=None):
     sub = "unseen_pert" if v3_unseen else "seen_pert"
     out = args.outdir / sub / f"slide_{sid}"
     if (out / "lfc_scores.json").exists():
-        log.info("slide %s %s exists — skip", sid, sub)
+        log.info("slide %s %s exists -- skip", sid, sub)
         return
     ctx = build_pm_ctx(args, sid)
     N = ctx["N"]
@@ -319,7 +319,7 @@ def run_seen(args, sid: str, v3_units=None):
 
     global_src_idx = pm.source_indices(adata_target, src_role=1)
     if len(global_src_idx) == 0:
-        log.warning("slide %s: no role==1 source cells — skip", sid)
+        log.warning("slide %s: no role==1 source cells -- skip", sid)
         return
     if v3_unseen:
         # Panel-driven: score ONLY the masked eval-unit genes on this (target) slide.
@@ -334,29 +334,29 @@ def run_seen(args, sid: str, v3_units=None):
         groups = {}
         for g in v3_units:
             if g not in ctx["name2code"]:
-                log.warning("slide %s v3-unseen: gene %s has no model code — skip", sid, g)
+                log.warning("slide %s v3-unseen: gene %s has no model code -- skip", sid, g)
                 continue
             gi = np.where(canon_all == g)[0]
             if len(gi) == 0:
-                log.warning("slide %s v3-unseen: gene %s has no KO cells on target — skip", sid, g)
+                log.warning("slide %s v3-unseen: gene %s has no KO cells on target -- skip", sid, g)
                 continue
             # APPLES-TO-APPLES with the competitor unseen harness (benchmark_v3_eval_lib.
             # unseen_v3_pm): competitors score masked-KO-of-G vs WHOLE-SLIDE KP control with
             # NO niche restriction (niche=-1). Register the group with b=-1 so _ref_ko_idx /
             # _ref_ctrl_idx (which fall back to slide-level when the niche has < min_g_cells)
-            # use the whole-slide masked KO and whole-slide control — identical GT/control to
+            # use the whole-slide masked KO and whole-slide control -- identical GT/control to
             # the competitor. (Previously used the dominant bin -> niche-restricted GT, which
             # made CONCERT's unseen numbers not directly comparable to competitors'.)
             groups[(-1, g, 0)] = np.arange(n_src, dtype=int)
         if not groups:
-            log.warning("slide %s v3-unseen: no valid panel-unit genes — skip", sid)
+            log.warning("slide %s v3-unseen: no valid panel-unit genes -- skip", sid)
             return
         panel = sorted({g for (_, g, _) in groups})
         log.info("slide %s v3-UNSEEN panel-driven units=%s (masked-GT = same-slide canon==G)", sid, panel)
     else:
         groups = pm.seen_niche_groups(adata_target, src_role=1)
         if not groups:
-            log.warning("slide %s: no seen niches — skip", sid)
+            log.warning("slide %s: no seen niches -- skip", sid)
             return
         panel = sorted({g for (_, g, _) in groups})
     log.info("slide %s: %d groups, panel=%s, %d source cells", sid, len(groups), panel, len(global_src_idx))
@@ -385,8 +385,8 @@ def run_seen(args, sid: str, v3_units=None):
         pred_g_cache[g] = np.asarray(_predict_swap(ctx, global_src_idx, code, args), dtype=np.float32)
     unpred = {g for g, v in pred_g_cache.items() if v is None}
 
-    # Basal prediction (code=0) on the SAME source cells → DELTA scoring
-    # pred_KO − pred_basal cancels basal reconstruction error.
+    # Basal prediction (code=0) on the SAME source cells -> DELTA scoring
+    # pred_KO - pred_basal cancels basal reconstruction error.
     pred_basal = np.asarray(_predict_swap(ctx, global_src_idx, 0, args), dtype=np.float32)
 
     # v3-unseen GT needs no coord filter: groups already scope observed LFC to
@@ -447,7 +447,7 @@ def run_unseen(args, sid: str):
     mask as seen; observed LFC = donor real-KO vs donor control(KP)."""
     out = args.outdir / "unseen_pert" / f"slide_{sid}"
     if (out / "lfc_scores.json").exists():
-        log.info("slide %s unseen exists — skip", sid)
+        log.info("slide %s unseen exists -- skip", sid)
         return
     eval_genes = pm.load_manifest_genes(pm.DEFAULT_PREPARED, sid)
     adata_target, ctx, gene_names, Yobs = _model_adata(args, sid)
@@ -458,7 +458,7 @@ def run_unseen(args, sid: str):
         return
     global_src_idx = pm.source_indices(adata_target, src_role=1)
     if len(global_src_idx) == 0:
-        log.warning("slide %s: no role==1 source cells for unseen — skip", sid)
+        log.warning("slide %s: no role==1 source cells for unseen -- skip", sid)
         return
     with h5py.File(str(DATA / f"perturbmap_s{sid}_spacfmt.h5ad"), "r") as _vf:
         _vnames = _vf["var"]["_index"][:].astype(str)
@@ -478,7 +478,7 @@ def run_unseen(args, sid: str):
                            if code is not None else None)
     unpred = {g for g, v in pred_g_cache.items() if v is None}
 
-    # Basal prediction (code=0) on the SAME source cells → DELTA scoring.
+    # Basal prediction (code=0) on the SAME source cells -> DELTA scoring.
     pred_basal = np.asarray(_predict_swap(ctx, global_src_idx, 0, args), dtype=np.float32)
 
     # Donor pools from the OTHER slides (model-row space, same gene order).
@@ -533,7 +533,7 @@ def main():
             # ONLY target slides with a valid eval unit are scored as unseen.
             units = v3_units_by_slide.get(str(sid), [])
             if not units:
-                log.info("=== pmap v3-unseen slide %s: not a target slide — skip ===", sid)
+                log.info("=== pmap v3-unseen slide %s: not a target slide -- skip ===", sid)
                 continue
             log.info("=== pmap v3-unseen slide %s units=%s ===", sid, units)
             run_seen(args, sid, v3_units=units)

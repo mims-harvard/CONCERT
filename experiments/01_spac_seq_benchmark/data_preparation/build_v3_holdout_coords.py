@@ -4,7 +4,7 @@
 The v3 manifests store *slide-local prepared indices* (union_holdout_idx for the
 unassigned prediction-source patch; ko_holdout_idx for the masked target KO).
 CONCERT trains on the raw_output_*.h5ad files and keys cells by
-(sample_id, array_coords) — barcodes are dropped in the loader. Prepared and raw
+(sample_id, array_coords) -- barcodes are dropped in the loader. Prepared and raw
 share both obs_names and obsm['array_coords'] (prepared is a filtered subset), so
 we translate manifest indices -> array_coords via the prepared slide adata.
 
@@ -52,7 +52,7 @@ def build(prep_dir, regime, slide_to_sid, out_path, raw_files=None):
     ko = {}
     stats = []
 
-    # unassigned source patch — present for BOTH seen and unseen
+    # unassigned source patch -- present for BOTH seen and unseen
     hu_dir = os.path.join(v3, "holdout_unassigned")
     for fn in sorted(os.listdir(hu_dir)):
         d = json.load(open(os.path.join(hu_dir, fn)))
@@ -70,7 +70,7 @@ def build(prep_dir, regime, slide_to_sid, out_path, raw_files=None):
         unassigned[str(slide_to_sid[sid_str])] = sel.tolist()
         stats.append(f"  unassigned {sid_str}(sid{slide_to_sid[sid_str]}): {len(idx)} idx -> {len(sel)} uniq coords")
 
-    # masked KO — UNSEEN only
+    # masked KO -- UNSEEN only
     if regime == "unseen":
         ko_dir = os.path.join(v3, "holdout_ko")
         agg = {}  # sid_str -> list of coord arrays
@@ -113,7 +113,7 @@ def verify_against_raw(out, raw_files, slide_to_sid):
             print(f"  verify {kind} sid{sid_str} vs {os.path.basename(raw)}: "
                   f"{hit}/{len(coords)} = {rate:.3f} {flag}")
             if rate <= 0.98:
-                raise SystemExit(f"[FATAL] coord match rate {rate:.3f} too low — bridge unsafe")
+                raise SystemExit(f"[FATAL] coord match rate {rate:.3f} too low -- bridge unsafe")
 
 
 if __name__ == "__main__":

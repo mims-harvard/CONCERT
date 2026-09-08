@@ -13,7 +13,7 @@ REPS="${REPS:-}"
 # Seed 42 keeps the bare tag (that is what the aggregator expects); other seeds get _s<N>.
 ONLY="${ONLY:-}"
 
-# tag|env overrides  — each arm is base with exactly one factor moved
+# tag|env overrides  -- each arm is base with exactly one factor moved
 ARMS=(
   "seed1|SEED=1"
   "seed2|SEED=2"

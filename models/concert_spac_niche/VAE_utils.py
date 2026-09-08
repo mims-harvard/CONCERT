@@ -66,7 +66,7 @@ class BasalEncoder(nn.Module):
     """Amortized basal representation from normalized log-expression.
 
     Replaces the per-cell lookup (RegularizedEmbedding) so the basal latent is an
-    inductive function of expression — required for held-out-cell inference and to
+    inductive function of expression -- required for held-out-cell inference and to
     restore reconstruction pressure on z (cures posterior collapse).
     """
 

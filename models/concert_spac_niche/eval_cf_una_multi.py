@@ -3,7 +3,7 @@
 
 Same scoring rule as the single-slide eval (eval_cf_una_only.py), but the model
 is the MULTI-slide checkpoint (trained on all 5 slides). For a target slide we
-predict on its SEEN unassigned cells (no holdout) → KO, per the top perturbations.
+predict on its SEEN unassigned cells (no holdout) -> KO, per the top perturbations.
 
 Panel rule (identical to single-slide):
   - gene-KO with >= panel_min_cells on the slide, top max_panel by count
@@ -56,7 +56,7 @@ def parse_args():
     p.add_argument("--n_samples",       type=int, default=10)
     p.add_argument("--batch_size",      type=int, default=512)
     p.add_argument("--n_hvg",           type=int, default=2000)
-    # Architecture — must match multi_v6b training
+    # Architecture -- must match multi_v6b training
     p.add_argument("--use_expr_encoder",      type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--expr_hidden_dims",      type=int, nargs="+", default=[512, 256])
     p.add_argument("--use_basal_encoder_only",type=lambda x: x.lower()=="true", default=True)
@@ -96,7 +96,7 @@ def main():
         n_samples=args.n_samples, batch_size=args.batch_size, graph_file=None,
     )
     ctx = load_eval_context_multi(fwd)
-    log.info("Multi ctx: target %s → %d cells, %d combined perts", args.target_slide, ctx["N"], ctx["n_batch"])
+    log.info("Multi ctx: target %s -> %d cells, %d combined perts", args.target_slide, ctx["N"], ctx["n_batch"])
 
     cls, perturb_raw, Y_obs = ctx["cls"], ctx["perturb_raw"], ctx["Y_obs"]
     ko_bin, _ = eu.build_niche_grid(ctx["coords"], args.niche_grid)

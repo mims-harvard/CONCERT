@@ -3,7 +3,7 @@
 Rules (SPAC-seq):
   * Exclude holdout **unassigned spatial patches** (patch_holdout role==1) from training.
   * Keep all NTC (control), KO, and non-holdout unassigned cells.
-  * Optional pooled subsample with one fixed seed → identical cells for every method.
+  * Optional pooled subsample with one fixed seed -> identical cells for every method.
 
 Rules (perturb-map):
   * Exclude holdout **KP-tumor source patches** (holdout_patch union / role==1).

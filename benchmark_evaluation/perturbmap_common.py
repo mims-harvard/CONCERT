@@ -7,7 +7,7 @@ differences vs ``spacseq_multi_common``:
   (``role == 1``), not unassigned cells.
 * The LFC baseline / reference is **control (KP-tumor)**: predicted LFC is
   ``pseudobulk_lfc(pred_on_source, source_expr)`` and observed LFC is
-  ``pseudobulk_lfc(real_KO_tumor, control_KP)`` — i.e. the clean KO-vs-control
+  ``pseudobulk_lfc(real_KO_tumor, control_KP)`` -- i.e. the clean KO-vs-control
   tumor effect (control is abundant here, unlike SPAC-seq NTC).
 * Niches (``bin_id``) and the contiguous KP-tumor source patches are taken
   directly from ``perturb_map/patches/slide{j}.npz`` (4x4 grid). Per prediction
@@ -467,8 +467,8 @@ def niche_lfc_seen_loop(adata_target, raw_mm, lib_sizes, global_src_idx,
     observed  LFC = pseudobulk_lfc(real_KO_tumor, control_KP)
 
     If ``pred_basal`` (predicted basal on the source cells, aligned with
-    global_src_idx) is given, reference = pred_basal → DELTA pred_KO − pred_basal
-    (cancels basal reconstruction error) instead of pred_KO − observed source.
+    global_src_idx) is given, reference = pred_basal -> DELTA pred_KO - pred_basal
+    (cancels basal reconstruction error) instead of pred_KO - observed source.
     """
     eu, sa = sec.import_eval_utils()
     unpredictable_genes = set(unpredictable_genes or [])
@@ -673,8 +673,8 @@ def niche_lfc_unseen_score(adata_target, global_src_idx, eval_genes, pred_g_cach
     donor_ko_raw are {gene: [arrays]}; donor_ctrl is a stacked (n_ctrl, G) array.
 
     If ``pred_basal`` (predicted basal on the source cells, aligned with global_src_idx)
-    is given, reference = pred_basal → DELTA pred_KO − pred_basal (cancels basal
-    reconstruction error) instead of pred_KO − observed source."""
+    is given, reference = pred_basal -> DELTA pred_KO - pred_basal (cancels basal
+    reconstruction error) instead of pred_KO - observed source."""
     eu, sa = sec.import_eval_utils()
     unpredictable_genes = set(unpredictable_genes or [])
     if scoring_method:

@@ -48,7 +48,7 @@ CONTROL = frozenset(["Non_targeting", "non_targeting", "NonTargeting", "control"
                      "Control", "CTRL", "ctrl", "NT"])
 
 
-# ───────────────────────── helpers ─────────────────────────
+# --- helpers ---
 def _dense(x):
     return x.toarray() if sp.issparse(x) else np.asarray(x)
 
@@ -112,7 +112,7 @@ def _signature(model, pos_scaled, Y_norm, n_batch, pert_code, tissue_code, batch
     return np.asarray(mu, dtype=np.float32)
 
 
-# ───────────────────────── deconvolution (Task 1) ─────────────────────────
+# --- deconvolution (Task 1) ---
 def run_deconvolution(model, adata, pos_raw, pert_map, cfg, outdir):
     """adata = normalized TRAIN AnnData (var_names = model genes); pos_raw = filtered
     train raw coords (for the MinMax framing); pert_map = {name: code}."""
@@ -252,7 +252,7 @@ def run_deconvolution(model, adata, pos_raw, pert_map, cfg, outdir):
                  outdir / "deconv_celllevel.h5ad", Xc.shape[0])
 
 
-# ───────────────────────── patch imputation (Task 2) ─────────────────────────
+# --- patch imputation (Task 2) ---
 def run_impute_patch(model, adata, pos_raw, pos_batched, cell_atts,
                      sample_indices, pert_map, cfg, outdir):
     """Impute the masked patch cells (role==1) at their held-out coords from the

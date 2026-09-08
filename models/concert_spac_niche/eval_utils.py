@@ -1,6 +1,6 @@
 """Pure functions for the CONCERT-spac spatial-counterfactual evaluation harness.
 
-No model/IO dependencies — these are the unit-tested core used by
+No model/IO dependencies -- these are the unit-tested core used by
 ``eval_spatial_counterfactual.py``: niche-grid construction, NTC-referenced
 pseudobulk LFC, LFC-agreement scoring, perturbation-panel selection, a
 spatial-kNN baseline, and contiguous held-out patch construction.
@@ -59,7 +59,7 @@ def energy_distance(X: np.ndarray, Y: np.ndarray, gene_mask: np.ndarray,
     Use for: comparing predicted vs observed KO cell distributions per niche.
     Lower = more similar distributions.
 
-    Steps: subset HVGs → log1p normalize → subsample → joint PCA (50 PCs) → e-distance.
+    Steps: subset HVGs -> log1p normalize -> subsample -> joint PCA (50 PCs) -> e-distance.
     E(X,Y) = 2·mean||x-y|| - mean||x-x'|| - mean||y-y'||
     """
     X = np.log1p(np.asarray(X, dtype=np.float64)[:, gene_mask])
@@ -77,8 +77,8 @@ def energy_distance(X: np.ndarray, Y: np.ndarray, gene_mask: np.ndarray,
     xy = cdist(Xp, Yp).mean()
     # U-statistic: exclude diagonal (i==j, distance=0) so we average over
     # distinct pairs only.  cdist.mean() is the V-statistic which includes
-    # n diagonal zeros, underestimating xx/yy by factor (n-1)/n — a 5-10%
-    # downward bias for small niches (n≈10–20) that inflates the result.
+    # n diagonal zeros, underestimating xx/yy by factor (n-1)/n -- a 5-10%
+    # downward bias for small niches (n≈10-20) that inflates the result.
     n, m = len(Xp), len(Yp)
     xx_d = cdist(Xp, Xp)
     xx = xx_d[np.triu_indices(n, k=1)].mean() if n > 1 else 0.0
@@ -94,7 +94,7 @@ def sample_global_source_indices(src_mask, max_src_cells: int = 500, seed: int =
     """Sample unassigned/source cells from the whole slide (never niche-restricted).
 
     Non-spatial methods must not use unassigned cells from the same niche as the
-    perturbed evaluation target — that leaks spatial context into the input."""
+    perturbed evaluation target -- that leaks spatial context into the input."""
     mask = np.asarray(src_mask, dtype=bool)
     global_src_idx = np.where(mask)[0]
     if max_src_cells > 0 and len(global_src_idx) > max_src_cells:
@@ -225,7 +225,7 @@ def split_half_lfc_reliability(g_expr, ntc_expr, gene_mask=None, n_seeds=5, base
 
     This BOUNDS the maximum achievable model<->observed agreement. If the observed LFC
     is noise-dominated (the two halves of the same data do not even agree), then no
-    model can correlate with it — a low model score is a property of the ground truth,
+    model can correlate with it -- a low model score is a property of the ground truth,
     not the model. Spearman-Brown (`2r/(1+r)`) projects the half-sample reliability up
     to the full-population size that the model is actually scored against."""
     g_expr = np.asarray(g_expr, dtype=np.float64)

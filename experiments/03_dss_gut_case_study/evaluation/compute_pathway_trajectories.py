@@ -31,7 +31,7 @@ assert vdays == DAYS, f"virtual_days {vdays} != {DAYS}"
 mice = sorted(set(mouse.tolist()))
 print(f"[dump] N={mouse.shape[0]}  mice={len(mice)}  pathways={len(pathways)}")
 
-# ── per-mouse cell-means ──────────────────────────────────────────────────────
+# --- per-mouse cell-means ---
 rows = []
 per = {}   # (mouse,pathway) -> dict
 for m in mice:
@@ -55,7 +55,7 @@ with open(HERE / "pathway_trajectories.csv", "w", newline="") as fh:
     w = csv.DictWriter(fh, fieldnames=fields); w.writeheader(); w.writerows(rows)
 print(f"[write] {HERE/'pathway_trajectories.csv'}  ({len(rows)} rows)")
 
-# ── per-pathway affine calibration on the diagonal (4 population day-means) ────
+# --- per-pathway affine calibration on the diagonal (4 population day-means) ---
 calib = {}
 for pw in pathways:
     recs = [per[(m, pw)] for m in mice]

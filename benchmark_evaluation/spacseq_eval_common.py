@@ -330,7 +330,7 @@ def save_results(out_dir: Path, scores, agg, mlfc, hvg_info, convergence=None):
     out_dir.joinpath("per_pert_summary.json").write_text(json.dumps(jsonify(per_pert), indent=2))
     if convergence is not None:
         out_dir.joinpath("convergence.json").write_text(json.dumps(jsonify(convergence), indent=2))
-    log.info("Results → %s", out_dir)
+    log.info("Results -> %s", out_dir)
     print_per_pert_table(per_pert, out_dir)
 
 
@@ -448,7 +448,7 @@ def _fill_worst_case_scores(
             n_scored = int((hvg_mask & (gene_names != g)).sum())
             reason = "unpredictable" if g in unpredictable_genes else "missing prediction"
             log.warning(
-                "[%s] %s niche %d: %s — inserting worst-case metrics",
+                "[%s] %s niche %d: %s -- inserting worst-case metrics",
                 lv,
                 g,
                 b,

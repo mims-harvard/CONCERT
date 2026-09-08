@@ -6,7 +6,7 @@ Problem
 -------
 In spatial CRISPR-screen data (e.g. SPAC-seq Visium HD), ALL perturbed spots
 share a systematic technical batch effect caused by the guide-delivery / Cas9
-machinery — independent of *which* gene was knocked out.  CONCERT's existing
+machinery -- independent of *which* gene was knocked out.  CONCERT's existing
 LORD encoder has a `perturbation` embedding (gene-specific) but no factor for
 this shared "perturbation action" noise.  The artifact therefore leaks into the
 basal latent `z`, making the basal representation non-exchangeable between
@@ -16,15 +16,15 @@ Solution
 --------
 PAD adds three coordinated mechanisms during pretraining:
 
-1. **Action embedding** — a small binary embedding (0=control/unassigned,
+1. **Action embedding** -- a small binary embedding (0=control/unassigned,
    1=any KO) that is concatenated to LORD's total_latent.  This gives the
    encoder an explicit route to absorb the shared action effect.
 
-2. **Adversarial (GRL) loss** — a gradient-reversal adversary that tries to
+2. **Adversarial (GRL) loss** -- a gradient-reversal adversary that tries to
    predict `is_perturbed` from `z_basal`.  The reversed gradient makes the
    encoder actively push the action effect *out* of `z_basal`.
 
-3. **MMD loss** — Maximum Mean Discrepancy between the `z_basal` distributions
+3. **MMD loss** -- Maximum Mean Discrepancy between the `z_basal` distributions
    of control and perturbed mini-batch samples.  Directly penalises distributional
    divergence in the basal space.
 
@@ -94,8 +94,8 @@ def mmd_rbf(x: torch.Tensor, y: torch.Tensor, sigmas: tuple[float, ...] = (1.0, 
 
     Parameters
     ----------
-    x : (n, d) tensor — samples from distribution P (e.g. control basal latents)
-    y : (m, d) tensor — samples from distribution Q (e.g. perturbed basal latents)
+    x : (n, d) tensor -- samples from distribution P (e.g. control basal latents)
+    y : (m, d) tensor -- samples from distribution Q (e.g. perturbed basal latents)
     sigmas : bandwidth values for multi-scale kernel
 
     Returns
@@ -124,7 +124,7 @@ class PerturbActionDenoiser(nn.Module):
     ----------
     action_dim : int
         Dimension of the binary action embedding (appended to LORD total_latent).
-        Recommended: 32–64.
+        Recommended: 32-64.
     basal_dim : int
         Dimension of LORD's basal latent `z` (= encoder_dim in CONCERT).
     lambda_mmd : float
@@ -183,7 +183,7 @@ class PerturbActionDenoiser(nn.Module):
 
         Parameters
         ----------
-        is_perturbed : (B,) int tensor — 0 for control/unassigned, 1 for any KO
+        is_perturbed : (B,) int tensor -- 0 for control/unassigned, 1 for any KO
 
         Returns
         -------
@@ -199,7 +199,7 @@ class PerturbActionDenoiser(nn.Module):
 
         Parameters
         ----------
-        n : int — number of spots / cells
+        n : int -- number of spots / cells
         device : target device
 
         Returns
@@ -226,8 +226,8 @@ class PerturbActionDenoiser(nn.Module):
 
         Parameters
         ----------
-        z_basal : (B, basal_dim) — LORD basal latent for the mini-batch
-        is_perturbed : (B,) int — 0/1 labels
+        z_basal : (B, basal_dim) -- LORD basal latent for the mini-batch
+        is_perturbed : (B,) int -- 0/1 labels
         min_per_class : skip loss if fewer than this many samples per class
                         (avoids unstable single-sample batches)
 

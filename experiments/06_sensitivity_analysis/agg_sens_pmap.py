@@ -38,7 +38,7 @@ ARMS: dict[str, tuple[str, float]] = {
     "brf64": ("basal_rff_features", 64), "brf256": ("basal_rff_features", 256),
     "brb005": ("basal_rff_bandwidth", 0.05), "brb030": ("basal_rff_bandwidth", 0.30),
 }
-# value the base config sits at, per factor — the base arm is replicated into each panel there.
+# value the base config sits at, per factor -- the base arm is replicated into each panel there.
 BASE_VALUE = {
     "seed": 42, "fpert_ls_max_loc": 360.0, "fpert_svgp_inducing": 64,
     "fpert_coord_scale": 20.0, "moran_lambda": 1.0, "lfc_lambda": 1.0,

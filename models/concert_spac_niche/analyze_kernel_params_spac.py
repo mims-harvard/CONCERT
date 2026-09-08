@@ -2,7 +2,7 @@
 (within-slide) model, and whether they carry spatial/biological signal.
 
 What is actually learned per perturbation in ms_spac1_niche_seen (fpert_field=gp_pp,
-basal_field=rff, use_niche_film=True) — both are read out from the 256-d LORD
+basal_field=rff, use_niche_film=True) -- both are read out from the 256-d LORD
 perturbation embedding e_p = lord_encoder.s_encoder.perturbation.weight[p]:
 
   1. footprint lengthscale   ls(p)      = ls_min + (ls_max-ls_min) * sigmoid(ls_head(e_p))

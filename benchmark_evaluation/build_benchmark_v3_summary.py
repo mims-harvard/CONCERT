@@ -239,7 +239,7 @@ def write_csv(path: Path, rows: list[dict], fields: list[str]) -> None:
 
 def write_markdown(path: Path, macro: list[dict]) -> None:
     lines = [
-        "# Benchmark v3 — method comparison (seen / unseen)",
+        "# Benchmark v3 -- method comparison (seen / unseen)",
         "",
         "Metrics pooled over eval records (SPAC seen: per-niche patch holdout; "
         "SPAC/PM unseen: one eval unit per gene @ target slide). "
@@ -254,7 +254,7 @@ def write_markdown(path: Path, macro: list[dict]) -> None:
                 continue
             sub.sort(key=lambda r: r["lfc_spearman"], reverse=True)
             lines += [
-                f"## {dlabel} — {regime}",
+                f"## {dlabel} -- {regime}",
                 "",
                 "| Method | N records | LFC ρ (mean±SEM) | e-dist (mean±SEM) |",
                 "| --- | ---: | ---: | ---: |",

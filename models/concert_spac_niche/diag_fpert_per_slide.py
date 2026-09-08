@@ -38,7 +38,7 @@ logging.info("tiled %d slides, spacing=%.1f", len(np.unique(sample_id)), spacing
 # save_model writes a bare state_dict
 sd = torch.load(args.model_file, map_location="cpu")
 if not any(k.startswith("fpert_field.") for k in sd):
-    raise SystemExit("checkpoint has no fpert_field.* keys — not a gp_pp/rff fpert model")
+    raise SystemExit("checkpoint has no fpert_field.* keys -- not a gp_pp/rff fpert model")
 enc_dim = sd["fpert_field.ls_head.weight"].shape[1]     # gp_pp has ls_head (encoder_dim -> 1)
 n_genes = sd["fpert_field.mlp.2.weight"].shape[0]
 m_ind = sd["fpert_field.Z"].shape[0]                    # perfect square (e.g. 16)

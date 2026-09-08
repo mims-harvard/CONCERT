@@ -41,7 +41,7 @@ export PMAP_INTERPRET_OUT="${PMAP_INTERPRET_OUT:-${OUTPUT_ROOT}/perturb_seq_case
 export PMAP_SYSTEMATIC_OUT="${PMAP_SYSTEMATIC_OUT:-${OUTPUT_ROOT}/perturb_seq_case_study/systematic}"
 
 [ -f "${PMAP_CKPT}/model.pt" ] || {
-    echo "[FATAL] checkpoint missing: ${PMAP_CKPT}/model.pt — run experiment 02 training first"
+    echo "[FATAL] checkpoint missing: ${PMAP_CKPT}/model.pt -- run experiment 02 training first"
     exit 1
 }
 cd "$HERE"

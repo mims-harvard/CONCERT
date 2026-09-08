@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-preprocess_spac_timeseries.py — Convert Day*/rep* GEX + guide h5 pairs into h5ad.
+preprocess_spac_timeseries.py -- Convert Day*/rep* GEX + guide h5 pairs into h5ad.
 
 Third SPAC-seq dataset: spatiotemporal CD8+ T cell screen (Fig 3, Zhang et al. 2026 Cell).
   - Mini-pool of 33 top-hit genes + sgnon-targeting (34 guides total)
-  - Harvested at Day 4, Day 7, Day 10 (2 replicates each → 6 slides)
+  - Harvested at Day 4, Day 7, Day 10 (2 replicates each -> 6 slides)
   - Stereo-seq poly(dT) platform
 
 Guide barcode format quirk:
   GEX barcodes:   "304204"        (coordinate-based DNB ID)
   Guide barcodes: "304204-5"      (same ID + UMI-count suffix 1-5)
-  → strip everything after the last '-' to align barcodes.
+  -> strip everything after the last '-' to align barcodes.
 
 Perturbation assignment (per spot):
   guide_max = max UMI across 34 guides
-  if guide_max == 0              → "unassigned"   (no guide captured)
-  elif ties at guide_max > 0    → "multiple"
-  elif top guide == sgnon-targeting → "control"
-  else                           → gene name (strip "sg" prefix)
+  if guide_max == 0              -> "unassigned"   (no guide captured)
+  elif ties at guide_max > 0    -> "multiple"
+  elif top guide == sgnon-targeting -> "control"
+  else                           -> gene name (strip "sg" prefix)
 
 Usage (single sample):
     python preprocess_spac_timeseries.py \\
@@ -45,13 +45,13 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 
-# ── guide-name utilities ────────────────────────────────────────────────────
+# --- guide-name utilities ---
 
 NON_TARGETING_RAW = "sgnon-targeting"
 
 
 def guide_name_to_perturbation(raw: str) -> str:
-    """'sgCd44' → 'Cd44', 'sgnon-targeting' → 'control'."""
+    """'sgCd44' -> 'Cd44', 'sgnon-targeting' -> 'control'."""
     if raw == NON_TARGETING_RAW:
         return "control"
     if raw.startswith("sg"):
@@ -59,7 +59,7 @@ def guide_name_to_perturbation(raw: str) -> str:
     return raw
 
 
-# ── I/O helpers ─────────────────────────────────────────────────────────────
+# --- I/O helpers ---
 
 def load_gex(gex_path: Path) -> ad.AnnData:
     """Load GEX h5 (Stereo-seq format) into AnnData with sparse X."""
@@ -119,7 +119,7 @@ def load_guide_matrix(guide_path: Path, gex_barcodes: np.ndarray):
     # Strip suffix '-N' from guide barcodes
     guide_bc_stripped = np.array([b.rsplit("-", 1)[0] for b in guide_bc_raw])
 
-    # Build mapping: stripped barcode → row in guide matrix
+    # Build mapping: stripped barcode -> row in guide matrix
     guide_bc_to_row = {bc: i for i, bc in enumerate(guide_bc_stripped)}
 
     n_gex = len(gex_barcodes)
@@ -143,8 +143,8 @@ def assign_perturbation(guide_mat: np.ndarray, guide_names: list):
 
     Returns
     -------
-    perturbation : (N,) str array — gene name / "control" / "unassigned" / "multiple"
-    n_guide_umi  : (N,) int32 — total guide UMI per spot
+    perturbation : (N,) str array -- gene name / "control" / "unassigned" / "multiple"
+    n_guide_umi  : (N,) int32 -- total guide UMI per spot
     """
     n_guide_umi = guide_mat.sum(axis=1).astype(np.int32)
     row_max     = guide_mat.max(axis=1)
@@ -168,7 +168,7 @@ def assign_perturbation(guide_mat: np.ndarray, guide_names: list):
     return perturbation.astype(str), n_guide_umi
 
 
-# ── spatial plots ─────────────────────────────────────────────────────────────
+# --- spatial plots ---
 
 SPECIAL_PERT_COLORS = {
     "unassigned": "#CCCCCC",
@@ -251,7 +251,7 @@ def make_spatial_plot_clean(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Spatial plot → {out_path}")
+    print(f"  Spatial plot -> {out_path}")
 
 
 def make_spatial_plot(
@@ -267,7 +267,7 @@ def make_spatial_plot(
     """Plot clean spatial map (top-K labels, no legend) plus perturbation count bar chart."""
     coords = adata.obsm["spatial"]
     title = (
-        f"SPAC-seq — {day} {rep} ({sample_id})\n"
+        f"SPAC-seq -- {day} {rep} ({sample_id})\n"
         f"Top {top_k} gene perturbations by abundance"
     )
     out_path = outdir / f"{sample_id}_spatial_perturbation.png"
@@ -282,14 +282,14 @@ def make_spatial_plot(
     gene_colors = {g: mcolors.to_hex(cmap_base(i % 20)) for i, g in enumerate(gene_labels)}
     label_to_color = {**SPECIAL_PERT_COLORS, **gene_colors}
 
-    # ── bar chart: spot counts per perturbation ─────────────────────────────
+    # --- bar chart: spot counts per perturbation ---
     counts = pd.Series(perturbation).value_counts().sort_values(ascending=False)
     n_show = min(len(counts), 40)
     fig2, ax2 = plt.subplots(figsize=(14, 5))
     bars = counts.iloc[:n_show]
     bar_colors = [label_to_color.get(l, "#888888") for l in bars.index]
     bars.plot.bar(ax=ax2, color=bar_colors, edgecolor="black", linewidth=0.3)
-    ax2.set_title(f"Spot counts per perturbation — {day} {rep}", fontsize=11)
+    ax2.set_title(f"Spot counts per perturbation -- {day} {rep}", fontsize=11)
     ax2.set_xlabel("Perturbation", fontsize=9)
     ax2.set_ylabel("# spots", fontsize=9)
     ax2.tick_params(axis="x", labelsize=6, rotation=60)
@@ -297,14 +297,14 @@ def make_spatial_plot(
     bar_path = outdir / f"{sample_id}_perturbation_bar.png"
     plt.savefig(bar_path, dpi=150, bbox_inches="tight")
     plt.close()
-    print(f"  Bar plot     → {bar_path}")
+    print(f"  Bar plot     -> {bar_path}")
 
 
-# ── main ─────────────────────────────────────────────────────────────────────
+# --- main ---
 
 def parse_args():
     p = argparse.ArgumentParser(
-        description="Convert Day*/rep* GEX+guide h5 pairs → h5ad (SPAC-seq time-series).",
+        description="Convert Day*/rep* GEX+guide h5 pairs -> h5ad (SPAC-seq time-series).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     p.add_argument("--gex",       required=True, type=Path, help="GEX h5 file")
@@ -389,7 +389,7 @@ def main():
         "perturbations": sorted(set(perturbation) - {"unassigned", "multiple", "control"}),
         "platform":    "Stereo_seq",
         "species":     "mouse",
-        "probe_set":   "Stereo-seq poly(dT) — mini-pool T cell screen (Day4/7/10)",
+        "probe_set":   "Stereo-seq poly(dT) -- mini-pool T cell screen (Day4/7/10)",
         "scalefactors": {},
     })
 
@@ -397,7 +397,7 @@ def main():
     adata.obsm["array_coords"] = adata.obsm["spatial"].copy()
 
     # 7. Save (atomic write)
-    print(f"\n[5] Saving → {out_path}")
+    print(f"\n[5] Saving -> {out_path}")
     tmp = out_path.with_suffix(".tmp.h5ad")
     adata.write_h5ad(tmp, compression="gzip")
     tmp.rename(out_path)

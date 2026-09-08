@@ -1,5 +1,5 @@
 """
-hier_pert_emb.py — Hierarchical Perturbation Embedding (Phase 2.3).
+hier_pert_emb.py -- Hierarchical Perturbation Embedding (Phase 2.3).
 
 Design
 ------
@@ -8,11 +8,11 @@ Perturbation embeddings are factored into three additive levels:
     pert_emb_i^(s) = pathway_emb[g(i)] + gene_delta_i + sample_delta_i^(s)
 
 Where:
-  • pathway_emb[g(i)] : shared pathway-level embedding (all genes in same KEGG
+  * pathway_emb[g(i)] : shared pathway-level embedding (all genes in same KEGG
                          pathway share a base vector). Promotes sharing across
                          related knockouts (e.g., all TGF-β pathway genes).
-  • gene_delta_i      : gene-specific residual (learned independently per KO).
-  • sample_delta_i^(s): sample×gene interaction (captures replicate-specific KO
+  * gene_delta_i      : gene-specific residual (learned independently per KO).
+  * sample_delta_i^(s): sample×gene interaction (captures replicate-specific KO
                         effects). Set to zero for single-sample training (Phase 2).
 
 Without pathway annotations, pathway_emb degenerates to a gene-level embedding
@@ -33,14 +33,14 @@ Usage
         n_genes=n_unique_perts,       # number of unique perturbation labels
         emb_dim=encoder_dim,          # embedding dimension
         n_samples=1,                  # 1 for single-sample, 8 for multi-sample
-        pathway_map=None,             # optional: dict{pert_idx → pathway_idx}
+        pathway_map=None,             # optional: dict{pert_idx -> pathway_idx}
         n_pathways=None,              # number of unique pathways
         dropout=0.1,
     )
 
     # In forward:
-    pert_idx = cell_atts[:, 1]        # (B,) int — perturbation codes
-    sample_idx = ...                   # (B,) int — sample/replicate index
+    pert_idx = cell_atts[:, 1]        # (B,) int -- perturbation codes
+    sample_idx = ...                   # (B,) int -- sample/replicate index
     emb = hier_emb(pert_idx, sample_idx)  # (B, emb_dim)
 """
 
@@ -58,21 +58,21 @@ import torch.nn.functional as F
 class HierarchicalPertEmbedding(nn.Module):
     """Three-level hierarchical perturbation embedding.
 
-    Level 1: Pathway embedding   — shared across genes in same pathway.
-    Level 2: Gene-specific delta — independent residual per KO gene.
-    Level 3: Sample-gene delta   — replicate × gene interaction (for multi-sample).
+    Level 1: Pathway embedding   -- shared across genes in same pathway.
+    Level 2: Gene-specific delta -- independent residual per KO gene.
+    Level 3: Sample-gene delta   -- replicate × gene interaction (for multi-sample).
 
     Parameters
     ----------
-    n_genes     : int  — number of unique perturbation labels (including
+    n_genes     : int  -- number of unique perturbation labels (including
                          "unassigned", "control", and all gene KO targets)
-    emb_dim     : int  — embedding dimension (= LORD encoder_dim)
-    n_samples   : int  — number of samples/replicates (1 for single-sample)
-    pathway_map : Optional[np.ndarray] — (n_genes,) int mapping pert_idx → pathway_idx.
+    emb_dim     : int  -- embedding dimension (= LORD encoder_dim)
+    n_samples   : int  -- number of samples/replicates (1 for single-sample)
+    pathway_map : Optional[np.ndarray] -- (n_genes,) int mapping pert_idx -> pathway_idx.
                   None means each gene is its own pathway (no sharing).
-    n_pathways  : Optional[int] — number of unique pathways. Required if pathway_map != None.
-    dropout     : float — dropout on output embedding
-    sigma_noise : float — noise for regularization during training (à la LORD)
+    n_pathways  : Optional[int] -- number of unique pathways. Required if pathway_map != None.
+    dropout     : float -- dropout on output embedding
+    sigma_noise : float -- noise for regularization during training (à la LORD)
     """
 
     def __init__(
@@ -91,7 +91,7 @@ class HierarchicalPertEmbedding(nn.Module):
         self.n_samples = n_samples
         self.sigma_noise = sigma_noise
 
-        # ── Level 1: Pathway embedding ─────────────────────────────────────
+        # --- Level 1: Pathway embedding ---
         if pathway_map is not None and n_pathways is not None:
             self.pathway_map = torch.tensor(pathway_map, dtype=torch.long)
             self.pathway_emb = nn.Embedding(n_pathways, emb_dim)
@@ -104,14 +104,14 @@ class HierarchicalPertEmbedding(nn.Module):
             self.pathway_emb = nn.Embedding(n_genes, emb_dim)
             nn.init.xavier_uniform_(self.pathway_emb.weight)
             self._has_pathways = False
-            logging.info("[HierPertEmb] No pathway map — gene-level pathway embedding (%d genes)", n_genes)
+            logging.info("[HierPertEmb] No pathway map -- gene-level pathway embedding (%d genes)", n_genes)
 
-        # ── Level 2: Gene-specific delta ─────────────────────────────────
+        # --- Level 2: Gene-specific delta ---
         # Initialized to zero; learns the residual not captured by pathway emb
         self.gene_delta = nn.Embedding(n_genes, emb_dim)
         nn.init.zeros_(self.gene_delta.weight)
 
-        # ── Level 3: Sample × Gene delta (multi-sample) ──────────────────
+        # --- Level 3: Sample × Gene delta (multi-sample) ---
         # Zero for single-sample; non-trivial for multi-sample Phase 2.2
         if n_samples > 1:
             self.sample_gene_delta = nn.Embedding(n_samples * n_genes, emb_dim)
@@ -123,8 +123,8 @@ class HierarchicalPertEmbedding(nn.Module):
 
     def forward(
         self,
-        pert_idx: torch.Tensor,    # (B,) int — perturbation code [0, n_genes)
-        sample_idx: Optional[torch.Tensor] = None,  # (B,) int — sample index [0, n_samples)
+        pert_idx: torch.Tensor,    # (B,) int -- perturbation code [0, n_genes)
+        sample_idx: Optional[torch.Tensor] = None,  # (B,) int -- sample index [0, n_samples)
     ) -> torch.Tensor:
         """Return (B, emb_dim) hierarchical perturbation embedding."""
         # Level 1: pathway embedding
@@ -139,7 +139,7 @@ class HierarchicalPertEmbedding(nn.Module):
 
         # Level 3: sample × gene interaction (multi-sample only)
         if self.sample_gene_delta is not None and sample_idx is not None:
-            # Flatten (sample_idx, pert_idx) → single index
+            # Flatten (sample_idx, pert_idx) -> single index
             flat_idx = sample_idx * self.n_genes + pert_idx          # (B,)
             emb = emb + self.sample_gene_delta(flat_idx)             # (B, D)
 

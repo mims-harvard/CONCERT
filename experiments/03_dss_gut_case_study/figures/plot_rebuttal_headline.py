@@ -84,14 +84,14 @@ fig = plt.figure(figsize=(15.0, 9.2))
 gs = fig.add_gridspec(2, 3, width_ratios=[1.3, 1.3, 1.0], height_ratios=[1.0, 1.15],
                       hspace=0.42, wspace=0.30, left=0.06, right=0.97, top=0.90, bottom=0.08)
 
-# ── A: per-cell Pearson, per mouse ────────────────────────────────────────────
+# --- A: per-cell Pearson, per mouse ---
 axA = fig.add_subplot(gs[0, 0])
 axA.bar(x, [r["pearson"] for r in rows], color=cols, edgecolor="white", lw=0.8, zorder=2)
 axA.axhline(0, color=ps.INK, lw=1.4, zorder=3)
 axA.axhline(mean_r, color=ps.MUTED, ls="--", lw=1.1, zorder=3)
 axA.text(n_mice - 0.45, mean_r + 0.02, f"mean $r$ = {mean_r:.3f}", ha="right",
          fontsize=9, color=ps.MUTED)
-axA.text(-0.45, 0.035, "any interpolation for an unseen individual  →  $r$ = 0",
+axA.text(-0.45, 0.035, "any interpolation for an unseen individual  ->  $r$ = 0",
          fontsize=8.5, color=ps.INK)
 axA.set_xticks(x); axA.set_xticklabels(short, rotation=35, ha="right")
 axA.set_ylabel("per-cell Pearson $r$ (pred vs obs)")
@@ -100,7 +100,7 @@ axA.set_ylim(-0.04, 0.78); axA.set_xlim(-0.7, n_mice - 0.3)
 axA.xaxis.grid(False)
 ps.panel_label(axA, "A")
 
-# ── B: calibrated RMSE vs the best constant, paired ───────────────────────────
+# --- B: calibrated RMSE vs the best constant, paired ---
 axB = fig.add_subplot(gs[0, 1])
 for i, r in enumerate(rows):
     win = r["rmse_affine"] < r["rmse_const"]
@@ -117,12 +117,12 @@ axB.xaxis.grid(False)
 axB.legend(handles=[
     plt.Line2D([0], [0], marker="_", ls="", color=ps.INK, ms=11, mew=1.8,
                label="best constant = SD(obs)"),
-    plt.Line2D([0], [0], marker="o", ls="", color=ps.MUTED, ms=7, label="CONCERT — wins"),
-    plt.Line2D([0], [0], marker="X", ls="", color=ps.MUTED, ms=7, label="CONCERT — loses")],
+    plt.Line2D([0], [0], marker="o", ls="", color=ps.MUTED, ms=7, label="CONCERT -- wins"),
+    plt.Line2D([0], [0], marker="X", ls="", color=ps.MUTED, ms=7, label="CONCERT -- loses")],
     loc="upper left", fontsize=8.5)
 ps.panel_label(axB, "B")
 
-# ── C: the calibration ladder ─────────────────────────────────────────────────
+# --- C: the calibration ladder ---
 axC = fig.add_subplot(gs[0, 2])
 lbls = [l for l, _ in LADDER]
 vals = [wins[k] for _, k in LADDER]
@@ -138,7 +138,7 @@ axC.set_title("Calibration ladder\n(every fit leave-one-mouse-out)")
 axC.xaxis.grid(False)
 ps.panel_label(axC, "C", dx=-0.16)
 
-# ── D: one mouse, per-cell ────────────────────────────────────────────────────
+# --- D: one mouse, per-cell ---
 axD = fig.add_subplot(gs[1, :2])
 r = next(r for r in rows if r["mouse"] == FEATURED)
 mm = mouse == FEATURED
@@ -148,11 +148,11 @@ hb = axD.hexbin(p, o, gridsize=95, bins="log", cmap=ps.DENSITY_CMAP, mincnt=1,
                 extent=(lim[0], lim[1], lim[0], lim[1]), zorder=2)
 axD.plot(lim, lim, ls="--", color=ps.INK, lw=1.2, zorder=3, label="identity")
 axD.axhline(o.mean(), color=ps.day_color(9.0), lw=1.8, zorder=3,
-            label="best constant — a flat line, $r$ = 0")
+            label="best constant -- a flat line, $r$ = 0")
 axD.set_xlim(lim); axD.set_ylim(lim)
 axD.set_xlabel("predicted DSS-marker score  (calibrated on the other 7 mice)")
 axD.set_ylabel("observed DSS-marker score")
-axD.set_title(f"{FEATURED} — day {r['day']:.0f}, {r['n']:,} cells, $r$ = {r['pearson']:.3f}")
+axD.set_title(f"{FEATURED} -- day {r['day']:.0f}, {r['n']:,} cells, $r$ = {r['pearson']:.3f}")
 axD.legend(loc="upper left")
 axD.grid(False)
 cb = fig.colorbar(hb, ax=axD, shrink=0.85, pad=0.015)
@@ -160,7 +160,7 @@ cb.set_label("cells (log scale)", fontsize=9)
 cb.outline.set_visible(False)
 ps.panel_label(axD, "D", dx=-0.065, dy=1.05)
 
-# ── caption block ─────────────────────────────────────────────────────────────
+# --- caption block ---
 axT = fig.add_subplot(gs[1, 2]); axT.axis("off"); axT.grid(False)
 axT.text(0.0, 1.0,
          f"$\\bf{{Leave\\ one\\ mouse\\ out\\ imputation}}$\n"
@@ -172,7 +172,7 @@ axT.text(0.0, 1.0,
          "exists for it: any interpolant is a\nconstant per cell, and a constant\n"
          "has per-cell correlation 0.\n\n"
          f"$\\bf{{Limitation}}$\nThe uncalibrated level is over-\npredicted, increasingly at late\n"
-         "timepoints — the field reads tissue\narchitecture, which lags molecular\nresolution.",
+         "timepoints -- the field reads tissue\narchitecture, which lags molecular\nresolution.",
          va="top", ha="left", fontsize=9.3, linespacing=1.5)
 
 fig.suptitle("Reconstructing an unseen individual's spatial inflammation field", x=0.06, ha="left")

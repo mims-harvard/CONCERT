@@ -146,7 +146,7 @@ class FpertField(nn.Module):
         self.coord_scale = float(coord_scale)
         # Bounded per-perturbation lengthscale band (gp_pp). When both set, ls is
         # squashed into (ls_min, ls_max) via sigmoid so it CANNOT collapse below the
-        # floor — fixes the multimodal-perturbation lengthscale-collapse failure where
+        # floor -- fixes the multimodal-perturbation lengthscale-collapse failure where
         # a scattered-multi-patch KO (e.g. Tgfbr2) drives ls->0 and overfits, since the
         # soft ls_prior penalty alone was too weak to hold the band.
         self.ls_min = None if ls_min is None else float(ls_min)
@@ -162,7 +162,7 @@ class FpertField(nn.Module):
             self.register_buffer("rff_b", b)
             feat_dim = 2 * rff_features
         elif field == "mb_rff":
-            # M3: multi-bandwidth RFF — K fixed-frequency blocks concatenated; the per-pert
+            # M3: multi-bandwidth RFF -- K fixed-frequency blocks concatenated; the per-pert
             # MLP weights pick the effective scale. Collapse-proof (frequencies fixed).
             bws = list(mb_bandwidths) if mb_bandwidths else [0.05, 0.15, 0.5]
             Ws = [torch.randn(2, rff_features) * float(bw) for bw in bws]
@@ -180,7 +180,7 @@ class FpertField(nn.Module):
             self._raw_ls = nn.Parameter(torch.tensor(float(svgp_ls_init)))
             feat_dim = self.Z.shape[0]
         elif field == "gp_pp":
-            # M1: per-PERTURBATION GP footprint — RBF kernel features to a learnable grid Z,
+            # M1: per-PERTURBATION GP footprint -- RBF kernel features to a learnable grid Z,
             # with a per-pert lengthscale ls(pert_emb) = softplus(linear(emb)). Guarded by the
             # ls_prior band in the model elbo (interpretable, but can drift -> guard required).
             m = int(round(svgp_inducing ** 0.5))
@@ -379,8 +379,8 @@ class NicheDescriptor(nn.Module):
 
     z_niche_i = pool_MLP( distance-weighted kNN mean over batch neighbors j of proj(gs_j) ,
                           proj(gs_i) ).
-    Uses ONLY the content latent gs (cell-state) + spatial coords — no labels, no precomputed
-    graph — so it summarizes "what cell states surround me" and transfers across patches/slides.
+    Uses ONLY the content latent gs (cell-state) + spatial coords -- no labels, no precomputed
+    graph -- so it summarizes "what cell states surround me" and transfers across patches/slides.
     Neighbors are taken batch-locally over coords (same pattern as _knn_smooth); for the small
     pmap slides a training batch ≈ the whole slide, so this is the full neighborhood. Compact
     out_dim keeps it inspectable and overfit-resistant.
@@ -462,7 +462,7 @@ class EarlyStopping:
             self._save(loss, model)
 
         if epoch < self.patience_start_epoch:
-            # Still in warmup — checkpoint tracked above, but don't count patience
+            # Still in warmup -- checkpoint tracked above, but don't count patience
             score = -loss
             if self.best_score is None or score > self.best_score:
                 self.best_score = score
@@ -485,7 +485,7 @@ class EarlyStopping:
 
     def _save(self, loss: float, model: nn.Module) -> None:
         if self.verbose:
-            logging.info("Validation loss improved: %.6f → %.6f (saving)", self.loss_min, loss)
+            logging.info("Validation loss improved: %.6f -> %.6f (saving)", self.loss_min, loss)
         atomic_torch_save(model.state_dict(), self.model_file)
         self.loss_min = loss
 
@@ -494,11 +494,11 @@ class EarlyStopping:
 # Model
 # ---------------------------------------------------------------------------
 class CONCERT(nn.Module):
-    """CONCERT — GP-VAE for spatial counterfactual perturbation modeling.
+    """CONCERT -- GP-VAE for spatial counterfactual perturbation modeling.
 
     Latent factorization:
-      • GP block (GP_dim): spatially structured latent processes via SVGP.
-      • Gaussian block (Normal_dim): non-spatial latent effects.
+      * GP block (GP_dim): spatially structured latent processes via SVGP.
+      * Gaussian block (Normal_dim): non-spatial latent effects.
     """
 
     def __init__(
@@ -531,19 +531,19 @@ class CONCERT(nn.Module):
         max_beta: float,
         dtype: torch.dtype,
         device: str,
-        # ── Perturbation Action Denoiser (PAD) ──────────────────────────
+        # --- Perturbation Action Denoiser (PAD) ---
         use_pad: bool = True,
         pad_action_dim: int = 64,
         pad_lambda_mmd: float = 0.1,
         pad_lambda_adv: float = 0.01,
         pad_adv_hidden: int = 64,
-        # ── explicit action correction ────────────────────────
+        # --- explicit action correction ---
         use_action_correction: bool = True,
         detach_mu_action_for_ko: bool = False,
         mu_action_anchor=None,
         mu_action_anchor_lambda: float = 0.0,
-        # ── latent disentanglement (drop pert from encoder) ───
-        # When True, the VAE encoder sees only [basal, tissue] from LORD —
+        # --- latent disentanglement (drop pert from encoder) ---
+        # When True, the VAE encoder sees only [basal, tissue] from LORD --
         # the perturbation embedding is held back and applied as an explicit
         # gene-space additive log-fold term via f_pert. This makes z
         # structurally pert-blind, leaving f_pert as the sole counterfactual
@@ -564,7 +564,7 @@ class CONCERT(nn.Module):
         # UNITS FIX: band for the gp_pp per-perturbation footprint lengthscale, expressed in
         # NORMALIZED coordinate units (fraction of one slide width), because _spatial_features
         # compares ls against c = coords / coord_scale. ls_prior_min/max are in loc units and
-        # were tuned for the SVGP kernel scale, which consumes untransformed tiled coords — so
+        # were tuned for the SVGP kernel scale, which consumes untransformed tiled coords -- so
         # reusing them here made the floor coord_scale (=20) times too large and pinned ls above
         # the useful range. None => legacy behaviour (ls_prior_min/max, unconverted).
         fpert_ls_min: Optional[float] = None,
@@ -579,7 +579,7 @@ class CONCERT(nn.Module):
         niche_film_dispersion: bool = False,  # add neighborhood 2nd-moment (dispersion) to z_niche
         use_consistency_loss: bool = False,
         consistency_lambda: float = 1.0,
-        # ── inductive expression encoder + collapse fixes ─────
+        # --- inductive expression encoder + collapse fixes ---
         use_expr_encoder: bool = False,
         expr_hidden_dims: Optional[List[int]] = None,
         expr_dropout: float = 0.1,
@@ -616,7 +616,7 @@ class CONCERT(nn.Module):
         ls_prior_lambda: float = 0.0,
         ls_prior_min: float = 3.0,
         ls_prior_max: float = 8.0,
-        # ── P0: deterministic RFF basal field + scale-aware disentanglement ──
+        # --- P0: deterministic RFF basal field + scale-aware disentanglement ---
         basal_field: str = "svgp",
         basal_rff_features: int = 128,
         basal_rff_bandwidth: float = 0.15,
@@ -687,17 +687,17 @@ class CONCERT(nn.Module):
         self.dynamicVAE = dynamicVAE
         self.beta = init_beta
 
-        # ── Control-anchored explicit action correction ──────────
-        # 3-term decoder: log μ_g = f_basal(z_b) + 𝟙[has_guide]·μ_action_g + 𝟙[is_real_KO]·f_pert
+        # --- Control-anchored explicit action correction ---
+        # 3-term decoder: log μ_g = f_basal(z_b) + 1[has_guide]·μ_action_g + 1[is_real_KO]·f_pert
         # μ_action is a learnable per-gene additive shift in log-count space.
         # Identifiability:
-        #   unassigned cells → establish f_basal (both action terms off)
-        #   control cells    → identify μ_action   (f_pert off, has_guide=1)
-        #   gene_KO cells    → identify f_pert given μ_action from above
+        #   unassigned cells -> establish f_basal (both action terms off)
+        #   control cells    -> identify μ_action   (f_pert off, has_guide=1)
+        #   gene_KO cells    -> identify f_pert given μ_action from above
         self.use_action_correction = use_action_correction
         self.detach_mu_action_for_ko = detach_mu_action_for_ko
         self.mu_action_anchor_lambda = float(mu_action_anchor_lambda)
-        # empirical anchor (logmean(NTC) − logmean(unassigned)) pins μ_action
+        # empirical anchor (logmean(NTC) - logmean(unassigned)) pins μ_action
         # to the pure technical direction so the NTC-only gradient (after detach)
         # can't drift. Registered once as a (possibly None) non-trainable buffer.
         self.register_buffer(
@@ -710,7 +710,7 @@ class CONCERT(nn.Module):
                 torch.zeros(num_genes, dtype=dtype), requires_grad=True
             )
 
-        # ── P0: deterministic RFF basal field + scale-aware disentanglement ──
+        # --- P0: deterministic RFF basal field + scale-aware disentanglement ---
         self.basal_field = str(basal_field)
         self.disentangle_radius = float(disentangle_radius)
         # Multi-slide guard: the Moran-scale penalty builds a dense Gaussian graph over the
@@ -737,7 +737,7 @@ class CONCERT(nn.Module):
         else:
             self.basal_rff = None
 
-        # ── spatial-basal disentanglement + LFC supervision ────────
+        # --- spatial-basal disentanglement + LFC supervision ---
         self.spatial_basal_only = bool(spatial_basal_only)
         self.lfc_lambda = float(lfc_lambda)
         self.disentangle_lambda = float(disentangle_lambda)
@@ -752,7 +752,7 @@ class CONCERT(nn.Module):
         self._last_gpaux = 0.0
         # RC2 spatial residualization: penalize spatial autocorrelation of the ADDITIVE basal
         # OUTPUT contribution (log_basal in gene space), not just the 2-dim latent. Forces the
-        # smooth spatial component of expression out of the basal path → it can only be
+        # smooth spatial component of expression out of the basal path -> it can only be
         # reconstructed by the coord-driven GP path. Stronger/more direct than latent Moran.
         self.basal_moran_output_lambda = float(basal_moran_output_lambda)
         self._last_basal_out_moran = 0.0
@@ -772,7 +772,7 @@ class CONCERT(nn.Module):
         # Set by run_concert_spac before .fit(); consumed in forward when lfc_lambda>0.
         self.lfc_targets: Optional[Dict[Tuple[int, int], torch.Tensor]] = None
 
-        # ── latent disentanglement flags ─────────────────────────
+        # --- latent disentanglement flags ---
         self.use_basal_encoder_only = use_basal_encoder_only
         self.use_f_pert = use_f_pert
         self.f_pert_clamp = float(f_pert_clamp)
@@ -780,11 +780,11 @@ class CONCERT(nn.Module):
         self.consistency_lambda = float(consistency_lambda)
 
         # Number of LORD blocks fed to the VAE encoder:
-        #   - basal_encoder_only: 2 blocks (basal + tissue)  → pert held out
+        #   - basal_encoder_only: 2 blocks (basal + tissue)  -> pert held out
         #   - legacy:             3 blocks (basal + tissue + perturbation)
         n_lord_blocks_to_encoder = 2 if use_basal_encoder_only else 3
 
-        # ── Perturbation Action Denoiser (PAD) ──────────────────────────────
+        # --- Perturbation Action Denoiser (PAD) ---
         # Now a soft regularizer; main action removal via μ_action above.
         # Downgrade λ values (mmd 0.1, adv 0.01) to avoid over-suppression.
         # With use_basal_encoder_only=True, PAD is redundant (pert is removed
@@ -804,7 +804,7 @@ class CONCERT(nn.Module):
             _encoder_input_dim = encoder_dim * n_lord_blocks_to_encoder
 
         # f_pert: per-perturbation gene-space additive log-fold term.
-        # Takes LORD's perturbation embedding (encoder_dim) → (num_genes).
+        # Takes LORD's perturbation embedding (encoder_dim) -> (num_genes).
         # Init near zero so training starts from "no pert effect".
         if use_f_pert:
             self.f_pert = nn.Linear(encoder_dim, num_genes, bias=False)
@@ -839,7 +839,7 @@ class CONCERT(nn.Module):
         else:
             self.fpert_field = None  # type: ignore[assignment]
 
-        # ── NNGP local field over the kNN graph (pert-agnostic) ──
+        # --- NNGP local field over the kNN graph (pert-agnostic) ---
         self.use_nngp = use_nngp
         self.nngp_lambda = float(nngp_lambda)
         if use_nngp:
@@ -857,7 +857,7 @@ class CONCERT(nn.Module):
         # Spatial graph attached post-construction (depends on data order).
         self.graph = None  # type: ignore[assignment]
 
-        # ── paracrine spillover (own gene-signature head + per-pert radius) ──
+        # --- paracrine spillover (own gene-signature head + per-pert radius) ---
         self.use_paracrine = use_paracrine
         self.paracrine_l1 = float(paracrine_l1)
         if use_paracrine:
@@ -871,7 +871,7 @@ class CONCERT(nn.Module):
             self.s_signature = None  # type: ignore[assignment]
             self._raw_radius = None  # type: ignore[assignment]
 
-        # ── low-rank niche x pert interaction (niche = GP latent summary) ──
+        # --- low-rank niche x pert interaction (niche = GP latent summary) ---
         self.use_niche_interaction = use_niche_interaction
         if use_niche_interaction:
             nd = int(niche_dim) if niche_dim is not None else GP_dim   # niche summary dim
@@ -890,9 +890,9 @@ class CONCERT(nn.Module):
             self.inter_V = None         # type: ignore[assignment]
             self.inter_out = None       # type: ignore[assignment]
 
-        # ── per-cell scalar gate on the global perturbation effect ──
+        # --- per-cell scalar gate on the global perturbation effect ---
         # gate_i = sigmoid(MLP([gp_latent ; basal_latent])) ∈ [0,1]; multiplies g_global(g).
-        # Coordinate-free (uses GP latent, not raw x/y) → transfers across slides.
+        # Coordinate-free (uses GP latent, not raw x/y) -> transfers across slides.
         self.use_pert_gate = use_pert_gate
         if use_pert_gate:
             gate_in = GP_dim + Normal_dim          # niche (location) + basal cell-state
@@ -900,7 +900,7 @@ class CONCERT(nn.Module):
                 nn.Linear(gate_in, gate_hidden), nn.ELU(),
                 nn.Linear(gate_hidden, 1),
             )
-            # Init gate ≈ 1 (final weight=0, bias=+3 → sigmoid(3)≈0.95): near drop-in for
+            # Init gate ≈ 1 (final weight=0, bias=+3 -> sigmoid(3)≈0.95): near drop-in for
             # "pure g_global" at start; training pulls the gate down only where warranted.
             nn.init.zeros_(self.pert_gate[-1].weight)
             nn.init.constant_(self.pert_gate[-1].bias, 3.0)
@@ -921,14 +921,14 @@ class CONCERT(nn.Module):
             use_expr_encoder=use_expr_encoder,
             expr_hidden_dims=expr_hidden_dims,
             expr_dropout=expr_dropout,
-            # tissue cardinality from the data (spac → all-zeros → 1 class; perturbmap
-            # → tumor/normal → 2 classes). Hardcoding 1 silently drops tissue disentanglement.
+            # tissue cardinality from the data (spac -> all-zeros -> 1 class; perturbmap
+            # -> tumor/normal -> 2 classes). Hardcoding 1 silently drops tissue disentanglement.
             n_labels_override=[
                 int(np.asarray(cell_atts)[:, 0].max()) + 1 if np.asarray(cell_atts).size else 1,
                 n_batch,
             ],
         )
-        # ── Niche-FiLM head: transferable niche descriptor + per-pert sign-flip gamma ──
+        # --- Niche-FiLM head: transferable niche descriptor + per-pert sign-flip gamma ---
         self.use_niche_film = use_niche_film
         if use_niche_film:
             self.niche_descriptor = NicheDescriptor(Normal_dim, out_dim=niche_film_dim,
@@ -966,12 +966,12 @@ class CONCERT(nn.Module):
         last_dim = decoder_layers[-1] if len(list(decoder_layers)) > 0 else GP_dim + Normal_dim
         self.dec_mean = nn.Sequential(nn.Linear(last_dim, self.num_genes), MeanAct())
 
-        # Option 2 — gated additive decoder. Reconstruct log μ additively from TWO separate
+        # Option 2 -- gated additive decoder. Reconstruct log μ additively from TWO separate
         # paths: a spatial path fed ONLY by the coord-driven GP latent z_gp, and a basal path
         # fed ONLY by the expression basal latent z_basal. Because the paths no longer share a
         # decoder MLP (where the high-capacity basal input dominates the first layer), z_gp gets
         # an un-shared gradient path to reconstruction. Paired with basal whitening (moran_lambda
-        # + small Normal_dim), the smooth spatial component is forced through z_gp → GP becomes
+        # + small Normal_dim), the smooth spatial component is forced through z_gp -> GP becomes
         # load-bearing without de-amortizing (so z_gp stays coord-driven, preserving the
         # spatial-footprint goal). log μ_basal = dec_logmu_gp(z_gp) + dec_logmu_basal(z_basal).
         if self.additive_decoder:
@@ -1009,8 +1009,8 @@ class CONCERT(nn.Module):
         """Map a latent sample z = [z_gp ; z_basal] to the count-space basal mean μ_basal.
 
         Standard mode: shared decoder MLP then exp head. Additive mode (Option 2): two
-        separate paths summed in log space — log μ = dec_logmu_gp(z_gp) + dec_logmu_basal(z_basal)
-        — so the GP path has an independent gradient route to reconstruction.
+        separate paths summed in log space -- log μ = dec_logmu_gp(z_gp) + dec_logmu_basal(z_basal)
+        -- so the GP path has an independent gradient route to reconstruction.
         """
         if not self.additive_decoder:
             return self.dec_mean(self.decoder(z))
@@ -1043,13 +1043,13 @@ class CONCERT(nn.Module):
             if ckpt_v.shape == model_v.shape:
                 merged[k] = ckpt_v
             elif k == "slide_bias" and ckpt_v.shape[0] > model_v.shape[0]:
-                # multi-slide checkpoint → fewer-slide model. Keep the leading rows;
+                # multi-slide checkpoint -> fewer-slide model. Keep the leading rows;
                 # target slide is row 0 by multi_sample_files convention.
                 merged[k] = ckpt_v[:model_v.shape[0]].clone()
                 logging.warning("[load_model] truncated slide_bias from %s to %s (kept row 0 = target slide)",
                                 tuple(ckpt_v.shape), tuple(model_v.shape))
             elif allow_cell_size_mismatch and k in _per_cell and ckpt_v.shape[0] >= model_v.shape[0]:
-                # Multi-slide checkpoint → single-slide eval: truncate to model size.
+                # Multi-slide checkpoint -> single-slide eval: truncate to model size.
                 # Correct because the target slide is always first in multi_sample_files.
                 merged[k] = ckpt_v[:model_v.shape[0]]
                 logging.warning("[load_model] truncated %s from %s to %s", k, tuple(ckpt_v.shape), tuple(model_v.shape))
@@ -1059,12 +1059,12 @@ class CONCERT(nn.Module):
                 )
         # Guard the silent-partial-load trap: any TRAINABLE parameter present in the model but
         # ABSENT from the checkpoint keeps its random init (no error). This silently broke the
-        # 2-2 Bayes-basal CF eval (deterministic head built vs bayes checkpoint → mlp.2 random).
+        # 2-2 Bayes-basal CF eval (deterministic head built vs bayes checkpoint -> mlp.2 random).
         # Warn loudly so an arch/flag mismatch (e.g. missing --basal_bayes) surfaces immediately.
         _missing = [k for k in dict(self.named_parameters()) if k not in state]
         if _missing:
             logging.warning(
-                "[load_model] %d model parameter(s) NOT in checkpoint — left at RANDOM INIT "
+                "[load_model] %d model parameter(s) NOT in checkpoint -- left at RANDOM INIT "
                 "(likely a build/flag mismatch vs training, e.g. --basal_bayes/--basal_field/--fpert_field): %s",
                 len(_missing), _missing[:12],
             )
@@ -1154,8 +1154,8 @@ class CONCERT(nn.Module):
     def _mmd_rbf(x: torch.Tensor, y: torch.Tensor, sigmas: Tuple[float, ...] = (1.0, 2.0, 5.0, 10.0)) -> torch.Tensor:
         """Multi-bandwidth RBF MMD^2 between two batches of vectors (same dim).
 
-        Uses the dot-product identity ‖a−b‖² = ‖a‖²+‖b‖²−2⟨a,b⟩ so
-        memory cost is O(n²) not O(n²·G) — safe with G=10k genes.
+        Uses the dot-product identity ‖a-b‖² = ‖a‖²+‖b‖²-2⟨a,b⟩ so
+        memory cost is O(n²) not O(n²·G) -- safe with G=10k genes.
         """
         def _sq_dists(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
             a2 = (a * a).sum(-1, keepdim=True)   # (n, 1)
@@ -1189,10 +1189,10 @@ class CONCERT(nn.Module):
         cutoff: torch.Tensor,
         num_samples: int = 1,
         is_perturbed: Optional[torch.Tensor] = None,  # (B,) int 0/1 for PAD
-        has_guide: Optional[torch.Tensor] = None,     # (B,) float 0/1 — action indicator
-        is_real_KO: Optional[torch.Tensor] = None,   # (B,) float 0/1 — KO indicator
-        niche_id: Optional[torch.Tensor] = None,     # (B,) long — niche bin id for LFC supervision
-        slide_index: Optional[torch.Tensor] = None,   # (B,) long — per-cell slide id (C2)
+        has_guide: Optional[torch.Tensor] = None,     # (B,) float 0/1 -- action indicator
+        is_real_KO: Optional[torch.Tensor] = None,   # (B,) float 0/1 -- KO indicator
+        niche_id: Optional[torch.Tensor] = None,     # (B,) long -- niche bin id for LFC supervision
+        slide_index: Optional[torch.Tensor] = None,   # (B,) long -- per-cell slide id (C2)
     ) -> Tuple[torch.Tensor, ...]:
         """Forward pass computing ELBO terms and reconstructions."""
         self.train()
@@ -1214,7 +1214,7 @@ class CONCERT(nn.Module):
         pad_loss = torch.tensor(0.0, device=self.device)
         if self.use_pad and is_perturbed is not None:
             s_action = self.pad(is_perturbed)                           # (B, action_dim)
-            y_embed = torch.cat([y_embed, s_action], dim=-1)            # (B, …+action)
+            y_embed = torch.cat([y_embed, s_action], dim=-1)            # (B, ...+action)
             pad_loss = self.pad.combined_loss(lord["basal_latent"], is_perturbed)
 
         # Inference network -> posterior params for GP & Gaussian latents
@@ -1245,7 +1245,7 @@ class CONCERT(nn.Module):
             gp_noise = gp_var
 
         # Spatial basal latent. RFF: deterministic coord(+tissue) field, no GP KL. SVGP:
-        # per-pert GP posterior (legacy) — observations = all cells but NTC/KO carry ~0
+        # per-pert GP posterior (legacy) -- observations = all cells but NTC/KO carry ~0
         # precision (gp_noise), so only unassigned define the field.
         if self.basal_field == "rff":
             coords = x[:, :2]
@@ -1279,24 +1279,24 @@ class CONCERT(nn.Module):
 
             gp_p_m = torch.stack(gp_p_m, dim=1)
             gp_p_v = torch.stack(gp_p_v, dim=1)
-            # Guard SVGP numerical instability: NaN posterior → zero mean, unit variance fallback
+            # Guard SVGP numerical instability: NaN posterior -> zero mean, unit variance fallback
             gp_p_m = torch.nan_to_num(gp_p_m, nan=0.0)
             gp_p_v = torch.nan_to_num(gp_p_v, nan=1.0, posinf=1.0, neginf=1.0)
 
-        # ── NNGP local field (epoch-stale cache for cross-batch neighbors) ──
+        # --- NNGP local field (epoch-stale cache for cross-batch neighbors) ---
         nngp_kl = torch.tensor(0.0, device=self.device)
         if self.use_nngp and self.nngp is not None and self.graph is not None:
             gidx = sample_index.long()
             knn_idx_b  = self.graph.knn_idx[gidx]      # (B, k) global neighbor indices
             knn_dist_b = self.graph.knn_dist[gidx]     # (B, k)
-            neighbor_vals = self.gp_cache[knn_idx_b]   # (B, k, GP_dim) — detached cache
+            neighbor_vals = self.gp_cache[knn_idx_b]   # (B, k, GP_dim) -- detached cache
             local_mean, nngp_kl = self.nngp(knn_dist_b, neighbor_vals)
             # cache the PRE-smoothing GP means for future batches (avoid recursive feedback)
             # nan_to_num guards against SVGP instability poisoning the cache
             self.gp_cache[gidx] = torch.nan_to_num(gp_p_m.detach(), nan=0.0)
             gp_p_m = gp_p_m + local_mean
 
-        # ── Route 2: auxiliary GP-field supervision ─────────────────────────
+        # --- Route 2: auxiliary GP-field supervision ---
         # Force the coord-driven SVGP field gp_p_m to reconstruct the spatially-smoothed
         # expression (per-gene standardized so all genes weigh equally and λ is scale-free).
         # The gradient flows through gp_p_m into the encoder gp_mu AND the SVGP inducing
@@ -1314,7 +1314,7 @@ class CONCERT(nn.Module):
 
         # GP prior KL via cross entropy (q||p). NTC/KO are pinned toward the field by this
         # term (helpful: trains the encoder to be pert-blind), while their z still comes from
-        # gp_p_m (the field) — so no perturbation leaks into z.
+        # gp_p_m (the field) -- so no perturbation leaks into z.
         if self.basal_field == "rff":
             # RFF basal is deterministic + collapse-proof: no GP variational KL.
             gp_ce = torch.zeros((), device=self.device)
@@ -1341,7 +1341,7 @@ class CONCERT(nn.Module):
                 gp_KL = torch.nan_to_num(gp_ce - inside_elbo, nan=0.0, posinf=0.0, neginf=0.0)
 
         # Gaussian block KL (with optional free-bits floor so no Normal dim can fully
-        # collapse to the prior — guards the posterior collapse fixed earlier).
+        # collapse to the prior -- guards the posterior collapse fixed earlier).
         prior = Normal(torch.zeros_like(gs_mu), torch.ones_like(gs_var))
         post = Normal(gs_mu, torch.sqrt(gs_var))
         if self.free_bits > 0:
@@ -1377,13 +1377,13 @@ class CONCERT(nn.Module):
         p_v = torch.clamp(torch.cat([gp_p_v, gs_var], dim=1), min=1e-6)
         latent_dist = Normal(p_m, torch.sqrt(p_v))
 
-        # ── explicit gene-space log-shift ─────────────────────
-        # log μ = log μ_basal + 𝟙[has_guide]·μ_action + 𝟙[is_real_KO]·f_pert(p)
+        # --- explicit gene-space log-shift ---
+        # log μ = log μ_basal + 1[has_guide]·μ_action + 1[is_real_KO]·f_pert(p)
         # In count space: μ = μ_basal * exp(action_shift + f_pert_shift)
         # Identifiable via the 3-class structure:
-        #   unassigned → both shifts off  → establishes f_basal baseline
-        #   control    → μ_action only    → identifies action effect
-        #   gene_KO    → both terms       → identifies f_pert per perturbation
+        #   unassigned -> both shifts off  -> establishes f_basal baseline
+        #   control    -> μ_action only    -> identifies action effect
+        #   gene_KO    -> both terms       -> identifies f_pert per perturbation
         action_shift = None
         if self.use_action_correction and has_guide is not None:
             mu_action_clamped = torch.clamp(self.mu_action, -5.0, 5.0)
@@ -1404,7 +1404,7 @@ class CONCERT(nn.Module):
         niche_latent = gp_p_m.detach() if self.use_niche_interaction else None
         # gate conditioning: [gp_latent ; basal_latent], detached (conditioning, not posterior grad path)
         gate_state = torch.cat([gp_p_m, gs_mu], dim=-1).detach() if self.use_pert_gate else None
-        # batch-local niche descriptor (coord kNN over gs_mu); detached — conditioning signal
+        # batch-local niche descriptor (coord kNN over gs_mu); detached -- conditioning signal
         z_niche_f = (self.niche_descriptor(gs_mu.detach(), x[:, :2])
                      if self.use_niche_film else None)
         f_pert_shift = self._pert_log_shift_from_lord(
@@ -1415,7 +1415,7 @@ class CONCERT(nn.Module):
         mu_basal_last: Optional[torch.Tensor] = None
         for _ in range(num_samples):
             z = latent_dist.rsample()
-            mu_basal = self._decode_to_mean(z)   # (B, G) — exp(pre-activation) in count space
+            mu_basal = self._decode_to_mean(z)   # (B, G) -- exp(pre-activation) in count space
             mu_basal_last = mu_basal       # keep last sample for consistency loss
 
             log_shift = torch.zeros_like(mu_basal)
@@ -1458,7 +1458,7 @@ class CONCERT(nn.Module):
         unknown_pen = _unknown_attribute_penalty(lord["basal_latent"])  # encourages disentanglement
         lord_loss = unknown_pen + recon_mse
 
-        # ── consistency loss — push mu_basal of KO and control
+        # --- consistency loss -- push mu_basal of KO and control
         # cells to share a distribution. Forces f_pert to absorb all per-pert
         # variance; mu_basal stays pert-blind. Batch-level MMD on log mu_basal.
         consistency_loss = torch.tensor(0.0, device=self.device)
@@ -1473,7 +1473,7 @@ class CONCERT(nn.Module):
             if int(is_ko_mask.sum().item()) > 1 and int(is_ctrl_mask.sum().item()) > 1:
                 log_basal = torch.log(mu_basal_last + 1e-6)
                 # L2-normalize each cell vector so squared distances are in [0, 4]
-                # regardless of gene count → bandwidth selection stays sensible.
+                # regardless of gene count -> bandwidth selection stays sensible.
                 lb_norm = torch.nn.functional.normalize(log_basal, dim=1)
                 consistency_loss = self._mmd_rbf(lb_norm[is_ko_mask], lb_norm[is_ctrl_mask])
 
@@ -1492,10 +1492,10 @@ class CONCERT(nn.Module):
                 basal_consistency_loss = self._mmd_rbf(
                     basal_lat[is_ko_mask_b], basal_lat[is_ctrl_mask_b])
 
-        # ── mini-bulk KO-vs-NTC LFC supervision ────────────────────
+        # --- mini-bulk KO-vs-NTC LFC supervision ---
         # Model's KO-vs-NTC pseudobulk LFC over a niche IS f_pert_shift (mu_action is
         # shared with NTC and cancels). Pull it toward the observed per-(niche, pert) LFC.
-        # Mini-bulk only — per-cell LFC is undefined on sparse spots.
+        # Mini-bulk only -- per-cell LFC is undefined on sparse spots.
         lfc_loss = torch.tensor(0.0, device=self.device)
         if (self.lfc_lambda > 0 and self.lfc_targets is not None
                 and f_pert_shift is not None and is_real_KO is not None and niche_id is not None):
@@ -1542,7 +1542,7 @@ class CONCERT(nn.Module):
             elbo = elbo + self.beta * (bsz / self.N_train) * self.basal_rff.kl()
         # Stage 1 GP guardrail: squared-hinge band prior keeping the SVGP kernel
         # lengthscale inside [ls_prior_min, ls_prior_max]. Data moves freely within
-        # the band; only out-of-band excursions are penalized — this stops the
+        # the band; only out-of-band excursions are penalized -- this stops the
         # multi-slide runaway (L~27-60 vs spacing ~3.3) that made K_mm singular and
         # collapsed the GP. No-op when ls_prior_lambda == 0 (default / eval).
         if self.ls_prior_lambda > 0 and hasattr(self.svgp, "kernel"):
@@ -1572,7 +1572,7 @@ class CONCERT(nn.Module):
             pe = self.lord_encoder.s_encoder["perturbation"].weight
             gsc = torch.clamp(torch.nn.functional.softplus(self.g_scale_head(pe)), max=self.g_cap)
             elbo = elbo + self.niche_film_l2 * (gsc.mean() + self.beta_out.weight.pow(2).mean())
-        # anchor μ_action to the empirical NTC−unassigned technical shift.
+        # anchor μ_action to the empirical NTC-unassigned technical shift.
         if (self.use_action_correction and self.mu_action_anchor is not None
                 and self.mu_action_anchor_lambda > 0):
             mu_anchor_loss = (
@@ -1644,7 +1644,7 @@ class CONCERT(nn.Module):
                 gp_mu = self.gp_mu_free[is_.long()]
 
             if self.basal_field == "rff":
-                # RFF basal: deterministic coord(+tissue) field — mirror forward (:952).
+                # RFF basal: deterministic coord(+tissue) field -- mirror forward (:952).
                 tissue_emb = lord["tissue"] if self.basal_rff.tissue_dim > 0 else None
                 gp_p_m = self.basal_rff(xs[:, :2], tissue_emb=tissue_emb)
             else:
@@ -1681,7 +1681,7 @@ class CONCERT(nn.Module):
         """Denoised mean expression.
 
         When force_basal=True, returns mu_basal only (no μ_action / f_pert
-        shifts) — i.e., the cell's "what would it look like unperturbed" mean.
+        shifts) -- i.e., the cell's "what would it look like unperturbed" mean.
         Otherwise applies μ_action (if has_guide given) and f_pert (if
         is_real_KO given and module enabled) on top of mu_basal.
         """
@@ -1722,7 +1722,7 @@ class CONCERT(nn.Module):
                 gp_mu = self.gp_mu_free[is_.long()]
 
             if self.basal_field == "rff":
-                # RFF basal: deterministic coord(+tissue) field — mirror forward (:952).
+                # RFF basal: deterministic coord(+tissue) field -- mirror forward (:952).
                 tissue_emb = lord["tissue"] if self.basal_rff.tissue_dim > 0 else None
                 gp_p_m = self.basal_rff(xs[:, :2], tissue_emb=tissue_emb)
                 gp_p_v = torch.exp(self.basal_rff_logvar).expand_as(gp_p_m)
@@ -2007,7 +2007,7 @@ class CONCERT(nn.Module):
                 gp_mu = self.gp_mu_free[is_.long()]
 
             if self.basal_field == "rff":
-                # RFF basal: deterministic coord(+tissue) field — mirror forward (:952).
+                # RFF basal: deterministic coord(+tissue) field -- mirror forward (:952).
                 tissue_emb = lord["tissue"] if self.basal_rff.tissue_dim > 0 else None
                 gp_p_m = self.basal_rff(xs[:, :2], tissue_emb=tissue_emb)
                 gp_p_v = torch.exp(self.basal_rff_logvar).expand_as(gp_p_m)
@@ -2033,7 +2033,7 @@ class CONCERT(nn.Module):
 
             # Apply gene-space additive shifts using the TARGET perturbation
             # (μ_action is global; f_pert uses LORD's pert_emb for the swapped
-            # pert index — this is the clean counterfactual mechanism).
+            # pert index -- this is the clean counterfactual mechanism).
             # All target cells get has_guide=1 if target_cell_perturbation>0,
             # is_real_KO=1 if the target represents a real KO (here we treat
             # any non-zero target as a real KO; caller can override).
@@ -2059,7 +2059,7 @@ class CONCERT(nn.Module):
             gate_state = torch.cat([gp_p_m, gs_mu], dim=-1).detach() if self.use_pert_gate else None
             # Diagnostic: _disable_fpert_field passes coords=None so _pert_log_shift_from_lord
             # skips ONLY the coord-conditioned FpertField residual (core f_pert / niche / gate
-            # unchanged) — isolates whether the spatial field corrupts unseen/multimodal perts.
+            # unchanged) -- isolates whether the spatial field corrupts unseen/multimodal perts.
             _cf_coords = None if getattr(self, "_disable_fpert_field", False) else xs[:, :2]
             # z_niche keyed to each predicted cell's OWN neighborhood -> per-cell variation
             z_niche_cf = (self.niche_descriptor(gs_mu.detach(), xs[:, :2])
@@ -2110,7 +2110,7 @@ class CONCERT(nn.Module):
 
         NOTE: NNGP local field and paracrine spillover are skipped for these
         unseen coordinates (no precomputed graph / KO-neighbor entries exist for
-        them) — a deferred extension. This method is pure imputation (no
+        them) -- a deferred extension. This method is pure imputation (no
         cell-autonomous perturbation shift), so f_pert/niche do not apply here.
         """
         self.eval()
@@ -2241,8 +2241,8 @@ class CONCERT(nn.Module):
 	) -> Tuple[np.ndarray, np.ndarray]:
         """
         Counterfactual impute:
-        • GP block: SVGP posterior from training GP latents.
-        • Gaussian block: replace tissue/perturbation with specified targets.
+        * GP block: SVGP posterior from training GP latents.
+        * Gaussian block: replace tissue/perturbation with specified targets.
 
         Y_train = normalized log-expression of the TRAIN cells; required when
         use_expr_encoder is on so train latents are amortized via the basal encoder
@@ -2382,10 +2382,10 @@ class CONCERT(nn.Module):
         ncounts: np.ndarray,
         raw_counts: np.ndarray,
         size_factors: np.ndarray,
-        has_guide: Optional[np.ndarray] = None,   # (N,) float32 0/1 — action indicator
-        is_real_KO: Optional[np.ndarray] = None,  # (N,) float32 0/1 — gene KO indicator
-        niche_id: Optional[np.ndarray] = None,    # (N,) int — niche bin id for LFC supervision (-1 = none)
-        sample_id: Optional[np.ndarray] = None,   # (N,) int — per-cell slide id (C2; None = single-slide)
+        has_guide: Optional[np.ndarray] = None,   # (N,) float32 0/1 -- action indicator
+        is_real_KO: Optional[np.ndarray] = None,  # (N,) float32 0/1 -- gene KO indicator
+        niche_id: Optional[np.ndarray] = None,    # (N,) int -- niche bin id for LFC supervision (-1 = none)
+        sample_id: Optional[np.ndarray] = None,   # (N,) int -- per-cell slide id (C2; None = single-slide)
         lr: float = 1e-3,
         weight_decay: float = 1e-3,
         batch_size: int = 512,
@@ -2424,11 +2424,11 @@ class CONCERT(nn.Module):
             _shapes["has_guide"] = len(has_guide)
         if len(set(_shapes.values())) != 1:
             raise ValueError(
-                f"[train_model] Size mismatch across inputs — check that normalize() "
+                f"[train_model] Size mismatch across inputs -- check that normalize() "
                 f"is called with filter_min_counts=False. Shapes: {_shapes}"
             )
 
-        # ── 3-class action indicators ────────────────────────────────────────
+        # --- 3-class action indicators ---
         # has_guide: True for control + gene_KO (any guide delivered)
         # is_real_KO: True for gene_KO only (not control, not unassigned)
         # is_perturbed (PAD flag): same as has_guide
@@ -2478,7 +2478,7 @@ class CONCERT(nn.Module):
         is_main = rank == 0
 
         # DataLoader worker config. NOTE: the TensorDataset tensors are CUDA-resident,
-        # so num_workers>0 is INVALID here — forked workers cannot re-init CUDA
+        # so num_workers>0 is INVALID here -- forked workers cannot re-init CUDA
         # ("CUDA error: initialization error") and pin_memory can't pin GPU tensors.
         # Default 0 (known-good). The real per-sample-indexing bottleneck is addressed
         # separately via batched sampling, not workers. Left env-overridable only for
@@ -2538,13 +2538,13 @@ class CONCERT(nn.Module):
             if is_ddp:
                 train_loader.sampler.set_epoch(epoch)
 
-            # Ramp GRL alpha from 0→1 over training (Ganin et al. 2015)
+            # Ramp GRL alpha from 0->1 over training (Ganin et al. 2015)
             if self.use_pad and self.pad is not None:
                 self.pad.set_grl_alpha(grl_alpha_schedule(epoch, maxiter))
 
             # bf16 autocast disabled: cuSOLVER Cholesky/inv don't support bf16,
             # and bf16 precision causes NaN in encoder latent means.
-            # fp32 on H100 is fast enough — no autocast needed.
+            # fp32 on H100 is fast enough -- no autocast needed.
 
             for xb, yb, yr, sf, si, ca, bt, cf, ip, hg, rk, ni, sid_b in train_loader:
                 xb = xb.to(self.device)
@@ -2782,7 +2782,7 @@ class CONCERT(nn.Module):
                         except Exception:
                             pass
 
-                    # early stopping — rank 0 decides
+                    # early stopping -- rank 0 decides
                     early(val_elbo, self, epoch=epoch)
                     if early.early_stop:
                         logging.info("Early stopping at epoch %d", epoch + 1)
@@ -2837,12 +2837,12 @@ class CONCERT(nn.Module):
             if scale_np.ndim == 2:
                 if code < scale_np.shape[0]:
                     scale_row = scale_np[code]
-                    logging.info("  • %-16s | scale=%s | mean_cutoff=%.4f",
+                    logging.info("  * %-16s | scale=%s | mean_cutoff=%.4f",
                                  name, np.array2string(scale_row, precision=4), mean_cut)
                 else:
-                    logging.info("  • %-16s | scale=<out of range for batch idx %d> | mean_cutoff=%.4f",
+                    logging.info("  * %-16s | scale=<out of range for batch idx %d> | mean_cutoff=%.4f",
                                  name, code, mean_cut)
             else:
-                logging.info("  • %-16s | scale(shared)=%s | mean_cutoff=%.4f",
+                logging.info("  * %-16s | scale(shared)=%s | mean_cutoff=%.4f",
                              name, np.array2string(scale_np, precision=4), mean_cut)
 

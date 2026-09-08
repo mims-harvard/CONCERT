@@ -103,13 +103,13 @@ def main() -> None:
                         slide=a.target_slide, mean_depth=float(depth[idx].mean()), **meta))
         print(f"  {scenario:10s} {name:26s} n={len(idx):4d} depth={depth[idx].mean():.2f} {meta}")
 
-    # ── A. cortical depth: both patches inside CTX ──────────────────────────
+    # --- A. cortical depth: both patches inside CTX ---
     d_ctx = depth[ctx]
     for tag, seed in [] if a.emit == "z" else (("superficial", int(np.argmin(d_ctx))), ("deep", int(np.argmax(d_ctx)))):
         emit(f"ctxdepth_{tag}", "ctx_depth", grow(xy, ctx, seed, a.patch_n),
              region=a.cortex, placement=tag)
 
-    # ── B. single-section lesion for the z test ─────────────────────────────
+    # --- B. single-section lesion for the z test ---
     # Seeded at the shallowest cortical spot, i.e. where a photothrombotic lesion is made.
     if a.emit != "depth":
         emit("zsec1_ctx", "z_propagation", grow(xy, ctx, int(np.argmin(d_ctx)), a.zpatch_n),

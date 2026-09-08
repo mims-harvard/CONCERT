@@ -92,7 +92,7 @@ def load_concert_v3_records(v3_root: Path, task: str, method_key: str, eval_unit
                     lfc_dist=ld,
                     # Eval-native gene bootstrap (n_boot=10). Unseen has no niche, so the niche-gated
                     # attach_concert_gene_bootstrap cannot recompute it and routing CONCERT through the
-                    # competitor path corrupts its point estimate — so read the eval's own boot here. For
+                    # competitor path corrupts its point estimate -- so read the eval's own boot here. For
                     # unseen these are comparable in width to competitors' gene bootstrap.
                     lfc_spearman_boot=float(rec.get("spearman_boot_std", float("nan"))),
                     lfc_dist_boot=float(rec.get("lfc_dist_boot_std", float("nan"))),
@@ -454,7 +454,7 @@ def attach_concert_gene_bootstrap(
     never pass through score_lfc_agreement and would otherwise carry no bootstrap at all
     (the per-gene bar panels then showed an error for all 11 competitors and none for
     CONCERT). Its eval JSON does ship a `spearman_boot_std`, but that is produced by a
-    different procedure and lands 3-5x tighter than the gene bootstrap — copying it would
+    different procedure and lands 3-5x tighter than the gene bootstrap -- copying it would
     make CONCERT look far more precise than every competitor for reasons of bootstrap
     definition, not accuracy. So it is recomputed here from CONCERT's own predictions,
     through the identical code path the competitors use.
@@ -462,7 +462,7 @@ def attach_concert_gene_bootstrap(
     ONLY the bootstrap fields are written back. The stored lfc_spearman / lfc_dist are the
     master values every competitor is rescored against and must not move. If the recomputed
     rho disagrees with the stored one the vectors or gene mask differ, which would make the
-    bootstrap describe a different quantity — those records keep NaN and are counted.
+    bootstrap describe a different quantity -- those records keep NaN and are counted.
     """
     n_ok = n_skip = n_mismatch = 0
     for m in master:

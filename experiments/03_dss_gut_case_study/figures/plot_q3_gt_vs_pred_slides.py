@@ -60,7 +60,7 @@ DOT = 0.45          # cells are dense enough that anything larger merges into a 
 d = np.load(DUMP, allow_pickle=True)
 mouse_all, sid_all, coords = d["mouse"], d["sample_id"], d["coords"]
 
-# ── rows: largest slide of each featured mouse ─────────────────────────────────────
+# --- rows: largest slide of each featured mouse ---
 rows = []
 for M in MICE:
     m0 = mouse_all == M
@@ -75,7 +75,7 @@ for M in MICE:
 
 healthy = np.isclose(d["src_day"], 0.0, atol=1e-3)
 
-# ── continuous panels: both modalities in HEALTHY-TISSUE z-units ────────────────────
+# --- continuous panels: both modalities in HEALTHY-TISSUE z-units ---
 # NOT the shared readout calibration. That calibration is a BETWEEN-DAY amplitude
 # (a=0.205, fitted on population day-means); applied per cell it multiplies WITHIN-PANEL
 # spread by the same a and flattens the predicted maps. Measured: observed/calibrated
@@ -100,7 +100,7 @@ for r in rows:
     r["obs"] = _z(r["obs_raw"], OBS_HEALTHY)
     r["pred"] = {t: _z(v, PRED_HEALTHY) for t, v in r["pred_raw"].items()}
 
-# ── region panels: one cutoff per modality, matched on EFFECTIVE healthy rate ────────
+# --- region panels: one cutoff per modality, matched on EFFECTIVE healthy rate ---
 # A shared numeric cutoff is not comparable here. Observed is a sparse per-cell count
 # score with a long tail; CONCERT is a smooth conditional mean with a far shorter one, so
 # the same number flags wildly different fractions of the same healthy tissue. Worse, a

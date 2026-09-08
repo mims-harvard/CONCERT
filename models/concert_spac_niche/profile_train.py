@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-profile_train.py — Phase 1.4: Training profiler for CONCERT-spac.
+profile_train.py -- Phase 1.4: Training profiler for CONCERT-spac.
 
 Runs a short training session (10 epochs, small batch) with PyTorch profiler
 to identify the top bottlenecks. Output is a Chrome trace JSON and a text
@@ -14,12 +14,12 @@ Usage:
         --outdir ./profile_output
 
 Interpretation:
-    - If "Linear" ops dominate → decoder over 10k genes is the bottleneck
+    - If "Linear" ops dominate -> decoder over 10k genes is the bottleneck
       (expected; bf16 autocast gives ~2x speedup here)
-    - If "csr_matrix.toarray" appears → OOM fix for sparse loading not applied
-    - If "KMeans.fit" dominates → inducing point construction is slow
+    - If "csr_matrix.toarray" appears -> OOM fix for sparse loading not applied
+    - If "KMeans.fit" dominates -> inducing point construction is slow
       (won't repeat after first epoch)
-    - If "approximate_posterior_params" dominates → SVGP itself is bottleneck
+    - If "approximate_posterior_params" dominates -> SVGP itself is bottleneck
       (rare; M=36 should be fast)
 """
 
@@ -66,7 +66,7 @@ def main() -> None:
 
     cfg = parse_args()
 
-    # ── Load data ───────────────────────────────────────────────────────────
+    # --- Load data ---
     from run_concert_spac import (
         load_h5_dataset, build_attributes_spac, ensure_dir,
         build_inducing_points, auto_batch_size,
@@ -74,7 +74,7 @@ def main() -> None:
     import scanpy as sc
     from sklearn.preprocessing import MinMaxScaler
     from preprocess import normalize
-    import frozendict  # type: ignore  # may not be available — OK
+    import frozendict  # type: ignore  # may not be available -- OK
 
     unassigned_labels = frozenset(l.strip() for l in cfg.unassigned_label.split(",") if l.strip())
     control_labels    = frozenset(l.strip() for l in cfg.control_label.split(",") if l.strip())
@@ -146,9 +146,9 @@ def main() -> None:
     )
     logging.info("Model initialized.")
 
-    # ── Profile ─────────────────────────────────────────────────────────────
+    # --- Profile ---
     trace_path = str(outdir / "trace")
-    logging.info("Starting profiler. Trace → %s", trace_path)
+    logging.info("Starting profiler. Trace -> %s", trace_path)
 
     prof_schedule = schedule(wait=1, warmup=1, active=5, repeat=1)
 
@@ -178,14 +178,14 @@ def main() -> None:
         )
         prof.step()
 
-    # ── Print summary ────────────────────────────────────────────────────────
+    # --- Print summary ---
     summary = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=30
     )
     print(summary)
     (outdir / "profile_summary.txt").write_text(summary)
-    logging.info("Profile summary saved → %s", outdir / "profile_summary.txt")
-    logging.info("Chrome trace → %s (open in chrome://tracing)", trace_path)
+    logging.info("Profile summary saved -> %s", outdir / "profile_summary.txt")
+    logging.info("Chrome trace -> %s (open in chrome://tracing)", trace_path)
 
 
 if __name__ == "__main__":

@@ -284,7 +284,7 @@ def predict_basal_in_prepared_space(
 def eval_seen_slide(args, slide_id: str) -> None:
     out_path = args.outdir / "patch" / f"slide_{slide_id}" / "lfc_agg.json"
     if out_path.exists() and not args.force:
-        log.info("Slide %s: existing results — skip", slide_id)
+        log.info("Slide %s: existing results -- skip", slide_id)
         return
 
     log.info("=== CONCERT v3 seen patch eval slide %s ===", slide_id)
@@ -294,14 +294,14 @@ def eval_seen_slide(args, slide_id: str) -> None:
 
     role = load_patch_roles(args.prepared_dir, slide_id, adata_target)
     if role is None:
-        log.warning("Slide %s: no patch holdout file — skip", slide_id)
+        log.warning("Slide %s: no patch holdout file -- skip", slide_id)
         return
 
     niche_dom = patch_dominant_perts(
         adata_target, role, args.min_g_cells, src_role=args.patch_role,
     )
     if not niche_dom:
-        log.warning("Slide %s: no evaluable patch niches — skip", slide_id)
+        log.warning("Slide %s: no evaluable patch niches -- skip", slide_id)
         return
 
     panel = sorted(set(niche_dom.values()))
@@ -317,7 +317,7 @@ def eval_seen_slide(args, slide_id: str) -> None:
         slide_id, len(niche_dom), len(panel), len(kept_idx), len(src_idx),
     )
     if len(kept_idx) < args.min_g_cells:
-        log.warning("Slide %s: too few mapped source cells (%d) — skip", slide_id, len(kept_idx))
+        log.warning("Slide %s: too few mapped source cells (%d) -- skip", slide_id, len(kept_idx))
         return
 
     pert = adata_target.obs["perturbation_canon"].astype(str).to_numpy()

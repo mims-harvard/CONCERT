@@ -11,10 +11,10 @@ Uses make_umap.load_data (matches training pipeline) so LORD's cell-indexed
 basal table aligns with the checkpoint (off-by-one normalize drop matters).
 
 Outputs (all in --outdir):
-  kernel_scales.npz      — (n_pert, 2) learned Cauchy scales + pert name array
-  f_pert_lfc_matrix.npy  — (n_pert, n_genes) per-pert gene-space LFC
-  f_pert_pert_names.npy  — pert name for each row
-  spatial_footprint.pdf  — 5-panel diagnostic figure
+  kernel_scales.npz      -- (n_pert, 2) learned Cauchy scales + pert name array
+  f_pert_lfc_matrix.npy  -- (n_pert, n_genes) per-pert gene-space LFC
+  f_pert_pert_names.npy  -- pert name for each row
+  spatial_footprint.pdf  -- 5-panel diagnostic figure
 """
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ from make_umap import load_data, build_model as build_umap_model
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# --- Config ---
 DATA_FILE  = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
 MODEL_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/src/CONCERT-spac/outputs/raw_output_1-1/model_spac_1-1_v2.pt"
 OUTDIR     = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/analysis/umap_v2"
@@ -62,14 +62,14 @@ def parse_args():
     return p.parse_args()
 
 
-# ── Extract diagnostics ───────────────────────────────────────────────────────
+# --- Extract diagnostics ---
 def get_kernel_scales(model):
     """(n_batch, 2) learned Cauchy spatial scales."""
     return model.svgp.kernel.scale.detach().cpu().float().numpy().clip(1e-6, 1e6)
 
 
 def get_fpert_lfc(model, n_batch):
-    """(n_batch, n_genes) per-pert gene-space LFC via LORD pert embedding → f_pert."""
+    """(n_batch, n_genes) per-pert gene-space LFC via LORD pert embedding -> f_pert."""
     with torch.no_grad():
         device   = model.lord_encoder.s_encoder["perturbation"].weight.device
         codes    = torch.arange(n_batch, dtype=torch.long, device=device)
@@ -85,7 +85,7 @@ def get_mu_action(model):
     return None
 
 
-# ── Plot helpers ──────────────────────────────────────────────────────────────
+# --- Plot helpers ---
 def _cmap(n):
     return [to_hex(plt.cm.tab20(i % 20)) for i in range(n)]
 
@@ -147,14 +147,14 @@ def plot_spatial_cells(ax, pos_scaled, perturb_idx, pert_names, top_codes, title
     ax.set_aspect("equal")
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# --- Main ---
 def main():
     args   = parse_args()
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     top_k  = args.top_k
 
-    # 1) Load via make_umap.load_data — matches training pipeline (alignment safe)
+    # 1) Load via make_umap.load_data -- matches training pipeline (alignment safe)
     logging.info("Loading data via make_umap.load_data...")
     (adata, pos_batched, cell_atts, batch_oh, pert_name, cutoff_t,
      perturb_raw, has_guide, is_real_KO, n_batch, perturb_idx) = load_data(args.data_file)
@@ -210,7 +210,7 @@ def main():
         logging.info("mu_action: mean=%.4f  std=%.4f  min=%.4f  max=%.4f",
                      mu_action.mean(), mu_action.std(), mu_action.min(), mu_action.max())
 
-    # 5) Spatial maps — KO cells only
+    # 5) Spatial maps -- KO cells only
     ko_codes = set(perturb_idx[
         np.array([p not in UNASSIGNED and p not in CONTROL for p in perturb_raw])
     ].tolist())
@@ -226,19 +226,19 @@ def main():
     plot_scale_vs_lfc(fig.add_subplot(gs[0, 2]), scale_mag, lfc_norm, pert_names_arr, top_lfc_idx)
     plot_spatial_cells(
         fig.add_subplot(gs[1, 0:2]), pos_scaled, perturb_idx, pert_name, top_lfc_ko,
-        f"Tissue positions — top-{len(top_lfc_ko)} KOs by gene-space LFC\n"
+        f"Tissue positions -- top-{len(top_lfc_ko)} KOs by gene-space LFC\n"
         "(spatial clustering = pert enriched in tissue region)")
     plot_spatial_cells(
         fig.add_subplot(gs[1, 2]), pos_scaled, perturb_idx, pert_name, top_scale_ko,
-        f"Tissue positions — top-{len(top_scale_ko)} KOs by kernel scale\n"
+        f"Tissue positions -- top-{len(top_scale_ko)} KOs by kernel scale\n"
         "(largest spatial correlation radius)")
 
-    fig.suptitle("CONCERT-spac Phase 2.7 — Per-perturbation spatial footprint",
+    fig.suptitle("CONCERT-spac Phase 2.7 -- Per-perturbation spatial footprint",
                  fontsize=11, y=1.01)
     out_pdf = outdir / "spatial_footprint.pdf"
     fig.savefig(out_pdf, dpi=150, bbox_inches="tight")
     plt.close(fig)
-    logging.info("Saved → %s", out_pdf)
+    logging.info("Saved -> %s", out_pdf)
 
     logging.info("=" * 60)
     logging.info("Summary:")

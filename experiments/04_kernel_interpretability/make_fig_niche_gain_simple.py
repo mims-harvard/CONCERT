@@ -4,7 +4,7 @@ Single message: **the model opens its niche modulation for perturbations that ar
 through many microenvironments, and closes it for perturbations confined to one clump.**
 
 Deliberately scoped:
-  - Niche gain ONLY. The footprint lengthscale is left out — on this checkpoint its
+  - Niche gain ONLY. The footprint lengthscale is left out -- on this checkpoint its
     strongest correlate is the perturbation-embedding norm (+0.356, q=0.011), stronger
     than either spatial descriptor (-0.299 / -0.276, both just past BH), and it is squeezed
     into 0.150-0.272 of a [0.15, 0.90] band. There is no clean per-perturbation pattern to
@@ -13,7 +13,7 @@ Deliberately scoped:
 
 Left  : four tissue maps, two spread out (red) vs two clumped (blue), matched on cell number
 Right : all 87 benchmark perturbations, occupancy vs niche gain, both adjusted for cell
-        number and embedding norm — the SAME quantities the reported partial correlation
+        number and embedding norm -- the SAME quantities the reported partial correlation
         uses, so the panel shows the actual statistic rather than a raw view of it.
 
 Run in concert_env.

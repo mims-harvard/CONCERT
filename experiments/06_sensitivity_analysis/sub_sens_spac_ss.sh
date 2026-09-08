@@ -9,7 +9,7 @@
 #SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/spac_niche_%x_%j.out
 #SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/spac_niche_%x_%j.err
 
-# spac1 NICHE-FiLM retrain — IDENTICAL recipe to sub_train_multislide_v3.sh (v3/rffbasal) EXCEPT:
+# spac1 NICHE-FiLM retrain -- IDENTICAL recipe to sub_train_multislide_v3.sh (v3/rffbasal) EXCEPT:
 #   (1) code dir = CONCERT-spac-niche, (2) niche mechanism swapped:
 #       old v3:  --use_niche_interaction True --niche_rank N   (sign-locked additive interaction)
 #       niche :  --use_niche_interaction False --use_niche_film True ...  (niche-conditioned FiLM head)
@@ -32,7 +32,7 @@ BASE=/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets
 SP=${BASE}/newdata/spac_seq
 HOCO=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/v3_holdout_coords
 
-FILES="${SP}/raw_output_1-1.h5ad"   # SINGLE SLIDE — timing arm for the SI sensitivity analysis
+FILES="${SP}/raw_output_1-1.h5ad"   # SINGLE SLIDE -- timing arm for the SI sensitivity analysis
 IND=6; MINCELLS=25; LABELS=""; ACTCORR=True
 HOLD="${HOCO}/holdout_v3_spac_${REGIME}.json"
 [ -f "$HOLD" ] || { echo "[FATAL] holdout file missing: $HOLD"; exit 1; }

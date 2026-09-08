@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Per-niche unassigned-only counterfactual eval — TWO setups (seen + unseen).
+"""Per-niche unassigned-only counterfactual eval -- TWO setups (seen + unseen).
 
 No NTC required. Source cells are UNASSIGNED (true basal). For each KO gene we
 predict unassigned -> KO per niche and compare pseudobulk vs observed KO cells.
@@ -8,7 +8,7 @@ predict unassigned -> KO per niche and compare pseudobulk vs observed KO cells.
   UNSEEN: source = held-out unassigned cells the model never saw (generalization).
 
 Both setups score against the SAME observed KO cells (KO cells are never held
-out — only unassigned are). The v6 model amortizes the basal latent from each
+out -- only unassigned are). The v6 model amortizes the basal latent from each
 cell's own expression (use_expr_encoder), so it can encode held-out cells; the
 GP mask_cutoff is sliced positionally, so any source set with <= N_train cells
 is valid. The two setups therefore differ ONLY in the source unassigned set.
@@ -68,7 +68,7 @@ def parse_args():
     p.add_argument("--n_samples",       type=int, default=10)
     p.add_argument("--batch_size",      type=int, default=512)
     p.add_argument("--n_hvg",           type=int, default=2000)
-    # Architecture — must match training
+    # Architecture -- must match training
     p.add_argument("--use_expr_encoder",      type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--expr_hidden_dims",      type=int, nargs="+", default=[512, 256])
     p.add_argument("--use_basal_encoder_only",type=lambda x: x.lower()=="true", default=True)
@@ -93,7 +93,7 @@ def load_unseen_ctx(args, seen_ctx, holdout_indices):
     SEEN model. Returns a ctx-like dict with the arrays _predict_swap needs.
 
     Uses make_umap.load_data(holdout_keep_only=True) so the exact same filter
-    pipeline runs and the returned cells are precisely the held-out set — no
+    pipeline runs and the returned cells are precisely the held-out set -- no
     fragile re-indexing across the rare-pert filter.
     """
     import scipy.sparse as sp
@@ -136,7 +136,7 @@ def load_unseen_ctx(args, seen_ctx, holdout_indices):
 def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
     """Score one setup. src_ctx supplies prediction inputs + source unassigned
     cells; ko_ref supplies observed KO cells, their niche bins, Y_obs, name2code,
-    hvg_mask, and panel (all from the seen ctx — KO cells are never held out)."""
+    hvg_mask, and panel (all from the seen ctx -- KO cells are never held out)."""
     src_bin, n_bins = eu.build_niche_grid(src_ctx["coords"], args.niche_grid)
     una_all = np.where(src_ctx["cls"] == "unassigned")[0]
     log.info("[%s] source unassigned cells: %d  (%d niches)", label, len(una_all), n_bins)
@@ -149,7 +149,7 @@ def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
     seen_coords = ko_ref["coords"]        # SEEN coords for kNN reference pools
     src_coords  = src_ctx["coords"]
 
-    # Global kNN baseline is model-free (observed data + source coords) → identical for
+    # Global kNN baseline is model-free (observed data + source coords) -> identical for
     # seen/unseen up to the coord frame; compute it only in the SEEN run (matched frame).
     # Held-out-source drivers set args.force_knn to get the baseline in a single run.
     compute_knn = getattr(args, "force_knn", False) or (label == "seen")
@@ -166,14 +166,14 @@ def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
                 full = np.sort(rng.choice(full, args.max_src_per_niche, replace=False))
             src_cache[b] = full
         return src_cache[b]
-    # pred(src→0) depends only on the niche's (subsampled) source cells → cache per niche.
+    # pred(src->0) depends only on the niche's (subsampled) source cells -> cache per niche.
     pred0_cache: dict[int, np.ndarray] = {}
     def pred0_for(b):
         if b not in pred0_cache:
             pred0_cache[b] = _predict_swap(src_ctx, src_for_niche(b), 0, args).astype(np.float64)
         return pred0_cache[b]
     # kNN unassigned base = closest k observed unassigned cells (global, whole slide)
-    # per query coord. Query depends only on niche b → cache per niche.
+    # per query coord. Query depends only on niche b -> cache per niche.
     knn_base_cache: dict[int, np.ndarray] = {}
     def knn_base_for(b, qxy):
         if b not in knn_base_cache:
@@ -208,7 +208,7 @@ def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
         rho, _ = stats.spearmanr(pb_pred, pb_obs)
         edist = eu.energy_distance(pred_raw, obs_raw, hvg_mask)
 
-        # LFC (with-noise): model LFC = pred(una→g) − pred(una→0); obs = KO − observed unassigned.
+        # LFC (with-noise): model LFC = pred(una->g) - pred(una->0); obs = KO - observed unassigned.
         # lfc_rho = rank agreement (scale-free); lfc_dist = RMSE between LFC vectors (magnitude).
         lfc_rho = float("nan"); lfc_dist = float("nan"); obs_lfc = None
         una_obs_b = una_obs_idx[ko_bin[una_obs_idx] == b]
@@ -221,10 +221,10 @@ def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
             if _fin.any():
                 lfc_dist = float(np.sqrt(np.mean((model_lfc[_fin] - obs_lfc[_fin]) ** 2)))
 
-        # ── Global kNN baseline (model-free): predict each source cell as the mean
+        # --- Global kNN baseline (model-free): predict each source cell as the mean
         #    of its k spatially-nearest KO cells of this gene, sampled across the
         #    WHOLE slide (no leave-one-niche-out). Source cells are unassigned and
-        #    references are KO → always distinct cells, so no self-leakage. ──────
+        #    references are KO -> always distinct cells, so no self-leakage. ---
         knn_abs_rho = knn_lfc_rho = knn_e_dist = float("nan")
         if compute_knn:
             g_glob = ko_idx                       # all KO cells of gene g, global
@@ -277,7 +277,7 @@ def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
                    knn_e_dist_mean=float(df["knn_e_dist"].mean()),
                    per_gene=agg.to_dict(orient="records"))
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
-    log.info("[%s] DONE %d genes × %d rows | MODEL abs=%.3f lfc=%.3f e=%.3f | kNN abs=%.3f lfc=%.3f e=%.3f → %s",
+    log.info("[%s] DONE %d genes × %d rows | MODEL abs=%.3f lfc=%.3f e=%.3f | kNN abs=%.3f lfc=%.3f e=%.3f -> %s",
              label, agg.shape[0], len(df), summary["abs_rho_mean"], summary["lfc_rho_mean"],
              summary["e_dist_mean"], summary["knn_abs_rho_mean"], summary["knn_lfc_rho_mean"],
              summary["knn_e_dist_mean"], out)
@@ -292,7 +292,7 @@ def main():
     import eval_utils as eu
     from eval_spatial_counterfactual import load_eval_context, _predict_swap
 
-    # SEEN ctx — builds + loads the model (holdout removed to match N_train).
+    # SEEN ctx -- builds + loads the model (holdout removed to match N_train).
     ctx = load_eval_context(args)
     log.info("Seen ctx: %d cells, %d unique perts", ctx["N"], ctx["n_batch"])
 
@@ -326,7 +326,7 @@ def main():
 
     if "unseen" in setups:
         if not getattr(args, "holdout_unassigned_file", None):
-            log.warning("UNSEEN requested but no --holdout_unassigned_file — skipping")
+            log.warning("UNSEEN requested but no --holdout_unassigned_file -- skipping")
         else:
             holdout_indices = np.load(args.holdout_unassigned_file)
             unseen_ctx = load_unseen_ctx(args, ctx, holdout_indices)

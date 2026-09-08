@@ -1,4 +1,4 @@
-"""Kernel-parameter interpretability figures — LSFIX checkpoint.
+"""Kernel-parameter interpretability figures -- LSFIX checkpoint.
 
 Rebuilt from make_interpret_figures.py (old ckpt) because the units fix changes the
 RESULT, not just the numbers: on the CONCERT model BOTH learned per-perturbation kernel
@@ -219,7 +219,7 @@ meta2 = []
 # THE TWO-KNOB PANEL: both learned scalars on the same exemplars, plus the descriptor
 # they jointly track. The point of the figure is that bars 1 and 2 move in OPPOSITE
 # directions across the same four perturbations.
-# NOTE — the footprint lengthscale is deliberately NOT a bar here. Its bench87 range is
+# NOTE -- the footprint lengthscale is deliberately NOT a bar here. Its bench87 range is
 # 0.150-0.272 against a floor of 0.150 (median 0.167), so individual perturbations do not
 # separate on it: the compact exemplars interleave with the dispersed ones. The lengthscale
 # result is real but only as a 87-point aggregate (partial rho -0.30, q=0.037) and is shown
@@ -227,7 +227,7 @@ meta2 = []
 # One grouped panel, three measures per perturbation, one colour per measure. The three
 # span very different ranges (gain 0.44-1.61, occupancy 0.029-0.214, index 0.21-0.36), so
 # bar HEIGHT is each measure scaled by its own largest exemplar value and the true value is
-# printed on every bar. Red/blue no longer encodes the group on the bars themselves — it
+# printed on every bar. Red/blue no longer encodes the group on the bars themselves -- it
 # moves to the perturbation names, which is where the two rows of maps are already keyed.
 BAR = [("Learned niche gain", "g_scale_niche", "#0f766e", "{:.2f}"),
        ("Tissue occupancy fraction", "occupancy_frac", "#d97706", "{:.3f}"),
@@ -312,7 +312,7 @@ stats_out = {
     "fig3_stats": fig3_stats,
     "lengthscale_distribution_bench87": ls_desc,
     "floor_caveat": ("gp_pp lengthscale floor is 0.15; bench87 median %.4f, 75th pct %.4f, "
-                     "max %.4f — the floor is still binding, report relatively"
+                     "max %.4f -- the floor is still binding, report relatively"
                      % (ls_desc["median"], ls_desc["q75"], ls_desc["max"])),
 }
 json.dump(stats_out, open(os.path.join(OUT, "figure_stats.json"), "w"), indent=2)

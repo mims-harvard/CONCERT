@@ -1,5 +1,5 @@
 """Inspect obs structure of the 3 datasets to design the CRISPR-noise analysis.
-Lazy (backed) read of obs only — does not load X."""
+Lazy (backed) read of obs only -- does not load X."""
 import anndata as ad, numpy as np, collections, h5py
 
 FILES = {

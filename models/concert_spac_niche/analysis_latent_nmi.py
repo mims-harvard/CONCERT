@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Part 1 — spatial autocorrelation of CONCERT v6 latent spaces (slide 1-1).
+"""Part 1 -- spatial autocorrelation of CONCERT v6 latent spaces (slide 1-1).
 
 Extract every latent representation the v6 model exposes for all cells, cluster
 each (KMeans, k = #spatial bins = 36), and measure how strongly each clustering
@@ -8,12 +8,12 @@ space is organized by physical location (spatial autocorrelation).
 
 Latent spaces evaluated:
   - z_full   : 10-D posterior-mean latent  [GP spatial(2) | Normal cell-state(8)]
-  - z_gp     : 2-D GP latent           (expected HIGH — explicitly spatial; positive ctrl)
+  - z_gp     : 2-D GP latent           (expected HIGH -- explicitly spatial; positive ctrl)
   - z_normal : 8-D Normal cell-state latent
   - basal    : 256-D amortized basal latent (expression encoder; pert-blind)
   - pert_emb : 256-D LORD perturbation embedding per cell (the "learned perturbation space")
 
-Reference: NMI(raw perturbation identity, bin) — does KO identity itself colocalize?
+Reference: NMI(raw perturbation identity, bin) -- does KO identity itself colocalize?
 
 No model retraining. Mirrors decompose_levels.py for data/model alignment.
 """
@@ -99,7 +99,7 @@ def build_v6_model(adata, pos_batched, cell_atts, cutoff_t, n_batch):
 
 
 def cluster_nmi(name, feats, bin_id, k, seed):
-    """Standardize → MiniBatchKMeans(k) → NMI/AMI/ARI vs spatial bins."""
+    """Standardize -> MiniBatchKMeans(k) -> NMI/AMI/ARI vs spatial bins."""
     Xs = StandardScaler().fit_transform(np.asarray(feats, dtype=np.float64))
     km = MiniBatchKMeans(n_clusters=k, random_state=seed, n_init=10,
                          batch_size=4096, max_iter=300)

@@ -57,7 +57,7 @@ def score_lfc_agreement(model_lfc: np.ndarray, obs_lfc: np.ndarray,
     statistics, giving the sampling uncertainty of this one evaluation. It is computed
     here, at the single chokepoint every method's rescoring passes through, so CONCERT,
     the competitors, the naive reference strategies and STATE all get the same quantity
-    by construction — previously only CONCERT and the competitors carried a bootstrap
+    by construction -- previously only CONCERT and the competitors carried a bootstrap
     term (from their own eval JSONs), so per-gene bar panels could not show a comparable
     error for the others. Deterministic: fixed seed, so reruns reproduce byte-for-byte.
     """
@@ -554,7 +554,7 @@ def zero_residual_baseline_pm_slide(
                 continue
             key = f"{int(niche_bin)}:zero"
             obs_by_key[key] = obs
-            pred_by_key[key] = global_lfc.copy()  # constant → zero residual
+            pred_by_key[key] = global_lfc.copy()  # constant -> zero residual
 
         sc = score_gene_from_niche_lfc(
             gene, slide_id, "zero_residual", pred_by_key, obs_by_key, keep,

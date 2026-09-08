@@ -23,7 +23,7 @@ VARIANTS = {
 }
 N_PATCH = {"Jak2": 1, "Tgfbr2": 2}
 
-# ── data (shared across variants; load once) ────────────────────────────────
+# --- data (shared across variants; load once) ---
 (adata, pos_batched, cell_atts, batch_oh, pert_name, cutoff_t,
  perturb_raw, has_guide, is_real_KO, n_batch, perturb_idx) = load_data(
     DATA, hvg_max_rank=2000, min_cells_per_pert=20)
@@ -38,7 +38,7 @@ ctrl_mask = perturb_raw == "unperturbed"
 logging.info("N=%d  unperturbed=%d  Jak2=%d  Tgfbr2=%d  codes=%s",
              N, ctrl_mask.sum(), (perturb_raw=="Jak2").sum(), (perturb_raw=="Tgfbr2").sum(), pert_name)
 
-# ── define patches (spatial KMeans per KO gene) ─────────────────────────────
+# --- define patches (spatial KMeans per KO gene) ---
 patches = []  # (label, gene, code, idx_array)
 for gene, k in N_PATCH.items():
     gidx = np.where(perturb_raw == gene)[0]
@@ -100,7 +100,7 @@ for v, extra in VARIANTS.items():
     except Exception as e:
         import traceback; logging.error("[%s] FAILED %s", v, e); traceback.print_exc()
 
-# ── table ───────────────────────────────────────────────────────────────────
+# --- table ---
 labels = [p[0] for p in patches]
 print("\n===== perturbmap s0 patch footprint Spearman (predicted vs observed KO-vs-unperturbed, with-noise) =====")
 print("variant   | " + " | ".join(f"{l:>11s}" for l in labels) + " |   mean")

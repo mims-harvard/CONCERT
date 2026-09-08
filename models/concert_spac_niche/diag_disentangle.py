@@ -1,6 +1,6 @@
 """Disentanglement diagnostic (D1-D3) for the RFF-basal gate: svgp vs rff.
 
-Computed on a trained checkpoint, on UNASSIGNED/unperturbed cells (has_guide<0.5 —
+Computed on a trained checkpoint, on UNASSIGNED/unperturbed cells (has_guide<0.5 --
 the cells that define the spatial basal field in `spatial_basal_only` routing):
 
   D1  footprint-scale spatial leakage in z_basal  = _moran_i_scale(gs_mu, coords, radius)
@@ -48,7 +48,7 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
     rng = np.random.default_rng(args.seed)
 
-    # ── data ──────────────────────────────────────────────────────────────────
+    # --- data ---
     (adata, pos_batched, cell_atts, batch_oh, pert_name, cutoff_t,
      perturb_raw, has_guide, is_real_KO, n_batch, perturb_idx) = load_data(
         args.data_file, hvg_max_rank=args.hvg_max_rank,
@@ -73,7 +73,7 @@ def main():
     logging.info("[%s/%s] N=%d unassigned=%d (via %s) n_batch=%d radius=%.2f",
                  args.dataset, args.field, N, int(una.sum()), una_src, n_batch, args.radius)
 
-    # ── model ─────────────────────────────────────────────────────────────────
+    # --- model ---
     extra = dict(basal_field=args.field, disentangle_radius=args.radius,
                  fpert_field="rff", fpert_coord_scale=20.0,
                  fpert_rff_features=128, fpert_rff_bandwidth=0.15)
@@ -87,7 +87,7 @@ def main():
     model.load_model(args.ckpt, allow_cell_size_mismatch=True)
     model.eval()
 
-    # ── latents (gp_p_m | gs_mu) ───────────────────────────────────────────────
+    # --- latents (gp_p_m | gs_mu) ---
     si = torch.arange(N)
     latents = model.batching_latent_samples(
         X=pos_batched, sample_index=si, cell_atts=cell_atts,
@@ -96,7 +96,7 @@ def main():
     gp_p_m = latents[:, :GP]
     gs_mu = latents[:, GP:]
 
-    # ── D1: footprint-scale leakage in z_basal (unassigned only) ───────────────
+    # --- D1: footprint-scale leakage in z_basal (unassigned only) ---
     ui = np.where(una)[0]
     if len(ui) > args.moran_subsample:
         ui = rng.choice(ui, args.moran_subsample, replace=False)
@@ -105,12 +105,12 @@ def main():
     with torch.no_grad():
         D1 = float(_moran_i_scale(gs_u, co_u, args.radius).item())
 
-    # ── D2: spatial field variance (not collapsed?) ────────────────────────────
+    # --- D2: spatial field variance (not collapsed?) ---
     field_u = gp_p_m[ui]
     D2_per_dim = field_u.var(axis=0).tolist()
     D2 = float(np.mean(D2_per_dim))
 
-    # ── D3: held-out NB NLL (mean per element) ─────────────────────────────────
+    # --- D3: held-out NB NLL (mean per element) ---
     D3 = None
     try:
         order = rng.permutation(N)

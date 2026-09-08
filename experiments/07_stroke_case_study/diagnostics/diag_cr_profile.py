@@ -80,7 +80,7 @@ D = np.zeros_like(L_off)
 D[pred_core] = L_core[pred_core] - L_off[pred_core]
 D[pred_rim] = L_rim[pred_rim] - L_off[pred_rim]
 
-# ── observed side ─────────────────────────────────────────────────────────
+# --- observed side ---
 A_pt, xy_pt = load_stack("PT")
 Lpt = log1p_cpm(np.asarray(A_pt.X.todense(), np.float32))
 gs = np.asarray(A_pt.var_names)
@@ -107,7 +107,7 @@ for g in GENES:
         "depth_rho_predicted": float(spearmanr(range(NB), pp).statistic),
         "depth_rho_observed": float(spearmanr(range(NB), po).statistic)}
 
-# ── compartment-split marker panels, derived not hand-picked ──────────────
+# --- compartment-split marker panels, derived not hand-picked ---
 rm = json.loads((NS / "stroke3d/region_markers.json").read_text())
 allm = {e["gene"]: e for e in rm["ICA"] + rm["PIA"]}
 core_panel = sorted([g for g, e in allm.items() if e["delta_ICA"] - e["delta_PIA"] > MIN_SEP])

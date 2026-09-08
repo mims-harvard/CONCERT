@@ -2,27 +2,27 @@
 """Multi-slide counterfactual eval on HELD-OUT unassigned source patches.
 
 Companion to eval_cf_una_multi.py (SEEN-source). Here the source unassigned cells
-are restricted to the v3 held-out patches (holdout_v3_*.json → same coords the
+are restricted to the v3 held-out patches (holdout_v3_*.json -> same coords the
 training removed), so the score is a clean generalization test:
 
   seen-task   ckpt (ms_spac1_{arch}_seen)   : gene-KO effect WAS trained; predict on
                                                held-out source patches.
   unseen-task ckpt (ms_spac1_{arch}_unseen) : gene-KO cells were ALSO masked from
-                                               training → the effect itself is unseen.
+                                               training -> the effect itself is unseen.
 
 Both hand the model held-out source patches (keep_only), never memorized cells.
-The v3 (additive niche) and niche-FiLM checkpoints are both supported — pass the
+The v3 (additive niche) and niche-FiLM checkpoints are both supported -- pass the
 matching --use_niche_interaction/--niche_rank OR --use_niche_film flags.
 
 Held-out cells are matched exactly as training did: (sample_id, rint(raw_coords))
 against holdout_v3_*.json["unassigned"][str(sid)]. The KO reference (observed KO
 cells + observed-unassigned LFC reference) is taken from the FULL target-slide ctx
-— KO cells are never held out (seen-task) or are simply present in the eval h5ad
+-- KO cells are never held out (seen-task) or are simply present in the eval h5ad
 even when masked from training (unseen-task).
 
 Metrics per gene×niche (via run_setup, single source of truth):
   abs_rho   pseudobulk Spearman over HVGs (spatial advantage vs baselines)
-  lfc_rho   LFC Spearman  (with-noise: pred(una→g)−pred(una→0) vs KO−una)
+  lfc_rho   LFC Spearman  (with-noise: pred(una->g)-pred(una->0) vs KO-una)
   lfc_dist  LFC-RMSE      (magnitude agreement; lower is better)
   e_dist    energy distance
   knn_*     LONO-ish global spatial-kNN baseline (forced on via args.force_knn)
@@ -52,7 +52,7 @@ def parse_args():
     p.add_argument("--outdir", required=True, type=Path)
     p.add_argument("--model_file", required=True)
     p.add_argument("--holdout_v3_file", required=True,
-                   help="holdout_v3_spac_{seen,unseen}.json — coord-keyed held-out source patches.")
+                   help="holdout_v3_spac_{seen,unseen}.json -- coord-keyed held-out source patches.")
     p.add_argument("--task_label", default="heldout",
                    help="tag for the output subdir / summary (e.g. v3_seen, niche_unseen).")
     p.add_argument("--multi_sample_files", default=None,
@@ -70,7 +70,7 @@ def parse_args():
     p.add_argument("--n_samples",       type=int, default=10)
     p.add_argument("--batch_size",      type=int, default=512)
     p.add_argument("--n_hvg",           type=int, default=2000)
-    # ── Architecture — MUST match training (state_dict load) ────────────────
+    # --- Architecture -- MUST match training (state_dict load) ---
     p.add_argument("--use_expr_encoder",      type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--expr_hidden_dims",      type=int, nargs="+", default=[512, 256])
     p.add_argument("--use_basal_encoder_only",type=lambda x: x.lower()=="true", default=True)
@@ -91,7 +91,7 @@ def parse_args():
     p.add_argument("--niche_film_dispersion", type=lambda x: x.lower()=="true", default=False)
     p.add_argument("--use_pert_gate",         type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--gate_hidden",           type=int, default=64)
-    # f_pert footprint field + basal field — MUST match training
+    # f_pert footprint field + basal field -- MUST match training
     p.add_argument("--use_action_correction", type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--inducing_point_steps",  type=int, default=6)
     p.add_argument("--spatial_basal_only",    type=lambda x: x.lower()=="true", default=True)
@@ -109,7 +109,7 @@ def parse_args():
     p.add_argument("--ls_prior_min",          type=float, default=3.0)
     p.add_argument("--ls_prior_max",          type=float, default=18.0)
     # gp_pp band in NORMALIZED units; when set, overrides ls_prior_* for the footprint
-    # field only. MUST match training — the band is not stored in the state_dict, so a
+    # field only. MUST match training -- the band is not stored in the state_dict, so a
     # mismatch renders a different lengthscale from the same ls_head weights.
     p.add_argument("--fpert_ls_min",          type=float, default=None)
     p.add_argument("--fpert_ls_max",          type=float, default=None)
@@ -144,7 +144,7 @@ def main():
              else [f"{DATA_DIR}/raw_output_{s}.h5ad" for s in DEFAULT_SLIDES])
     target_idx = DEFAULT_SLIDES.index(args.target_slide)
 
-    # Full model-build namespace — every flag that shapes the checkpoint graph.
+    # Full model-build namespace -- every flag that shapes the checkpoint graph.
     fwd = SimpleNamespace(
         multi_sample_files=",".join(paths), target_slide_idx=target_idx,
         model_file=args.model_file, hvg_max_rank=args.hvg_max_rank,
@@ -173,10 +173,10 @@ def main():
         n_samples=args.n_samples, batch_size=args.batch_size, graph_file=None,
     )
     ctx = load_eval_context_multi(fwd)
-    log.info("Multi ctx: target %s (sid=%d) → %d cells, %d combined perts",
+    log.info("Multi ctx: target %s (sid=%d) -> %d cells, %d combined perts",
              args.target_slide, target_idx, ctx["N"], ctx["n_batch"])
 
-    # ── Restrict SOURCE to held-out unassigned patches ──────────────────────
+    # --- Restrict SOURCE to held-out unassigned patches ---
     holdout = json.load(open(args.holdout_v3_file))
     hold_mask, n_una_total, n_coords = heldout_unassigned_mask(ctx, holdout, target_idx)
     n_hold = int(hold_mask.sum())
@@ -184,7 +184,7 @@ def main():
              "(of %d unassigned; %d coords listed for this slide)",
              Path(args.holdout_v3_file).name, args.target_slide, n_hold, n_una_total, n_coords)
     if n_hold < args.una_floor:
-        log.warning("[holdout] only %d held-out source cells (< una_floor=%d) — panel will be thin",
+        log.warning("[holdout] only %d held-out source cells (< una_floor=%d) -- panel will be thin",
                     n_hold, args.una_floor)
 
     cls = ctx["cls"]

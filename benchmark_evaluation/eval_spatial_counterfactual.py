@@ -3,11 +3,11 @@
 
 Evaluates the model's impute -> counterfactual predictions with a spatial-aware,
 perturbation-noise-cancelled methodology across the three goal-3 scenarios:
-  (c) seen-cell pert swap   — Task 6 (two source levels: NTC + unassigned)
-  (b) held-out cell         — Task 7
-  (a) coord-only patches    — Task 7
+  (c) seen-cell pert swap   -- Task 6 (two source levels: NTC + unassigned)
+  (b) held-out cell         -- Task 7
+  (a) coord-only patches    -- Task 7
 
-Data + model are loaded via ``make_umap.load_data`` / ``build_model`` — the SAME
+Data + model are loaded via ``make_umap.load_data`` / ``build_model`` -- the SAME
 preprocessing as training, so LORD global cell indices align with the trained
 basal-embedding table (panel/grid/NTC counts are therefore computed in-driver on
 the filtered arrays, never hard-coded). No retraining, no model-code changes.
@@ -45,7 +45,7 @@ def _add_fpert_kwargs(extra, args):
     # basal spatial field (svgp legacy | rff deterministic). MUST match the trained
     # checkpoint so the basal_rff submodule (or SVGP prior) is present for state_dict load.
     extra["basal_field"] = args.basal_field
-    # Bayes-linear basal head + multi-bandwidth fpert — MUST match training for state_dict load.
+    # Bayes-linear basal head + multi-bandwidth fpert -- MUST match training for state_dict load.
     extra["basal_bayes"] = args.basal_bayes
     if args.fpert_field == "mb_rff" and args.fpert_mb_bandwidths:
         extra["fpert_mb_bandwidths"] = [float(x) for x in args.fpert_mb_bandwidths.split(",") if x.strip()]
@@ -101,7 +101,7 @@ def parse_args():
     p.add_argument("--panel_genes", default="", help="comma-separated gene names; bypasses auto panel selection")
     p.add_argument("--scenarios", default="c", help="comma list of scenarios to run: c,b,a")
     p.add_argument("--setup_only", action="store_true", help="load + grid + panel, then return (smoke)")
-    # ── v5a model flags (MUST match training keys, mirrors sub_decompose_levels_v5a.sh) ──
+    # --- v5a model flags (MUST match training keys, mirrors sub_decompose_levels_v5a.sh) ---
     p.add_argument("--use_expr_encoder", type=_bool, default=True)
     p.add_argument("--expr_hidden_dims", nargs="+", type=int, default=[512, 256])
     p.add_argument("--use_nngp", type=_bool, default=False)
@@ -116,17 +116,17 @@ def parse_args():
     p.add_argument("--gate_hidden", type=int, default=64)
     # spatial-basal disentanglement (no new params; routing flag for consistency)
     p.add_argument("--spatial_basal_only", type=_bool, default=False)
-    # basal spatial field type — MUST match training (svgp|rff) for state_dict load
+    # basal spatial field type -- MUST match training (svgp|rff) for state_dict load
     p.add_argument("--basal_field", default="svgp", help="svgp (legacy) | rff (deterministic)")
     p.add_argument("--basal_bayes", type=_bool, default=False, help="M2: Bayes-linear basal head")
     p.add_argument("--fpert_mb_bandwidths", default="", help="comma list for mb_rff, e.g. 0.05,0.15,0.5")
-    # data filtering — must match training to get same gene set and cell count
+    # data filtering -- must match training to get same gene set and cell count
     p.add_argument("--hvg_max_rank", type=int, default=10000)
     p.add_argument("--min_cells_per_pert", type=int, default=25)
-    # encoder architecture — must match training (default False = 3-block encoder)
+    # encoder architecture -- must match training (default False = 3-block encoder)
     p.add_argument("--use_basal_encoder_only", type=_bool, default=False)
 
-    # f_pert spatial footprint field — MUST match training so load_model state_dict aligns
+    # f_pert spatial footprint field -- MUST match training so load_model state_dict aligns
     p.add_argument("--fpert_field", default="constant",
                    help="constant|rff|svgp|hybrid (default constant = legacy core only)")
     p.add_argument("--fpert_rff_features", type=int, default=128)
@@ -137,9 +137,9 @@ def parse_args():
     p.add_argument("--fpert_coord_scale", type=float, default=1.0)
     p.add_argument("--f_pert_clamp", type=float, default=5.0)
     # MUST match training: pmap trained with action correction OFF (no mu_action param),
-    # spac with it ON. Wrong value → build_model constructs a mismatched mu_action.
+    # spac with it ON. Wrong value -> build_model constructs a mismatched mu_action.
     p.add_argument("--use_action_correction", type=_bool, default=True)
-    # GP-latent inducing grid steps — training used 4 (pmap) / 6 (spac). Wrong value →
+    # GP-latent inducing grid steps -- training used 4 (pmap) / 6 (spac). Wrong value ->
     # inducing-point shape mismatch on load.
     p.add_argument("--inducing_point_steps", type=int, default=6)
     # v5c holdout: path to holdout_unassigned_indices.npy saved during training
@@ -188,7 +188,7 @@ def load_eval_context_multi(args):
         load_h5ad_multi(paths, unassigned_labels=unassigned_labels,
                         control_labels=control_labels, hvg_max_rank=args.hvg_max_rank)
 
-    # Filter excluded labels across all slides (json's set — matches training)
+    # Filter excluded labels across all slides (json's set -- matches training)
     keep = np.array([p not in excluded_labels for p in perturb_all], dtype=bool)
     X_all, pos_all, perturb_all = X_all[keep], pos_all[keep], perturb_all[keep]
     has_guide_all = has_guide_all[keep]
@@ -197,7 +197,7 @@ def load_eval_context_multi(args):
     if tissue_all is not None:
         tissue_all = tissue_all[keep]
 
-    # Filter rare perturbs on COMBINED counts — exactly as training did. basal/control
+    # Filter rare perturbs on COMBINED counts -- exactly as training did. basal/control
     # are NOT rare-filtered: they collapse into the reserved code 0 regardless of count.
     real_counts = Counter([p for p in perturb_all.tolist() if p not in non_pert])
     keep2 = np.array([(p in non_pert) or (real_counts[p] >= args.min_cells_per_pert)
@@ -210,7 +210,7 @@ def load_eval_context_multi(args):
         tissue_all = tissue_all[keep2]
 
     # Map to trained codes via the persisted vocab: basal/control/unassigned + any pert
-    # absent from the trained vocab (e.g. rare-filtered) → reserved basal code 0.
+    # absent from the trained vocab (e.g. rare-filtered) -> reserved basal code 0.
     perturb_idx_all = np.array([pert_map.get(p, 0) for p in perturb_all], dtype=int)
     n_batch = max(pert_map.values()) + 1
     logging.info("Trained vocab: n_batch=%d; %d cells mapped to basal code 0 (of %d)",
@@ -239,7 +239,7 @@ def load_eval_context_multi(args):
     pert_name = {code: name for name, code in pert_map.items()}
     # Tissue axis: thread real codes via the trained tissue_dict (perturbmap
     # tumor/normal/periphery) so the model rebuilds the SAME tissue encoder the
-    # checkpoint carries; all-zeros for spac (no tissue → no tissue encoder).
+    # checkpoint carries; all-zeros for spac (no tissue -> no tissue encoder).
     if tis_target is not None and tissue_dict:
         tissue_idx = np.array([tissue_dict.get(str(t), 0) for t in tis_target], dtype=int)
     else:
@@ -344,7 +344,7 @@ def load_eval_context(args):
     N = adata.n_obs
     logging.info("Cells: %d  perts: %d", N, n_batch)
 
-    # Build model — flags MUST match training keys so load_model state_dict matches.
+    # Build model -- flags MUST match training keys so load_model state_dict matches.
     extra = {}
     if args.use_nngp:
         extra["use_nngp"] = True
@@ -424,7 +424,7 @@ def setup_grid_and_panel(ctx, args):
                  n_eval, n_bins, args.una_floor, una_per_bin.tolist())
     logging.info("NTC/bin (secondary, LFC-w/o gate=%d): %s", args.ntc_floor, ntc_per_bin.tolist())
     if frac_below > 0.25:
-        logging.warning("%.0f%% of bins below una_floor — consider a coarser --niche_grid",
+        logging.warning("%.0f%% of bins below una_floor -- consider a coarser --niche_grid",
                         100 * frac_below)
 
     # Panel: only gene_KO labels are candidates (NTC/unassigned mapped to an excluded sentinel).
@@ -486,20 +486,20 @@ def _predict_swap(ctx, idx, target_code, args):
 
 
 def run_scenario_c(ctx, args, src_restrict=None):
-    """Seen-cell pert swap — TWO LFC flavours, TWO ceilings, kNN baseline for each.
+    """Seen-cell pert swap -- TWO LFC flavours, TWO ceilings, kNN baseline for each.
 
-    Decoder: log μ = f_basal + 𝟙[has_guide]·μ_action + 𝟙[is_real_KO]·f_pert(g)
-      target_code > 0  →  has_guide=1, is_real_KO=1  →  f_basal + μ_action + f_pert(g)
-      target_code = 0  →  has_guide=0, is_real_KO=0  →  f_basal only
+    Decoder: log μ = f_basal + 1[has_guide]·μ_action + 1[is_real_KO]·f_pert(g)
+      target_code > 0  ->  has_guide=1, is_real_KO=1  ->  f_basal + μ_action + f_pert(g)
+      target_code = 0  ->  has_guide=0, is_real_KO=0  ->  f_basal only
 
     LFC WITH noise  (μ_action + f_pert(g)):
-      model:    pred(src→g, code>0) − pred(src→0)          [decoder diff; encoder cancels]
-      observed: gene_KO − unassigned                        [= μ_action + f_pert(g)]
+      model:    pred(src->g, code>0) - pred(src->0)          [decoder diff; encoder cancels]
+      observed: gene_KO - unassigned                        [= μ_action + f_pert(g)]
       ceiling:  split-half reliability of gene_KO vs unassigned
 
     LFC WITHOUT noise  (f_pert(g) only):
-      model:    (pred(src→g) − pred(src→0)) − μ_action     [subtract learned global param]
-      observed: gene_KO − NTC                               [= f_pert(g), μ_action cancels]
+      model:    (pred(src->g) - pred(src->0)) - μ_action     [subtract learned global param]
+      observed: gene_KO - NTC                               [= f_pert(g), μ_action cancels]
       ceiling:  split-half reliability of gene_KO vs NTC
 
     src_restrict: optional boolean mask restricting SOURCE cells (scenario b).
@@ -512,7 +512,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
     restrict  = np.ones(ctx["N"], dtype=bool) if src_restrict is None else np.asarray(src_restrict)
     src_masks = {"L1": (cls == "control") & restrict, "L2": (cls == "unassigned") & restrict}
 
-    # Global μ_action parameter — used to compute "without noise" model LFC.
+    # Global μ_action parameter -- used to compute "without noise" model LFC.
     mu_action = ctx["model"].mu_action.detach().cpu().numpy()  # (G,)
 
     # Reference pools for observed LFC and kNN baselines.
@@ -528,7 +528,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
     knn_scores_without = {lv: {g: [] for g in ctx["panel"]} for lv in lvs}
     model_lfc_with    = {lv: {g: {} for g in ctx["panel"]} for lv in lvs}
     model_lfc_without = {lv: {g: {} for g in ctx["panel"]} for lv in lvs}
-    # Absolute pseudobulk Spearman: pred(unassigned→g) vs observed KO — L2 source only.
+    # Absolute pseudobulk Spearman: pred(unassigned->g) vs observed KO -- L2 source only.
     # Captures both spatial f_basal and f_pert; meaningful for vs-baseline comparison.
     abs_scores     = {g: [] for g in ctx["panel"]}
     knn_abs_scores = {g: [] for g in ctx["panel"]}
@@ -547,11 +547,11 @@ def run_scenario_c(ctx, args, src_restrict=None):
             if len(una_b) < args.min_g_cells:   # gate on unassigned (source cells)
                 continue
             has_ntc = len(ntc_b) >= args.ntc_floor  # secondary: enables LFC-without-noise
-            # Empirical NTC re-reference offset = log(mean_src) − log(mean_NTC), observed-scale LFC.
+            # Empirical NTC re-reference offset = log(mean_src) - log(mean_NTC), observed-scale LFC.
             # Used to put the model's KO prediction on the NTC baseline WITHOUT trusting model.mu_action.
             emp_offset = eu.pseudobulk_lfc(Y_obs[una_b], Y_obs[ntc_b]) if has_ntc else None
 
-            # Shared base prediction: target_code=0 → pure f_basal, no CRISPR terms.
+            # Shared base prediction: target_code=0 -> pure f_basal, no CRISPR terms.
             pred_base = _predict_swap(ctx, src_b, 0, args)
 
             # Leave-one-niche-out pools: exclude test niche b so kNN baseline
@@ -559,7 +559,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
             ntc_lono = ntc_all[bin_id[ntc_all] != b]
             una_lono = una_all[bin_id[una_all] != b]
 
-            # kNN baselines — one per reference population (shared across all g).
+            # kNN baselines -- one per reference population (shared across all g).
             knn_base_ntc = eu.spatial_knn_mean(coords[src_b], coords[ntc_lono],
                                                Y_obs[ntc_lono], k=args.knn_k) if has_ntc else None
             knn_base_una = eu.spatial_knn_mean(coords[src_b], coords[una_lono],
@@ -574,18 +574,18 @@ def run_scenario_c(ctx, args, src_restrict=None):
                 pred_g = _predict_swap(ctx, src_b, g_code, args)
                 keep   = ctx["hvg_mask"] & (gene_names != g)
 
-                # ── Model LFCs ──────────────────────────────────────────────
+                # --- Model LFCs ---
                 m_with    = eu.pseudobulk_lfc(pred_g, pred_base)   # μ_action + f_pert(g)
                 # Clean KO-vs-NTC LFC via EMPIRICAL re-reference (robust to mis-estimated model.mu_action):
-                #   predicted_clean = stored_LFC(model KO-vs-basal) + (log mean_src − log mean_NTC)
-                # vs observed true_clean = log(mean_realKO) − log(mean_NTC) = o_without below.
+                #   predicted_clean = stored_LFC(model KO-vs-basal) + (log mean_src - log mean_NTC)
+                # vs observed true_clean = log(mean_realKO) - log(mean_NTC) = o_without below.
                 m_without = (m_with + emp_offset) if has_ntc else (m_with - mu_action)
 
-                # ── Observed LFCs ────────────────────────────────────────────
+                # --- Observed LFCs ---
                 o_with    = eu.pseudobulk_lfc(Y_obs[g_real_b], Y_obs[una_b])   # μ_action + f_pert(g)
                 o_without = eu.pseudobulk_lfc(Y_obs[g_real_b], Y_obs[ntc_b]) if has_ntc else None
 
-                # ── Score both flavours ──────────────────────────────────────
+                # --- Score both flavours ---
                 sc_w  = eu.score_lfc_agreement(m_with[keep], o_with[keep]); sc_w["niche"] = int(b)
                 scores_with[lv][g].append(sc_w)
                 model_lfc_with[lv][g][int(b)] = m_with
@@ -593,7 +593,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
                     sc_wo = eu.score_lfc_agreement(m_without[keep], o_without[keep]); sc_wo["niche"] = int(b)
                     scores_without[lv][g].append(sc_wo)
                     model_lfc_without[lv][g][int(b)] = m_without
-                    # DIAG: decompose the without-noise score — is it model skill or the
+                    # DIAG: decompose the without-noise score -- is it model skill or the
                     # shared log-mean(NTC) baseline term in (m_with+emp_offset) vs o_without?
                     import builtins as _b
                     _d = getattr(_b, "_CF_DIAG", None)
@@ -611,7 +611,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
                     _d["null_offset"].append(
                         eu.score_lfc_agreement(emp_offset[keep], o_without[keep])["spearman"])
 
-                # ── kNN LFCs ─────────────────────────────────────────────────
+                # --- kNN LFCs ---
                 g_lono = g_real_all[g][bin_id[g_real_all[g]] != b]
                 has_knn = len(g_lono) >= args.min_g_cells
                 if has_knn:
@@ -625,7 +625,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
                         ksc_wo = eu.score_lfc_agreement(k_wo[keep], o_without[keep]); ksc_wo["niche"] = int(b)
                         knn_scores_without[lv][g].append(ksc_wo)
 
-                # ── Absolute pseudobulk Spearman (L2/unassigned source only) ──
+                # --- Absolute pseudobulk Spearman (L2/unassigned source only) ---
                 if lv == "L2":
                     hvg = ctx["hvg_mask"]
                     pred_mean = pred_g[:, hvg].mean(axis=0).astype(np.float64)
@@ -643,7 +643,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
                         ed_k = eu.energy_distance(knn_pop, Y_obs[g_real_b], hvg)
                         knn_edist_scores[g].append(dict(edist=ed_k, niche=int(b)))
 
-    # ── Aggregate ──────────────────────────────────────────────────────────────
+    # --- Aggregate ---
     def _agg(score_dict):
         out = {lv: {} for lv in lvs}
         for lv in lvs:
@@ -720,7 +720,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
                          awo.get("spearman_sd", float("nan")),
                          kwo.get("spearman_mean", float("nan")), awo.get("sign_mean", float("nan")))
 
-    # ── L1↔L2 convergence on the "with noise" model LFC ──────────────────────
+    # --- L1↔L2 convergence on the "with noise" model LFC ---
     conv = {}
     for g in ctx["panel"]:
         shared = sorted(set(model_lfc_with["L1"][g]) & set(model_lfc_with["L2"][g]))
@@ -731,8 +731,8 @@ def run_scenario_c(ctx, args, src_restrict=None):
             logging.info("[c/convergence] %-12s shared=%2d L1<->L2=%.3f",
                          g, len(shared), conv[g]["l1_l2_spearman_mean"])
 
-    # ── Identity: pred(NTC → 0) should recover unassigned basal profile ───────
-    # target=0 → f_basal only (strips μ_action); ground truth = raw unassigned.
+    # --- Identity: pred(NTC -> 0) should recover unassigned basal profile ---
+    # target=0 -> f_basal only (strips μ_action); ground truth = raw unassigned.
     identity = {}
     id_scores = []
     for b in eval_bins:
@@ -741,7 +741,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
         if len(ntc_b) < args.min_g_cells or len(una_b) < args.min_g_cells:
             continue
         pred_basal = _predict_swap(ctx, ntc_b, 0, args)   # strip μ_action from NTC
-        # Populations differ in size → compare pseudobulk mean profiles over HVGs
+        # Populations differ in size -> compare pseudobulk mean profiles over HVGs
         hvg = ctx["hvg_mask"]
         pred_mean = pred_basal[:, hvg].mean(axis=0).astype(np.float64)
         obs_mean  = Y_obs[una_b][:, hvg].mean(axis=0).astype(np.float64)
@@ -752,11 +752,11 @@ def run_scenario_c(ctx, args, src_restrict=None):
         id_scores.append(float((rp * ro).sum() / denom) if denom > 0 else float("nan"))
     if id_scores:
         identity = dict(denoise_ntc_vs_unassigned_spearman=float(np.nanmean(id_scores)))
-        logging.info("[c/identity] denoise(NTC→0) vs observed-unassigned Spearman=%.3f "
+        logging.info("[c/identity] denoise(NTC->0) vs observed-unassigned Spearman=%.3f "
                      "(want >raw-NTC-vs-unassigned to confirm μ_action stripping works)",
                      identity["denoise_ntc_vs_unassigned_spearman"])
 
-    # ── Cell-state consistency (data-only signal detection) ───────────────────
+    # --- Cell-state consistency (data-only signal detection) ---
     cell_consistency = eu.cell_state_consistency_test(
         Y_obs, perturb_raw, bin_id, ctx["panel"],
         ntc_label="control", gene_mask=ctx["hvg_mask"], n_pairs=500, n_seeds=5)
@@ -765,7 +765,7 @@ def run_scenario_c(ctx, args, src_restrict=None):
                      g, v["n_niches"], v["same_mean"], v["cross_mean"],
                      v["effect_size"], v["mw_pvalue_median"])
 
-    # ── Reliability ceilings — one per LFC flavour ────────────────────────────
+    # --- Reliability ceilings -- one per LFC flavour ---
     ceiling_with    = {}   # gene_KO vs unassigned
     ceiling_without = {}   # gene_KO vs NTC
     for g in ctx["panel"]:
@@ -825,7 +825,7 @@ def _pseudobulk_spearman(a: np.ndarray, b: np.ndarray) -> float:
 def _per_gene_spearman_mean(pred, obs):
     """Mean over genes of the per-gene Spearman correlation across cells.
     Rank-based, so robust to the count-scale (pred) vs log-normalized (obs) mismatch
-    (monotone). Ordinal ranks (ties broken arbitrarily) — fine for a comparison metric."""
+    (monotone). Ordinal ranks (ties broken arbitrarily) -- fine for a comparison metric."""
     pred = np.asarray(pred, dtype=np.float64)
     obs = np.asarray(obs, dtype=np.float64)
     if pred.shape[0] < 3:
@@ -1019,14 +1019,14 @@ def write_report(results, ctx, args, outdir):
                              l1_with_model=mw, l1_with_knn=kw, ceiling_with=cw,
                              l1_without_model=mwo, l1_without_knn=kwo, ceiling_without=cwo,
                              identity_denoise_spearman=id_sp)
-        lines += [f"## (c) seen-cell pert swap — **{'PASS' if passed else 'CONCERN'}**",
+        lines += [f"## (c) seen-cell pert swap -- **{'PASS' if passed else 'CONCERN'}**",
                   "",
                   "| | model ρ (L1) | kNN ρ | ceiling (SB) |",
                   "|---|---|---|---|",
-                  f"| **With noise** (gene_KO − unassigned) | {mw:.3f} | {kw:.3f} | {cw:.3f} |",
-                  f"| **Without noise** (gene_KO − NTC) | {mwo:.3f} | {kwo:.3f} | {cwo:.3f} |",
+                  f"| **With noise** (gene_KO - unassigned) | {mw:.3f} | {kw:.3f} | {cw:.3f} |",
+                  f"| **Without noise** (gene_KO - NTC) | {mwo:.3f} | {kwo:.3f} | {cwo:.3f} |",
                   "",
-                  f"- Identity: denoise(NTC→basal) vs observed-unassigned Spearman = "
+                  f"- Identity: denoise(NTC->basal) vs observed-unassigned Spearman = "
                   f"{(id_sp if id_sp is not None else float('nan')):.3f} "
                   f"(want > raw-NTC-vs-unassigned; confirms μ_action stripping)",
                   "- L1↔L2 convergence: " +
@@ -1063,7 +1063,7 @@ def write_report(results, ctx, args, outdir):
                   "_e-dist_ = energy distance in PCA-50 space (lower=better, population-level); "
                   "_ceil_ = Spearman-Brown reliability; _cell-sig p_ = Mann-Whitney p.", ""]
 
-        # ── Top perturbations by e-distance (lower = better) ────────────────
+        # --- Top perturbations by e-distance (lower = better) ---
         if edg:
             ranked_ed = sorted([(g, v["edist_mean"]) for g, v in edg.items()],
                                key=lambda x: x[1])
@@ -1073,7 +1073,7 @@ def write_report(results, ctx, args, outdir):
             for rank, (g, ed) in enumerate(ranked_ed, 1):
                 ked = kedg.get(g, {}).get("edist_mean", float("nan"))
                 lines.append(f"| {rank} | {g} | {ed:.3f} | {ked:.3f} | {ked - ed:+.3f} |")
-            lines += ["", "_advantage_ = kNN e-dist − model e-dist (positive = model closer to observed).", ""]
+            lines += ["", "_advantage_ = kNN e-dist - model e-dist (positive = model closer to observed).", ""]
 
     for sc_key, label in [("b", "(b) held-out cell"), ("a", "(a) coord-only patches")]:
         if sc_key not in results:
@@ -1093,11 +1093,11 @@ def write_report(results, ctx, args, outdir):
         verdicts[sc_key] = dict(passed=bool(passed), model_spearman=m, knn_baseline_spearman=base,
                                 pseudobulk_spearman=pb, pseudobulk_knn=pbk,
                                 diag_pergene_allgenes=imp.get("diag_pergene_allgenes"))
-        lines += [f"## {label} — **{'PASS' if passed else 'CONCERN'}**",
+        lines += [f"## {label} -- **{'PASS' if passed else 'CONCERN'}**",
                   f"- per-cell/HVG Spearman: model {m} vs kNN {base}",
                   f"- pseudobulk/HVG Spearman: model {pb} vs kNN {pbk}",
                   f"- (diagnostic) per-gene/all-genes Spearman: {imp.get('diag_pergene_allgenes')} "
-                  f"— expected ~0 on 96%-sparse data, not a quality signal", ""]
+                  f"-- expected ~0 on 96%-sparse data, not a quality signal", ""]
 
     summary["verdicts"] = verdicts
     (outdir / "eval_summary.json").write_text(json.dumps(summary, indent=2, default=str))
@@ -1105,7 +1105,7 @@ def write_report(results, ctx, args, outdir):
         np.savez_compressed(outdir / "lfc_per_niche.npz", **npz)
     (outdir / "eval_report.md").write_text("\n".join(lines))
 
-    # ── Per-niche performance table (L2/unassigned source only) ──────────────
+    # --- Per-niche performance table (L2/unassigned source only) ---
     # Rows: one per (gene, niche). Columns: model_lfc_rho, knn_lfc_rho,
     # model_edist, knn_edist. Saves per-niche CSV for cross-model comparison.
     import csv
@@ -1154,7 +1154,7 @@ def main():
     ctx = setup_grid_and_panel(ctx, args)
 
     if args.setup_only:
-        logging.info("[setup_only] done — niches=%d/%d panel=%d",
+        logging.info("[setup_only] done -- niches=%d/%d panel=%d",
                      int(ctx["evaluable"].sum()), ctx["n_bins"], len(ctx["panel"]))
         return
 

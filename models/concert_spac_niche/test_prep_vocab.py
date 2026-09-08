@@ -21,7 +21,7 @@ def test_perturbmap_three_ko_basal_slot():
 
 
 def test_spac_excludes_unassigned_and_control():
-    # spac: real genes + unassigned(basal) + control(NTC) → both to reserved code 0
+    # spac: real genes + unassigned(basal) + control(NTC) -> both to reserved code 0
     perturb = np.array(["GeneA", "GeneB", "unassigned", "control", "GeneA"])
     _, _, pidx, pm = build_attributes_spac(
         perturb, tissue_raw=None,
@@ -30,7 +30,7 @@ def test_spac_excludes_unassigned_and_control():
     assert {k for k in pm if k != BASAL_PERT_KEY} == {"GeneA", "GeneB"}, pm
     assert pidx[2] == 0 and pidx[3] == 0, "unassigned + control must land in basal slot 0"
     assert pidx[0] > 0 and pidx[1] > 0, "real genes must be non-zero"
-    print("[ok] spac: unassigned + control excluded from vocab, → basal slot 0")
+    print("[ok] spac: unassigned + control excluded from vocab, -> basal slot 0")
 
 
 def test_real_perts_are_sorted_1_indexed():

@@ -58,7 +58,7 @@ def _day_mean_sd(d):
     return mean, sd, len(P)
 
 
-# ── 1. per-mouse trajectories (no GT) ────────────────────────────────────────
+# --- 1. per-mouse trajectories (no GT) ---
 fig, ax = plt.subplots(figsize=(6.8, 5.3))
 for r in traj:
     od = float(r["observed_day"])
@@ -76,7 +76,7 @@ ax.set_ylabel("predicted inflammation (log1p marker)", fontsize=14)
 ax.tick_params(axis="y", labelsize=14); ax.set_ylim(0, None)
 fig.tight_layout(); fig.savefig(f"{HERE}/fig_per_mouse_trajectories.png", dpi=150, bbox_inches="tight"); plt.close(fig)
 
-# ── 2. per-day mean trajectories (no GT) ─────────────────────────────────────
+# --- 2. per-day mean trajectories (no GT) ---
 fig, ax = plt.subplots(figsize=(6.8, 5.3))
 for d in DAYS:
     mean, sd, n = _day_mean_sd(d)
@@ -91,7 +91,7 @@ ax.set_ylabel("predicted inflammation (log1p marker)", fontsize=14)
 ax.tick_params(axis="y", labelsize=14); ax.set_ylim(0, None)
 fig.tight_layout(); fig.savefig(f"{HERE}/fig_per_day_trajectories.png", dpi=150, bbox_inches="tight"); plt.close(fig)
 
-# ── 3. velocity: per-day predicted + GT ──────────────────────────────────────
+# --- 3. velocity: per-day predicted + GT ---
 def _vel(curve):
     return [(curve[i + 1] - curve[i]) / (DAYS[i + 1] - DAYS[i]) for i in range(3)]
 
@@ -102,7 +102,7 @@ for d in DAYS:
     ax.plot(MID, _vel(mean), "o-", color=DC[float(d)], lw=2.6, ms=7, label=f"sampled Day {d}")
 ax.plot(MID, _vel(obs_curve), "s--", color=paper_style.INK, lw=3.0, ms=9, label="observed GT")
 ax.legend(fontsize=12, loc="upper right", frameon=False)
-ax.set_xticks(MID); ax.set_xticklabels([f"{a}→{b}" for a, b in zip(DAYS[:-1], DAYS[1:])], fontsize=14)
+ax.set_xticks(MID); ax.set_xticklabels([f"{a}->{b}" for a, b in zip(DAYS[:-1], DAYS[1:])], fontsize=14)
 ax.set_xlabel("day interval", fontsize=15)
 ax.set_ylabel("d(inflammation)/dt  (log1p marker / day)", fontsize=15)
 ax.tick_params(axis="y", labelsize=14)

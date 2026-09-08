@@ -8,8 +8,8 @@ preserved.
 Continuous columns added to ``adata.var`` (prefix ``hvg_``):
   - hvg_means
   - hvg_dispersions          (or variances if scanpy falls back)
-  - hvg_dispersions_norm     — primary score; higher = more variable
-  - hvg_rank                 — 1 = top HVG by ``hvg_dispersions_norm``
+  - hvg_dispersions_norm     -- primary score; higher = more variable
+  - hvg_rank                 -- 1 = top HVG by ``hvg_dispersions_norm``
 
 Use ``hvg_rank <= N`` (or sort by ``hvg_dispersions_norm`` descending) to pick
 any number of HVGs later without rerunning this step.
@@ -77,7 +77,7 @@ def compute_hvg_metrics(adata, *, n_top_genes: int) -> pd.DataFrame:
     if not tmp.var_names.is_unique:
         tmp.var_names_make_unique()
 
-    # seurat_v3 expects raw counts — do NOT log1p (non-integers trigger fallback columns).
+    # seurat_v3 expects raw counts -- do NOT log1p (non-integers trigger fallback columns).
     sc.pp.highly_variable_genes(
         tmp,
         n_top_genes=min(n_top_genes, tmp.n_vars),

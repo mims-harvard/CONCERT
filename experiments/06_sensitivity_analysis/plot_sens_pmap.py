@@ -58,7 +58,7 @@ GREY = "#9e9e9e"
 def arm_means(df: pd.DataFrame, metric: str) -> pd.DataFrame:
     """Two-stage: average the slide x perturbation cells within a run, then across seeds.
 
-    The error bar is the spread ACROSS SEEDS, not across cells — seed noise is the thing that
+    The error bar is the spread ACROSS SEEDS, not across cells -- seed noise is the thing that
     has to be beaten for a factor effect to be real, and it is much the larger of the two.
     """
     per_run = df.groupby(["factor", "value", "seed"])[metric].mean().reset_index()
@@ -73,7 +73,7 @@ def write_caption(outdir: Path, stats: dict, n_cells: int) -> None:
     b = stats["seed_band"]["spearman_mean"]
     be = stats["seed_band"]["lfc_dist_mean"]
     lines = [
-        "Figures — Sensitivity of CONCERT to its spatial hyper-parameters (Perturb-MAP, "
+        "Figures -- Sensitivity of CONCERT to its spatial hyper-parameters (Perturb-MAP, "
         "four slides, seen regime). Two panels sets, one per benchmark metric: "
         "fig_sens_pmap_rho (log-fold-change rank correlation) and fig_sens_pmap_rmse "
         "(log-fold-change RMSE).",
@@ -153,7 +153,7 @@ def main() -> None:
             sub = am[am["factor"] == factor].sort_values("value")
             bx = BASE[factor]
             if factor == "seed":
-                # seed ids are labels, not a quantity — categorical, and no connecting line
+                # seed ids are labels, not a quantity -- categorical, and no connecting line
                 sub = sub.iloc[np.argsort([0 if v == bx else v for v in sub["value"]])]
                 xs = np.arange(len(sub))
                 ax.plot(xs, sub["mean"], "o", ms=9, color=ps.ACCENT, ls="none", zorder=3)

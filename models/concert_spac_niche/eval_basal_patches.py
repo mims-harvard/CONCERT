@@ -114,7 +114,7 @@ def main():
     # Load the model's EXACT training gene order (persisted next to the checkpoint). The
     # multi-slide model's avg-rank HVG set differs from this slide's per-slide HVG rank
     # (only ~39% overlap, ~1% same-position), so without this the decoder output and the
-    # model input are gene-misaligned → predicted LFC uncorrelated with observed (rho~0).
+    # model input are gene-misaligned -> predicted LFC uncorrelated with observed (rho~0).
     ckdir = Path(args.ckpt_template.format(field=args.fields[0])).parent
     gpath = ckdir / "hvg_gene_names.txt"
     force_go = None
@@ -122,18 +122,18 @@ def main():
         force_go = np.array([l.strip() for l in open(gpath) if l.strip()])
         logging.info("[genes] forcing model gene order from %s (%d genes)", gpath, len(force_go))
     else:
-        logging.warning("[genes] %s not found — using per-slide HVG (only valid if the model was "
+        logging.warning("[genes] %s not found -- using per-slide HVG (only valid if the model was "
                         "trained on THIS slide's HVG set)", gpath)
     (adata, pos_batched, cell_atts, batch_oh, pert_name, cutoff_t,
      perturb_raw, has_guide, is_real_KO, n_batch, perturb_idx) = load_data(
         args.data, hvg_max_rank=2000, min_cells_per_pert=20, force_gene_order=force_go)
     N = adata.n_obs
 
-    # ── Vocab: use the TRAINED pert_map.json (single source of truth) instead of the
-    #    one load_data rebuilds — the multi-slide model reserves code 0 for basal and
+    # --- Vocab: use the TRAINED pert_map.json (single source of truth) instead of the
+    #    one load_data rebuilds -- the multi-slide model reserves code 0 for basal and
     #    numbers real KO 1..K; rebuilding from a single slide mis-indexes the embedding
     #    (and can miss KO genes absent from this slide, e.g. Ifngr2). Keeps load_data's
-    #    row order (patch cell_index is a permutation of these rows). ──
+    #    row order (patch cell_index is a permutation of these rows). ---
     pmj = args.pert_map_json or str(Path(args.ckpt_template.format(field=args.fields[0])).parent / "pert_map.json")
     if os.path.exists(pmj):
         pm = json.load(open(pmj))["pert_map"]
@@ -146,7 +146,7 @@ def main():
         pert_name = {v: k for k, v in pert_map.items()}
         logging.info("[vocab] using persisted pert_map (%s): n_batch=%d %s", pmj, n_batch, pert_map)
     else:
-        logging.warning("[vocab] pert_map.json NOT found at %s — falling back to load_data vocab "
+        logging.warning("[vocab] pert_map.json NOT found at %s -- falling back to load_data vocab "
                         "(only valid for single-slide models trained without basal-code reservation)", pmj)
     name2code = {v: k for k, v in pert_name.items()}
     Yexpr = np.asarray(adata.X.todense() if hasattr(adata.X, "todense") else adata.X, dtype=np.float32)
@@ -154,7 +154,7 @@ def main():
     Yobs = np.asarray(Yobs.todense() if hasattr(Yobs, "todense") else Yobs, dtype=np.float32)
     logging.info("N=%d pert_name=%s", N, pert_name)
 
-    # ── patches (model-row space via cell_index permutation) ──────────────────
+    # --- patches (model-row space via cell_index permutation) ---
     P = np.load(args.patch_file, allow_pickle=True)
     ci = P["cell_index"].astype(int)            # patch-row -> model-row
     role = P["role"]; pid = P["patch_id"]; tbin = P["target_bin"]
@@ -203,7 +203,7 @@ def main():
     with open(os.path.join(args.outdir, "basal_patch_lfc.json"), "w") as f:
         json.dump(out, f, indent=2)
 
-    # ── table ─────────────────────────────────────────────────────────────────
+    # --- table ---
     print("\n===== perturbmap basal-field gate: per-patch footprint Spearman (pred vs observed KO-vs-ctrl@target_bin) =====")
     hdr = "patch  gene    tbin niche  nsrc nko nct |" + "".join(f" {f:>8s}" for f in args.fields)
     print(hdr)

@@ -4,8 +4,8 @@
 Rule (mirrors eval_cf_una panel selection):
   1) Per slide, pick the top-KO panel (genes with >= panel_min_cells KO cells on
      that slide, top max_panel by count) and each gene's MOST ABUNDANT niche.
-  2) Hold out the UNASSIGNED cells in that niche (source cells only — never KO/NTC).
-  3) Union over genes & slides → indices into the post-exclusion concatenated
+  2) Hold out the UNASSIGNED cells in that niche (source cells only -- never KO/NTC).
+  3) Union over genes & slides -> indices into the post-exclusion concatenated
      training array (exactly what run_concert_spac.py --holdout_unassigned_file
      consumes: it applies the excluded-label filter, then removes these rows).
 
@@ -59,7 +59,7 @@ def main():
         paths, unassigned_labels=UNASSIGNED_LABELS, control_labels=CONTROL_LABELS,
         hvg_max_rank=args.hvg_max_rank)
 
-    # Excluded-label filter — IDENTICAL to run_concert_spac so indices align.
+    # Excluded-label filter -- IDENTICAL to run_concert_spac so indices align.
     excl = frozenset(l.strip() for l in args.excluded_label.split(",") if l.strip())
     if excl:
         keep = np.array([p not in excl for p in perturb_raw], dtype=bool)
@@ -67,7 +67,7 @@ def main():
         X, pos_raw, perturb_raw, has_guide, is_real_KO, sample_id = (
             X[keep], pos_raw[keep], perturb_raw[keep], has_guide[keep], is_real_KO[keep], sample_id[keep])
 
-    # Training coordinate frame: global MinMax → [0, loc_range].
+    # Training coordinate frame: global MinMax -> [0, loc_range].
     pos_scaled = MinMaxScaler().fit_transform(pos_raw) * args.loc_range
     cls = classify(perturb_raw)
 
@@ -104,7 +104,7 @@ def main():
             if args.max_per_niche > 0 and len(sel) > args.max_per_niche:
                 rng = np.random.default_rng(42 + int(b))
                 sel = np.sort(rng.choice(sel, args.max_per_niche, replace=False))
-            holdout.append(s_idx[sel])                      # → global indices
+            holdout.append(s_idx[sel])                      # -> global indices
             n_slide += len(sel)
         log.info("slide %s: panel=%d genes, held out %d unassigned (of %d) across niches",
                  s, len(panel), n_slide, len(una_local))
@@ -113,7 +113,7 @@ def main():
     # sanity: every held-out cell must be genuine unassigned
     assert np.all(~has_guide[holdout]), "BUG: a held-out cell has a guide (KO/NTC)!"
     np.save(args.out, holdout)
-    log.info("TOTAL held out %d unassigned cells → %s", len(holdout), args.out)
+    log.info("TOTAL held out %d unassigned cells -> %s", len(holdout), args.out)
 
 
 if __name__ == "__main__":

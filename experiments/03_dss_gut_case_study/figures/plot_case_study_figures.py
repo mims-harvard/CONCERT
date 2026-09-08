@@ -2,7 +2,7 @@
 """Case-study result figures for the DSS temporal CONCERT model (deliverable C1-C3).
 
 Pure plotting from the eval CSVs already written by composition_eval (run_case_study_deliverables)
-— NO model, NO torch, NO GPU. Safe to run on the head node.
+-- NO model, NO torch, NO GPU. Safe to run on the head node.
 
 Inputs (in RUNDIR/case_study/ unless overridden):
   per_mouse_trajectories.csv, heterogeneity.csv, case_study_summary.json
@@ -10,7 +10,7 @@ Inputs (in RUNDIR/case_study/ unless overridden):
   the sibling *_full run's observed_marker_by_day.json (falls back to the hardcoded values).
 
 Outputs (RUNDIR/case_study/figures/):
-  fig_case_study.png            — 4-panel summary (trajectories / calibration / heterogeneity / Moran)
+  fig_case_study.png            -- 4-panel summary (trajectories / calibration / heterogeneity / Moran)
   fig_per_mouse_trajectories.png, fig_calibration.png, fig_heterogeneity.png, fig_velocity.png
 """
 import argparse, json
@@ -111,7 +111,7 @@ def panel_moran(ax, summ):
 
 
 def fig_velocity(outdir, traj):
-    """dInflammation/dt per mouse — non-constant velocity is impossible for linear interp."""
+    """dInflammation/dt per mouse -- non-constant velocity is impossible for linear interp."""
     fig, ax = plt.subplots(figsize=(6, 4))
     seg_mid = [(DAYS[i] + DAYS[i+1]) / 2 for i in range(3)]
     for r in traj:
@@ -121,7 +121,7 @@ def fig_velocity(outdir, traj):
         ax.plot(seg_mid, vel, "-o", color=DAY_COLORS[od], alpha=0.55, ms=3)
     ax.axhline(0, color="k", lw=0.8)
     ax.set(xlabel="day (segment midpoint)", ylabel="d(inflammation)/dt",
-           title="Inflammation velocity per mouse (sign flips at d9 → non-linear)")
+           title="Inflammation velocity per mouse (sign flips at d9 -> non-linear)")
     fig.tight_layout(); fig.savefig(outdir / "fig_velocity.png", dpi=150); plt.close(fig)
 
 
@@ -133,7 +133,7 @@ def fig_trajectories_normalized(outdir, traj):
     amplitude (library depth + architecture-inferred scale) and shows that MOST mice
     share the same rise -> peak@d9 -> fall SHAPE. Mice whose fold-change stays near 1
     are the ones the model UNDER-fits (small architecture-inferred amplitude), not mice
-    that are biologically flat — the residual the LOMO affine calibration corrects.
+    that are biologically flat -- the residual the LOMO affine calibration corrects.
     """
     fig, ax = plt.subplots(figsize=(6.4, 4.6))
     folds9 = []
@@ -178,7 +178,7 @@ def main():
     panel_calibration(axes[0, 1], summ, obs_by_day)
     panel_heterogeneity(axes[1, 0], het)
     panel_moran(axes[1, 1], summ)
-    fig.suptitle("CONCERT DSS temporal case study — descriptive deliverables (C1-C3)",
+    fig.suptitle("CONCERT DSS temporal case study -- descriptive deliverables (C1-C3)",
                  fontsize=13, y=0.995)
     fig.tight_layout(rect=[0, 0, 1, 0.98])
     fig.savefig(outdir / "fig_case_study.png", dpi=150)
