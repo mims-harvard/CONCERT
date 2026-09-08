@@ -1,4 +1,4 @@
-# CONCERT — benchmark model
+# CONCERT - benchmark model
 
 The model used for both held-out perturbation benchmarks: SPAC-seq (experiment 01) and spatial
 Perturb-seq (experiment 02). The two experiments differ in their settings, not in this code.
@@ -42,5 +42,5 @@ response, or grow so the same perturbation acts differently in different neighbo
 
 The spatial field's lengthscale is bounded to an interpretable band. Note that this band is a
 plain attribute rather than a saved weight, so evaluation has to be given the same band that
-training used — otherwise identical weights render a different field. The run scripts in
+training used - otherwise identical weights render a different field. The run scripts in
 `experiments/` pass it in both places.

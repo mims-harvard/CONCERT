@@ -1,4 +1,4 @@
-# Experiment 03 — DSS colitis time course
+# Experiment 03 - DSS colitis time course
 
 A MERFISH time course of mouse colon through DSS-induced colitis and its resolution: healthy,
 day 3, day 9 and day 21, across 52 sections from several animals. One temporal model is fitted

@@ -2,8 +2,8 @@
 
 One script per paper result, reproduced from a **trained checkpoint**. Nothing here retrains:
 every script loads `model.pt`, runs inference, prints the numbers and writes the tables and
-figures. They are the command-line form of the notebooks in `../notebooks/` — same steps, same
-order, same numbers — for when you want a result in a batch job rather than a browser.
+figures. They are the command-line form of the notebooks in `../notebooks/` - same steps, same
+order, same numbers - for when you want a result in a batch job rather than a browser.
 
 | Script | Notebook | Reproduces | Checkpoints |
 |---|---|---|---|
@@ -48,16 +48,16 @@ a first pass costs seconds and still produces the reported numbers and every fig
 
 | Script | Expensive step | Cost |
 |---|---|---|
-| 01 | `slide` — score one slide over the full panel | 15–40 min on one H100 |
-| 01 | `crossslide --run-unit` — one evaluation unit end to end | a few minutes |
-| 02 | `section` — score one section | 5–15 min |
-| 03 | `--run-decode --mice all` — re-decode all 15 animals at four virtual days | 30–45 min, ~200 GB RAM |
-| 04 | `--run-decode` — the three decode passes | ~20 min per arm |
+| 01 | `slide` - score one slide over the full panel | 15-40 min on one H100 |
+| 01 | `crossslide --run-unit` - one evaluation unit end to end | a few minutes |
+| 02 | `section` - score one section | 5-15 min |
+| 03 | `--run-decode --mice all` - re-decode all 15 animals at four virtual days | 30-45 min, ~200 GB RAM |
+| 04 | `--run-decode` - the three decode passes | ~20 min per arm |
 
 ## Environment
 
 The prediction steps need a GPU: on CPU they are unusably slow. The environment is pinned to
-CUDA 11.8 and **cannot use Blackwell GPUs** — a run that dies with an `nvrtc -arch` error a few
+CUDA 11.8 and **cannot use Blackwell GPUs** - a run that dies with an `nvrtc -arch` error a few
 minutes in was scheduled on one. Ask for an H100 or A100.
 
 ```bash
@@ -88,9 +88,9 @@ into manuscript text.
 The two benchmarks compare against the published methods differently, and the difference is
 not cosmetic:
 
-* **Perturb-map** — the methods cover enough of the same records that the reported comparison
+* **Perturb-map** - the methods cover enough of the same records that the reported comparison
   is the intersection of the records **all** methods cover (27 of 31).
-* **SPAC-seq** — the all-method intersection is **empty** (CelComen covers 15 of 129 records,
+* **SPAC-seq** - the all-method intersection is **empty** (CelComen covers 15 of 129 records,
   CellAgentChat 11). The reported comparison is **paired, one competitor at a time**, on the
   records that competitor and CONCERT share. The `n_pairs` column of the shipped statistics
   table is that count, and `--steps compare` checks itself against it.

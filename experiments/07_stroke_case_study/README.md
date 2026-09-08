@@ -1,4 +1,4 @@
-# 07 — Mouse stroke case study (photothrombosis)
+# 07 - Mouse stroke case study (photothrombosis)
 
 Added 2026-08-30. Everything behind the stroke case study, including the diagnostics that
 overturned three earlier readings. Read the traps below before re-running anything.

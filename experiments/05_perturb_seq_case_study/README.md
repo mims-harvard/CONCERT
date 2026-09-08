@@ -1,4 +1,4 @@
-# Experiment 05 — does a predicted response depend on where the cell sits?
+# Experiment 05 - does a predicted response depend on where the cell sits?
 
 Experiment 02 asks whether held-out responses can be predicted. This one asks what the model
 has actually learned about place: whether the same knockout, put into different parts of the
@@ -19,11 +19,11 @@ the four steps in order.
 
 ## Order
 
-1. **`evaluation/pmap_case_study.py` — transplantation.** Take a patch of unperturbed spots,
+1. **`evaluation/pmap_case_study.py` - transplantation.** Take a patch of unperturbed spots,
    apply the same knockout to it, and read the predicted profile; then do it again with a patch
    in a different microenvironment. The comparison is between the two predictions and against
    the spots that carry that knockout for real.
-2. **`evaluation/pmap_interpret.py` — what the effect is made of, and how far it reaches.**
+2. **`evaluation/pmap_interpret.py` - what the effect is made of, and how far it reaches.**
    Splits the predicted shift into a part that is the same everywhere, a part that varies with
    position, and a part that depends on the neighbourhood, and reports their relative sizes per
    knockout. It then measures how much an unedited spot moves when some of its neighbours are
@@ -31,10 +31,10 @@ the four steps in order.
    experiment: a spot with no edited neighbour must not move, and a dense patch of edited spots
    has no unedited neighbours to affect, so a before/after comparison across such a patch
    measures nothing and will read as a null however the model behaves.
-3. **`evaluation/pmap_systematic_transplant.py` — replication.** Places each knockout into many
+3. **`evaluation/pmap_systematic_transplant.py` - replication.** Places each knockout into many
    sampled neighbourhoods, so how much a response varies with its surroundings is measured
    across neighbourhoods rather than asserted from a single pair.
-4. **`evaluation/pmap_pathways_powered.py` — which programmes track the neighbourhood.**
+4. **`evaluation/pmap_pathways_powered.py` - which programmes track the neighbourhood.**
    Correlates the predicted per-gene response against the composition of the neighbourhood it
    was placed in, then tests gene sets on that ranking.
 
@@ -65,7 +65,7 @@ content, and epithelial-to-mesenchymal transition is the programme whose respons
 on the neighbourhood in every knockout tested. The first of these is a statement about effect
 size and the second about effect shape; keeping them apart is what step 4 is for.
 
-A perturbed spot does influence its neighbours, but the effect is graded and small — it rises
+A perturbed spot does influence its neighbours, but the effect is graded and small - it rises
 monotonically with the number of edited neighbours and reaches roughly one percent of the
 expression change at full exposure. It is exactly zero, not merely small, for spots with no
 edited neighbour, which is what makes the gradient interpretable rather than noise. Report it

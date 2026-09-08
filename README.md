@@ -48,7 +48,7 @@ Ignoring cells' tissue context when predicting perturbations
 3. Predict perturbations at timepoints that were never measured.
 4. Impute missing cells with perturbation prediction.
 5. Learn the scope of a perturbation's effect on tissue space.
-6. Disentangle perturbation effects — intra- or inter-cellular.
+6. Disentangle perturbation effects - intra- or inter-cellular.
 
 <p align="center">
   <img src="./function.jpg" alt="model" width="400"/>
@@ -66,7 +66,7 @@ Ignoring cells' tissue context when predicting perturbations
 | [`scripts/`](./scripts/) | One command-line script per paper result, run from a trained checkpoint |
 | [`notebooks/`](./notebooks/) | The same four results as step-by-step tutorials |
 | [`datasets/`](./datasets/) | Where every dataset comes from, and how to point the code at it |
-| [`config/paths.sh`](./config/paths.sh) | Data, output and environment paths — the one file the SLURM scripts read |
+| [`config/paths.sh`](./config/paths.sh) | Data, output and environment paths - the one file the SLURM scripts read |
 
 The three model directories are deliberate copies rather than one shared package. They diverged
 in the model source itself, not only in configuration, and keeping them separate means a change
@@ -97,7 +97,7 @@ pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu118
 pip install -r env_requirements.txt
 ```
 
-CUDA 11.8 supports up to `sm_90`, so this environment **cannot run on Blackwell GPUs** — a run
+CUDA 11.8 supports up to `sm_90`, so this environment **cannot run on Blackwell GPUs** - a run
 that dies with an `nvrtc -arch` error a few minutes in was scheduled on one. Ask for an H100 or
 an A100.
 
@@ -123,7 +123,7 @@ an A100.
    python scripts/01_spac_seq_benchmark.py --steps aggregate
    ```
 
-### Example 1 — train on a spatial perturbation dataset
+### Example 1 - train on a spatial perturbation dataset
 
 ```bash
 cd models/concert_benchmark
@@ -146,7 +146,7 @@ perturbation vocabulary is read from `pert_map.json` rather than rebuilt, so tha
 code of every perturbation matches the one the weights were trained with.
 
 The lengthscale band (`--fpert_ls_min` / `--fpert_ls_max`) is a plain attribute of the spatial
-field, not a saved weight. **It has to be passed at evaluation exactly as at training** — leave
+field, not a saved weight. **It has to be passed at evaluation exactly as at training** - leave
 it out and the same weights render a different spatial field, and the run completes with
 plausible, wrong numbers.
 
@@ -158,7 +158,7 @@ sbatch experiments/02_perturb_seq_benchmark/train/train_perturb_seq.sh seen
 sbatch experiments/03_dss_gut_case_study/train/train_dss.sh
 ```
 
-### Example 2 — counterfactual prediction on chosen spots
+### Example 2 - counterfactual prediction on chosen spots
 
 Give a file of spot indices, the tissue type to place them in and the perturbation to apply.
 Spots can be selected interactively with the Shiny app in
@@ -184,10 +184,10 @@ log mu = f_basal(x, expression) + 1[has_guide] * mu_action + 1[is_real_KO] * f_p
 ```
 
 so a decode to perturbation `g` and a decode to the basal slot differ by exactly the
-perturbation terms — the basal reconstruction cancels. Every reported score is computed on that
+perturbation terms - the basal reconstruction cancels. Every reported score is computed on that
 difference of two decodes, not on one decode alone.
 
-### Example 3 — reproduce a paper result from a trained checkpoint
+### Example 3 - reproduce a paper result from a trained checkpoint
 
 Four scripts, one per result. They print the numbers and write the tables and figures; the
 steps that predict are opt-in, so a first pass reads the shipped results and still reproduces
@@ -211,7 +211,7 @@ See [`scripts/README.md`](./scripts/README.md) for every step, its cost and its 
 
 ### 📓 Tutorials
 
-The same four results, explained step by step, are in [`notebooks/`](./notebooks/) — start
+The same four results, explained step by step, are in [`notebooks/`](./notebooks/) - start
 there if you are reading rather than running:
 
 | Notebook | What it reproduces |
@@ -226,8 +226,8 @@ and only referred to afterwards.
 
 ### Reproducing an experiment end to end
 
-Each directory under `experiments/` is self-contained — its own data preparation, training,
-evaluation and figures — and carries a `README.md` listing the inputs it expects, the order to
+Each directory under `experiments/` is self-contained - its own data preparation, training,
+evaluation and figures - and carries a `README.md` listing the inputs it expects, the order to
 run things in, and what it writes.
 
 | Directory | Question |
@@ -242,7 +242,7 @@ run things in, and what it writes.
 
 The run scripts are SLURM batch scripts whose `#SBATCH` headers carry generic partition names;
 set the partition and account your cluster uses before submitting. To run without a scheduler,
-execute a script directly with `bash` — nothing outside the headers depends on SLURM except the
+execute a script directly with `bash` - nothing outside the headers depends on SLURM except the
 SPAC-seq evaluation, which reads `SLURM_ARRAY_TASK_ID` to pick a slide and can be given that
 variable by hand.
 

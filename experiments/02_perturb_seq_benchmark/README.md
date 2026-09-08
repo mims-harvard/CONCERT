@@ -1,4 +1,4 @@
-# Experiment 02 — spatial Perturb-seq held-out perturbation benchmark
+# Experiment 02 - spatial Perturb-seq held-out perturbation benchmark
 
 The same held-out perturbation question as experiment 01, on four sections of a spatial
 Perturb-seq assay. Running it on a second assay tests whether the result depends on the
@@ -20,9 +20,9 @@ The model is the same (`models/concert_benchmark`); the settings differ where th
 
 `PERTURB_SEQ_DIR` (set in `config/paths.sh`) must contain:
 
-- `perturbmap_s0_spacfmt.h5ad` … `perturbmap_s3_spacfmt.h5ad` — the four sections converted to
+- `perturbmap_s0_spacfmt.h5ad` ... `perturbmap_s3_spacfmt.h5ad` - the four sections converted to
   the common format by `data_preparation/prep_perturbmap_slide.py`;
-- `holdout_perturb_seq_seen.json`, `holdout_perturb_seq_unseen.json` — holdout definitions,
+- `holdout_perturb_seq_seen.json`, `holdout_perturb_seq_unseen.json` - holdout definitions,
   written by `build_v3_holdout_coords.py` in experiment 01's data preparation, which handles
   both assays.
 
@@ -36,7 +36,7 @@ The model is the same (`models/concert_benchmark`); the settings differ where th
 4. **Score.** `sbatch evaluation/eval_perturb_seq.sh seen` runs
    `../../benchmark_evaluation/run_concert_pm_niche.py` on the checkpoint and writes a
    per-perturbation summary per section. The lengthscale band, coordinate scale and inducing
-   count are passed again there and must match the training values — the band defines the
+   count are passed again there and must match the training values - the band defines the
    squashing function inside the spatial field, so a checkpoint read back under a different
    band reconstructs different lengthscales rather than failing.
 5. **Compare against the published methods.**

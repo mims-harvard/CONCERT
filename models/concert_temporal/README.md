@@ -1,4 +1,4 @@
-# CONCERT — temporal model
+# CONCERT - temporal model
 
 The model used for the DSS colitis time-course case study (experiment 03). It shares its
 structure with `../concert_benchmark/` and adds time as an explicit input, so one model spans

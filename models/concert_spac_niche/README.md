@@ -1,4 +1,4 @@
-# CONCERT — stroke case-study model
+# CONCERT - stroke case-study model
 
 The model used for the stroke case study (experiment 07): a lesion of a chosen size and
 position imposed on a healthy brain, predicted in a 2D arm and in a 3D arm that couples four
@@ -26,7 +26,7 @@ working tree** of the stroke model, not a trimmed copy. Alongside the model itse
 (`concert_spac.py`, `kernel.py`, `SVGP_Batch.py`, `nngp.py`, `VAE_utils.py`, `lord_batch.py`,
 `I_PID.py`, `pert_action_denoiser.py`) and the preparation and evaluation entry points
 (`preprocess.py`, `spatial_graph.py`, `eval_spatial_counterfactual.py`, `eval_utils.py`,
-`deconv_impute.py`) it holds the diagnostics that were run against it — the `diag_*.py`,
+`deconv_impute.py`) it holds the diagnostics that were run against it - the `diag_*.py`,
 `analyze_*.py`, `eval_*_patches.py` and gate scripts. Those are kept because they are the
 record of how the model was checked, not because the case study needs them.
 

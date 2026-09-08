@@ -7,9 +7,9 @@ gives the study the sections come from, where the raw data lives, and a processe
 
 | Dataset | Used for | Raw data | Processed data |
 |---|---|---|---|
-| [**SPAC-seq** CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) (Zhang et al., *Cell* 2026) | Benchmark, `experiments/01_spac_seq_benchmark` | *pending — see note below* | *pending — see note below* |
+| [**SPAC-seq** CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) (Zhang et al., *Cell* 2026) | Benchmark, `experiments/01_spac_seq_benchmark` | *pending - see note below* | *pending - see note below* |
 | [**Perturb-map** lung tumour](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7) (Dhainaut et al., *Cell* 2022) | Benchmark, `experiments/02_perturb_seq_benchmark` | [GEO GSE193460](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460) | [Figshare](https://figshare.com/articles/dataset/Datasets_-_Perturb-Map/29198468) |
-| [**Colitis MERFISH** time course](https://doi.org/10.1016/j.cell.2024.03.013) (Cadinu et al., *Cell* 2024) | Time-course case study, `experiments/03_dss_gut_case_study` | *pending — see note below* | *pending — see note below* |
+| [**Colitis MERFISH** time course](https://doi.org/10.1016/j.cell.2024.03.013) (Cadinu et al., *Cell* 2024) | Time-course case study, `experiments/03_dss_gut_case_study` | *pending - see note below* | *pending - see note below* |
 | [**Mouse gut DSS** Visium](https://www.nature.com/articles/s41586-024-08216-z) (Mayassi et al., *Nature* 2024) | Colon inflammation | [Broad SCP2771](https://singlecell.broadinstitute.org/single_cell?type=study&page=1&terms=SCP2771) | [Figshare](https://figshare.com/articles/dataset/Mouse_gut_inflammation_dataset/29882873) |
 | [**Mouse brain stroke**](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) (Han et al., *Sci. Transl. Med.* 2024) | Stroke case study, `experiments/07_stroke_case_study` | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
 
@@ -53,6 +53,6 @@ builds from these, and the order to build them in.
 
 Checkpoints are not included. Each result can be retrained from the scripts under
 `experiments/`, and the tutorials in `notebooks/` and `scripts/` load a checkpoint directory
-that must contain **both** `model.pt` and `pert_map.json` — the perturbation vocabulary is read
+that must contain **both** `model.pt` and `pert_map.json` - the perturbation vocabulary is read
 rather than rebuilt, so that the integer code of every perturbation matches the one the weights
 were trained with.

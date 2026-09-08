@@ -11,8 +11,8 @@ expression, and asked what that cell would look like carrying the perturbation. 
 is compared with the measured cells that actually carry it, through the log fold change over
 matched unperturbed cells:
 
-- **log fold change RMSE** — error in the size of the response, per perturbation and slide;
-- **log fold change rank correlation** — agreement in which genes move and in which direction.
+- **log fold change RMSE** - error in the size of the response, per perturbation and slide;
+- **log fold change rank correlation** - agreement in which genes move and in which direction.
 
 Both are computed per perturbation and slide, then averaged, with bootstrap resampling for the
 reported spread.

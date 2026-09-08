@@ -1,4 +1,4 @@
-# Experiment 04 — are the learned spatial parameters interpretable?
+# Experiment 04 - are the learned spatial parameters interpretable?
 
 The model gives every perturbation two spatial parameters: a **niche gain**, setting how
 strongly its predicted response may be reshaped by the local microenvironment, and a
@@ -43,6 +43,6 @@ imposes this.
 
 Exemplars are chosen inside a matched band of perturbed-cell number, and ranked on the same
 residual quantities the statistics use, so the panels are comparable and are selected on the
-axis the claim rests on. The nearest-neighbour index is below one for every perturbation —
-cells sharing a perturbation are always more clumped than random placement — so it is a
+axis the claim rests on. The nearest-neighbour index is below one for every perturbation -
+cells sharing a perturbation are always more clumped than random placement - so it is a
 relative ordering across perturbations, not an absolute test of randomness.
