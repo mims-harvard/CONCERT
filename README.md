@@ -74,24 +74,32 @@ made for the time course cannot silently alter a benchmark number.
 
 ## ⚙️ Dependencies
 
-Python 3.10.12, one CUDA GPU for training and for the prediction steps. The environment is
-pinned to CUDA 11.8 and cannot use Blackwell GPUs; ask for an H100 or A100.
+Python 3.11.13 and one CUDA GPU for training and for the prediction steps; the figure and
+table steps run on CPU. The reported results were produced in this environment:
 
 ```
-torch==2.1.0
-scanpy==1.10.1
-scikit-learn==1.4.0
+torch==2.3.0          # CUDA 11.8 build
+numpy==1.26.4
 scipy==1.12.0
-pandas==2.2.0
-numpy==1.23.5
-anndata
-h5py
-matplotlib
-scvi-tools
-wandb
+pandas==2.3.3
+scikit-learn==1.8.0
+scanpy==1.10.1
+anndata==0.12.2
+h5py==3.13.0
+matplotlib==3.10.1
+scvi-tools==1.3.3
+wandb==0.22.1
 ```
 
-See [`env_requirements.txt`](./env_requirements.txt). The figure and table steps run on CPU.
+```bash
+conda create -n concert_env python=3.11 && conda activate concert_env
+pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cu118
+pip install -r env_requirements.txt
+```
+
+CUDA 11.8 supports up to `sm_90`, so this environment **cannot run on Blackwell GPUs** — a run
+that dies with an `nvrtc -arch` error a few minutes in was scheduled on one. Ask for an H100 or
+an A100.
 
 ## 💻 Run CONCERT
 
