@@ -189,8 +189,6 @@ def build(kind, out_name):
                     ax.scatter(xy[:, 0], xy[:, 1], c=inflamed.astype(int), s=DOT,
                                cmap=REGION_CMAP, vmin=0, vmax=1, linewidths=0,
                                rasterized=True)
-                    ax.text(0.02, 0.02, f"r = {100*inflamed.mean():.0f}%", fontsize=19,
-                            transform=ax.transAxes, ha="left", va="bottom", color=ps.INK)
                 ax.set_xlim(xy[:, 0].min(), xy[:, 0].max())
                 ax.set_ylim(xy[:, 1].min(), xy[:, 1].max())
             else:

@@ -46,3 +46,25 @@ residual quantities the statistics use, so the panels are comparable and are sel
 axis the claim rests on. The nearest-neighbour index is below one for every perturbation -
 cells sharing a perturbation are always more clumped than random placement - so it is a
 relative ordering across perturbations, not an absolute test of randomness.
+
+## Repetition on Perturb-FISH
+
+The same readout is repeated on a Perturb-FISH tumour section, trained with the within-slide
+configuration used for SPAC-seq.
+
+1. `run_perturbfish_interp.sh` runs `prep_perturbfish_concert.py`, which moves the perturbation
+   assignment and the MERFISH centroids into the layout `run_concert_spac.py` reads and rescales
+   the coordinates to one unit per cell spacing; it then trains the model from
+   `models/concert_benchmark` and runs `analyze_kernel_params_spac.py` on the checkpoint.
+2. `run_partial_corr.sh` runs `partial_corr_perturbfish.py`, which computes the partial rank
+   correlations with the same two controls (log10 cell number and perturbation embedding norm)
+   on the per-perturbation table and prints them beside the SPAC-seq values.
+3. `make_fig_perturbfish_consistency.py` writes the supplementary figure and its stats JSON:
+   panel a places the four pre-specified relations of the two datasets side by side with 95%
+   Fisher intervals, panels b and c show the Perturb-FISH rank residuals behind two of them.
+
+On the 31 Perturb-FISH perturbations all four relations take the SPAC-seq sign: the niche gain
+rises with the fraction of tissue reached (partial rho +0.42) and with the nearest-neighbour index
+(+0.31), and the footprint lengthscale falls with both (-0.21 and -0.22). The Benjamini-Hochberg
+q-values at this sample size lie between 0.11 and 0.63, so the section serves as a directional
+replication of the SPAC-seq result.

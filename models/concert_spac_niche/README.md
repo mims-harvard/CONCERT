@@ -33,3 +33,13 @@ record of how the model was checked, not because the case study needs them.
 The three model directories are deliberate copies rather than one shared package. They diverged
 in the model source itself, not only in configuration, and keeping them separate means a change
 made for one result cannot silently alter another.
+
+## Changes
+
+**Per-slide niche grid for the log-fold-change targets.** With `--lfc_lambda > 0`, training
+precomputes pseudo-bulk knockout log-fold-change targets per niche, binned on a 6x6 grid. The grid
+is built within each slide: tiled multi-slide coordinates are folded back to the per-slide
+`[0, loc_range]` frame, and each bin id is offset by the slide index, so every slide contributes
+its own 36 niches. This matches the per-slide grid that evaluation uses (`--niche_grid 6`). The
+same change is applied in `../concert_benchmark/run_concert_spac.py` and
+`../concert_temporal/run_concert_spac.py`.

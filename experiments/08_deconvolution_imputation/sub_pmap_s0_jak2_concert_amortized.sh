@@ -1,0 +1,41 @@
+#!/bin/bash -l
+#SBATCH -J pmap_jak2_v2
+#SBATCH -p kempner_h100
+#SBATCH --account=kempner_mzitnik_lab
+#SBATCH --mem=200G
+#SBATCH --time 0-06:00
+#SBATCH --gres=gpu:nvidia_h100_80gb_hbm3:1
+#SBATCH --constraint=h100
+#SBATCH --cpus-per-task=8
+#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/logs/pmap_jak2_concert_%j.out
+#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/logs/pmap_jak2_concert_%j.err
+
+# Caller: sbatch sub_pmap_s0_jak2_concert_amortized.sh
+# Paper method: location-matched CONCERT mu + amortized head (same as SPAC 2-1 v2).
+set +u
+source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
+conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+set -eo pipefail
+module purge; module load gcc
+export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
+export CUDA_VISIBLE_DEVICES=0
+nvidia-smi --query-gpu=name,memory.total,index --format=csv,noheader
+python - <<'PY'
+import torch
+print("cuda_available", torch.cuda.is_available(), "device", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+x=torch.zeros(1, device="cuda"); print("cuda_ok", x.device); del x
+PY
+
+EVAL=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval
+OUT=/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/spac_seq/pmap_s0_jak2_concert_amortized
+CKPT=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/ms_pmap_niche_seen
+mkdir -p "$OUT" "${EVAL}/logs"
+
+python -u "${EVAL}/run_pmap_s0_jak2_concert_amortized.py" \
+    --ckpt_dir "$CKPT" \
+    --outdir "$OUT" \
+    --n_synth 4000 --n_synth_test 1000 --epochs 80 \
+    --n_samples 5 --batch_size 2048 \
+    --device cuda
+
+echo "[$(date)] done -> $OUT"

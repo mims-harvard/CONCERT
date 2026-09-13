@@ -239,6 +239,7 @@ run things in, and what it writes.
 | [`05_perturb_seq_case_study`](./experiments/05_perturb_seq_case_study/) | Does the same knockout, placed in different parts of a section, produce a different predicted response? |
 | [`06_sensitivity_analysis`](./experiments/06_sensitivity_analysis/) | Do the reported numbers survive changes to the hyper-parameters, once initialisation noise is measured? |
 | [`07_stroke_case_study`](./experiments/07_stroke_case_study/) | Can a lesion of a chosen size and position be imposed on a healthy brain and its response predicted, in 2D and in 3D? |
+| [`08_deconvolution_imputation`](./experiments/08_deconvolution_imputation/) | Can CONCERT unmix spots that pool several perturbation states, and fill in a patch of tissue removed from a slide? |
 
 The run scripts are SLURM batch scripts whose `#SBATCH` headers carry generic partition names;
 set the partition and account your cluster uses before submitting. To run without a scheduler,

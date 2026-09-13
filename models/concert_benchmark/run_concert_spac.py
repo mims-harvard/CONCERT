@@ -190,7 +190,7 @@ class RunConfig:
     multi_sample_files: str = ""
 
     # --- Control-anchored explicit action correction ---
-    # 3-term decoder: log μ = f_basal + 1[has_guide]·μ_action + 1[is_real_KO]·f_pert
+    # 3-term decoder: log mu = f_basal + 1[has_guide]*mu_action + 1[is_real_KO]*f_pert
     use_action_correction: bool = True
     detach_mu_action_for_ko: bool = False
     mu_action_anchor_lambda: float = 0.0
@@ -292,7 +292,7 @@ class RunConfig:
     # --- Negative-control label shuffle (ablation) ---
     # If > 0, permute the perturbation labels of the top-N real-KO classes
     # (by post-filter cell count) AMONG those cells only. Marginal class counts
-    # are preserved but the cell↔label link is destroyed, so the model has no
+    # are preserved but the cell<->label link is destroyed, so the model has no
     # real perturbation signal to learn for those N genes. 0 = disabled.
     shuffle_top_perts: int = 0
 
@@ -303,7 +303,7 @@ class RunConfig:
     inducing_point_nums: int | None = None
     # If set (grid mode), derive grid resolution from data density instead of a fixed
     # inducing_point_steps: steps = round(sqrt(N / cells_per_inducing)), so the number of
-    # inducing points scales with the cell count (M = steps^2 ≈ N / cells_per_inducing).
+    # inducing points scales with the cell count (M = steps^2 ~= N / cells_per_inducing).
     cells_per_inducing: int | None = None
     inducing_steps_min: int = 6
     inducing_steps_max: int = 32
@@ -522,9 +522,9 @@ def _load_h5ad_dataset(
     --------
     1. Read filter_pass obs column -> boolean row mask.
     2. Read highly_variable var column -> boolean col mask (HVGs).
-    3. Read X as sparse CSR (never densify the full 632k × 20k matrix).
+    3. Read X as sparse CSR (never densify the full 632k x 20k matrix).
     4. Apply row mask -> apply col mask (both stay sparse).
-    5. Densify only the reduced (N_pass × G_hvg) submatrix.
+    5. Densify only the reduced (N_pass x G_hvg) submatrix.
 
     Returns
     -------
@@ -636,7 +636,7 @@ def _load_h5ad_dataset(
 
     # --- Column selection ---
     # force_gene_order (eval on a model trained with a DIFFERENT HVG set, e.g. a
-    # multi-slide model whose avg-rank genes ≠ this slide's per-slide HVG rank):
+    # multi-slide model whose avg-rank genes != this slide's per-slide HVG rank):
     # subset AND reorder to the model's exact training gene list so the decoder
     # output and the model input align gene-for-gene. Otherwise use the HVG mask.
     if force_gene_order is not None:
@@ -659,7 +659,7 @@ def _load_h5ad_dataset(
 
     # --- Densify only the reduced submatrix ---
     X = X_sp.toarray().astype(np.float32)
-    logging.info("[load] Final matrix: %d spots × %d genes", X.shape[0], X.shape[1])
+    logging.info("[load] Final matrix: %d spots x %d genes", X.shape[0], X.shape[1])
 
     # --- Derive 3-class indicators ---
     # has_guide : 1 for control + gene_KO (any guide delivered)
@@ -795,7 +795,7 @@ def load_h5ad_multi(
         rk_list.append(rk_s)
         tis_list.append(tis_s)
         sid_list.append(np.full(len(pert_s), s_idx, dtype=np.int32))
-        logging.info("[multi-load] Sample %d (%s): %d cells × %d genes",
+        logging.info("[multi-load] Sample %d (%s): %d cells x %d genes",
                      s_idx, Path(path).stem, X_s.shape[0], X_s.shape[1])
 
     X_all          = np.concatenate(Xs,         axis=0)
@@ -812,7 +812,7 @@ def load_h5ad_multi(
     else:
         tissue_all = None
 
-    logging.info("[multi-load] Total: %d cells × %d genes across %d samples",
+    logging.info("[multi-load] Total: %d cells x %d genes across %d samples",
                  X_all.shape[0], X_all.shape[1], len(paths))
     return X_all, pos_all, tissue_all, perturb_all, has_guide_all, is_real_KO_all, gene_names_out, sample_id_all
 
@@ -860,7 +860,7 @@ def build_attributes_spac(
                  RESERVED code 0 (`BASAL_PERT_KEY`); real KO labels are sorted -> 1..K.
                  This keeps the perturbation vocabulary == #real KO (+1 basal slot), so
                  basal/NTC never get a phantom perturbation footprint. f_pert is gated by
-                 is_real_KO (concert_spac.py) and μ_action is a global gene bias, so the
+                 is_real_KO (concert_spac.py) and mu_action is a global gene bias, so the
                  basal slot's embedding is never applied to reconstruction.
 
     Returns
@@ -1254,16 +1254,16 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     spatial_dims = pos_batched.shape[1] - n_batch
     kernel_scale = np.full((n_batch, spatial_dims), cfg.kernel_scale, dtype=np.float32)
 
-    # empirical μ_action anchor = logmean(NTC) - logmean(unassigned).
-    # Use RAW counts ÷ size_factors (non-negative) -- adata.X is standardized
-    # (normalize_input=True) so its mean can be ≤0 -> log -> NaN. adata.raw.X is the
+    # empirical mu_action anchor = logmean(NTC) - logmean(unassigned).
+    # Use RAW counts / size_factors (non-negative) -- adata.X is standardized
+    # (normalize_input=True) so its mean can be <=0 -> log -> NaN. adata.raw.X is the
     # HVG-subset raw counts (n_vars-dim -> matches mu_action).
     mu_action_anchor = None
     if cfg.use_action_correction and cfg.mu_action_anchor_lambda > 0:
         raw = adata.raw.X
         raw = raw.toarray() if hasattr(raw, "toarray") else np.asarray(raw)
         sf = adata.obs["size_factors"].to_numpy(dtype=np.float32)[:, None]
-        Xn = raw / np.clip(sf, 1e-8, None)                 # normalized counts ≥ 0
+        Xn = raw / np.clip(sf, 1e-8, None)                 # normalized counts >= 0
         ntc_m = (has_guide & ~is_real_KO)
         una_m = ~has_guide
         if int(ntc_m.sum()) >= 10 and int(una_m.sum()) >= 10:
@@ -1273,11 +1273,11 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             a = np.nan_to_num(a, nan=0.0, posinf=5.0, neginf=-5.0)
             mu_action_anchor = np.clip(a, -5.0, 5.0).astype(np.float32)
             logging.info(
-                "μ_action anchor: ||a||=%.3f (NTC=%d, unassigned=%d, λ=%.3g)",
+                "mu_action anchor: ||a||=%.3f (NTC=%d, unassigned=%d, lambda=%.3g)",
                 float(np.linalg.norm(mu_action_anchor)),
                 int(ntc_m.sum()), int(una_m.sum()), cfg.mu_action_anchor_lambda)
         else:
-            logging.warning("Too few NTC/unassigned cells for μ_action anchor; disabled")
+            logging.warning("Too few NTC/unassigned cells for mu_action anchor; disabled")
 
     # Model
     model = CONCERT(
@@ -1422,13 +1422,25 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         bs = auto_batch_size(X.shape[0]) if cfg.batch_size == "auto" else int(cfg.batch_size)
 
         # --- precompute mini-bulk KO-vs-NTC LFC targets ---
-        # niche grid MUST match eval --niche_grid (default 6); coords are already
-        # MinMax*LOC_RANGE framed in pos_batched, same as eval's ctx["coords"].
+        # niche grid MUST match eval --niche_grid (default 6), which bins each slide's own
+        # MinMax*LOC_RANGE coordinates.
         niche_id_arr = None
         if cfg.lfc_lambda > 0:
             from eval_utils import build_niche_grid, pseudobulk_lfc as _pblfc
             import scipy.sparse as _sp
-            _bin, _ = build_niche_grid(pos_batched[:, :2], grid=6)
+            # Niches are defined within each slide. Multi-slide coordinates are tiled, so fold
+            # them back to the per-slide [0, loc_range] frame and offset the bin id by the tile.
+            _xy = pos_batched[:, :2].astype(np.float64)
+            _tile = np.zeros(len(_xy), dtype=np.int64)
+            if sample_id_all is not None:
+                _S = float(cfg.loc_range) * float(cfg.slide_tile_gap_factor)
+                _cell = np.floor(_xy / _S)
+                _xy = _xy - _S * _cell
+                _tile = (_cell[:, 1] * 1000 + _cell[:, 0]).astype(np.int64)
+            _local, _nb = build_niche_grid(_xy, grid=6, loc_range=float(cfg.loc_range))
+            _, _tile_idx = np.unique(_tile, return_inverse=True)
+            _bin = (_tile_idx * _nb + _local).astype(int)
+            logging.info("[lfc] niche grid: %d tiles x %d bins", int(_tile_idx.max()) + 1, _nb)
             _raw = adata.raw.X
             _raw = _raw.toarray() if _sp.issparse(_raw) else np.asarray(_raw)
             _pcode = cell_atts[:, 1].astype(int)
@@ -1436,7 +1448,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             _ntc_mask = _hg & (~_rk)
             tgts = {}
             if _ntc_mask.sum() >= 30:
-                # --- datasets WITH NTC (spac): per-niche KO-vs-NTC. μ_action absorbs the
+                # --- datasets WITH NTC (spac): per-niche KO-vs-NTC. mu_action absorbs the
                 #    NTC-vs-basal guide shift, so this LFC isolates f_pert. ---
                 for b in np.unique(_bin):
                     ntc_b = np.where(_ntc_mask & (_bin == b))[0]
@@ -1451,7 +1463,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
                 logging.info("[lfc] precomputed %d (niche,pert) KO-vs-NTC targets over %d genes",
                              len(tgts), adata.n_vars)
             else:
-                # --- datasets WITHOUT NTC (perturbmap): μ_action is OFF, so f_pert IS the
+                # --- datasets WITHOUT NTC (perturbmap): mu_action is OFF, so f_pert IS the
                 #    full KO-vs-unperturbed log shift. Reference = unperturbed BASAL cells,
                 #    tissue-matched to the KO cells (KO spots are tumor) so tissue structure
                 #    (already carried by the tissue-conditioned basal field) does not leak into
@@ -1788,7 +1800,7 @@ def parse_args() -> RunConfig:
     p.add_argument("--deamortize_gp", type=lambda x: str(x).lower() in ("1", "true", "yes"), default=None,
                    help="Lever 2: use a free per-cell GP latent target (recon-driven) instead of the encoder-amortized gp_mu.")
     p.add_argument("--additive_decoder", type=lambda x: str(x).lower() in ("1", "true", "yes"), default=None,
-                   help="Option 2: gated additive decoder -- reconstruct log μ as dec_gp(z_gp)+dec_basal(z_basal) "
+                   help="Option 2: gated additive decoder -- reconstruct log mu as dec_gp(z_gp)+dec_basal(z_basal) "
                         "via two separate paths so the coord-driven GP latent has an un-shared gradient route to "
                         "reconstruction (pair with moran_lambda + small Normal_dim to force spatial signal through z_gp).")
     p.add_argument("--gp_field_aux_lambda", type=float, default=None,
