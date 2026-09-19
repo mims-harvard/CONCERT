@@ -44,3 +44,14 @@ The spatial field's lengthscale is bounded to an interpretable band. Note that t
 plain attribute rather than a saved weight, so evaluation has to be given the same band that
 training used - otherwise identical weights render a different field. The run scripts in
 `experiments/` pass it in both places.
+
+## Clonality gate and per-slide guide shift
+
+In SPAC-seq a guide lands in a slide as clones: all spots of one (slide, perturbation) pair
+descend from few founding cells. `--clonality_gate clone_size --clone_min_cells 100` gives the
+guide spots of any clone with fewer than 100 training spots weight 0 in the likelihood and in
+the LFC targets (all NTC spots of a slide count as one clone), so small clones carry no weight
+in the fit of the perturbation effect. `--slide_guide_shift True` adds a learned per-slide row to
+the shared guide shift, so a slide-specific guide-delivery effect has its own parameter. At
+evaluation the target slide's row is read from the checkpoint. Both flags default to off; the
+SPAC-seq benchmark runs set both.

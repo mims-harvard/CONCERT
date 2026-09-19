@@ -14,7 +14,11 @@
 #   seen   perturbations held out within a slide; the perturbation is observed on other slides
 #   unseen perturbations held out from every slide
 #
-# The holdout file is produced by ../data_preparation/build_v3_holdout_coords.py.
+# The holdout file is produced by ../data_preparation/build_v4_holdout_coords.py.
+#
+# Clonality gate: guide spots of a (slide, perturbation) clone with fewer than 100 training
+# spots get weight 0 in the likelihood and in the LFC targets; all NTC spots of a slide form one
+# clone. A per-slide guide shift is learned on top of the shared guide shift.
 
 # Locate config/paths.sh. Under sbatch the batch script is copied to a spool directory, so a
 # path relative to this file does not resolve there; CODEBASE_ROOT is the fallback. Failing
@@ -34,7 +38,7 @@ activate_env
 REGIME="${1:?usage: sbatch train_spac_seq.sh <seen|unseen>}"
 MODEL_DIR="${CODEBASE_ROOT}/models/concert_benchmark"
 OUT="${OUTPUT_ROOT}/spac_seq_${REGIME}"
-HOLDOUT="${SPAC_SEQ_DIR}/holdout_spac_${REGIME}.json"
+HOLDOUT="${SPAC_SEQ_DIR}/holdout_v4_spac_${REGIME}.json"
 
 FILES=$(for i in 1 2 3 4 5; do echo -n "${SPAC_SEQ_DIR}/raw_output_1-${i}.h5ad,"; done | sed 's/,$//')
 [ -f "$HOLDOUT" ] || { echo "[FATAL] holdout file missing: $HOLDOUT"; exit 1; }
@@ -71,6 +75,7 @@ python -u run_concert_spac.py \
     --basal_field rff --basal_bayes True --moran_lambda 1.0 --disentangle_radius 4.0 \
     --fpert_field gp_pp --fpert_coord_scale 20.0 --fpert_rff_features 128 --fpert_rff_bandwidth 0.15 \
     ${GUARD} \
+    --clonality_gate clone_size --clone_min_cells 100 --slide_guide_shift True \
     --resume "${RESUME:-False}" \
     --verbosity 1
 

@@ -314,6 +314,8 @@ def load_eval_context_multi(args):
                                 use_basal_encoder_only=args.use_basal_encoder_only, **extra)
     model.load_model(args.model_file, allow_cell_size_mismatch=True)
     model.eval()
+    set_target_slide_rows(model, args.model_file, args.target_slide_idx,
+                          force_slide_bias=bool(getattr(args, "cf_slide_bias", False)))
 
     Y_expr = adata.X
     Y_expr = (Y_expr.toarray() if sp.issparse(Y_expr) else np.asarray(Y_expr)).astype(np.float32)
@@ -334,6 +336,29 @@ def load_eval_context_multi(args):
                 perturb_raw=np.asarray(perturb_raw), cls=cls,
                 pert_name=pert_name, name2code=name2code, n_batch=n_batch,
                 cross_slide_counts=cross_slide_counts)
+
+
+def set_target_slide_rows(model, model_file, target_slide_idx, force_slide_bias=False):
+    """Attach the target slide's per-slide rows to a single-slide eval model.
+
+    The eval model is built for one slide, so multi-slide rows (slide_bias, mu_action_slide)
+    are absent from its state_dict and load_model skips them. Checkpoints trained with
+    --slide_guide_shift always get both rows (the model is incomplete without them); older
+    checkpoints get slide_bias only when force_slide_bias is set (ablation).
+    """
+    st = torch.load(str(model_file), map_location="cpu")
+    t = int(target_slide_idx)
+    gs, sb = st.get("mu_action_slide"), st.get("slide_bias")
+    if gs is not None:
+        model.cf_guide_shift = gs[t].float().clone()
+    if sb is not None and (gs is not None or force_slide_bias):
+        model.cf_slide_bias = sb[t].float().clone()
+    logging.info("[cf rows] target slide %d: guide_shift=%s (|.|=%.3f) slide_bias=%s (|.|=%.3f)", t,
+                 model.cf_guide_shift is not None,
+                 float(model.cf_guide_shift.norm()) if model.cf_guide_shift is not None else 0.0,
+                 model.cf_slide_bias is not None,
+                 float(model.cf_slide_bias.norm()) if model.cf_slide_bias is not None else 0.0)
+    del st
 
 
 def load_eval_context(args):

@@ -93,7 +93,7 @@ class NBLoss(nn.Module):
     def __init__(self):
         super(NBLoss, self).__init__()
 
-    def forward(self, x, mean, disp, scale_factor=None):
+    def forward(self, x, mean, disp, scale_factor=None, weight=None):
         eps = 1e-10
         if scale_factor is not None:
             scale_factor = scale_factor[:, None]
@@ -103,7 +103,10 @@ class NBLoss(nn.Module):
         t2 = (disp+x) * torch.log(1.0 + (mean/(disp+eps))) + (x * (torch.log(disp+eps) - torch.log(mean+eps)))
         log_nb = t1 + t2
 #        result = torch.mean(torch.sum(result, dim=1))
-        result = torch.sum(log_nb)
+        if weight is None:
+            result = torch.sum(log_nb)
+        else:
+            result = torch.sum(log_nb.sum(dim=1) * weight)    # per-cell weighted NB
         return result
 
 class MixtureNBLoss(nn.Module):

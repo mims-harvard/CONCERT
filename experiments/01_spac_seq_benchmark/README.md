@@ -17,10 +17,11 @@ Two holdout settings are reported:
 
 - `raw_output_1-1.h5ad` ... `raw_output_1-5.h5ad` - the five measured sections, with expression,
   per-cell perturbation assignment and array coordinates;
-- `holdout_spac_seen.json`, `holdout_spac_unseen.json` - which perturbations are held out on
-  which slide, written by `data_preparation/build_v3_holdout_coords.py`;
-- `prepared/` - the matched cell sets the evaluation reads, written by
-  `data_preparation/build_benchmark_v3_assets.py`.
+- `holdout_v4_spac_seen.json`, `holdout_v4_spac_unseen.json` - which perturbations are held out
+  on which slide, written by `data_preparation/build_v4_holdout_coords.py`;
+- `prepared/benchmark_v4/` - the evaluation panel, holdout pools and shared source cells the
+  evaluation reads, written by `data_preparation/build_benchmark_v4_assets.py` and
+  `benchmark_evaluation/build_v4_source_cells.py`.
 
 ## Order
 
@@ -30,13 +31,20 @@ Two holdout settings are reported:
 2. **Define the holdouts.** `data_preparation/build_v3_holdout_coords.py` chooses the held-out
    perturbations for both settings and records the affected cells.
    `data_preparation/make_niche_holdout.py` covers the microenvironment-level variant.
-3. **Build evaluation assets.** `data_preparation/build_benchmark_v3_assets.py` writes the
-   matched perturbed and unperturbed cell sets used at scoring time.
+3. **Build evaluation assets.** `data_preparation/build_benchmark_v4_assets.py` writes the
+   evaluation panel (85 knockout-target-slide pairs in the unseen setting) and holdout pools;
+   `benchmark_evaluation/build_v4_source_cells.py` draws the 5,000 shared source spots per
+   target slide.
 4. **Train.** `sbatch train/train_spac_seq.sh seen` (and `unseen`). One GPU; the reported runs
-   trained for up to 1500 epochs with early stopping.
-5. **Score.** `sbatch --array=1-5 evaluation/eval_spac_seq_benchmark.sh seen` runs one slide
-   per array task. Collect the five outputs with `build_benchmark_v3_summary.py` in
-   `../../benchmark_evaluation/`.
+   trained for up to 1500 epochs with early stopping. Both settings use the clonality gate
+   (`--clonality_gate clone_size --clone_min_cells 100`) and the per-slide guide shift
+   (`--slide_guide_shift True`).
+5. **Score.** `sbatch evaluation/eval_spac_seq_benchmark_v4.sh unseen` scores every unseen
+   pair in one job; `sbatch --array=1-5 evaluation/eval_spac_seq_benchmark_v4.sh seen` runs one
+   slide per array task. Collect the outputs with `agg_clonegate_v4b.py` in
+   `../../benchmark_evaluation/`. The v3 scripts (`build_v3_holdout_coords.py`,
+   `build_benchmark_v3_assets.py`, `eval_spac_seq_benchmark.sh`) remain as the record of the
+   earlier protocol; `build_v4_holdout_coords.py` asserts it reproduces their holdout files.
 
 ## Notes
 

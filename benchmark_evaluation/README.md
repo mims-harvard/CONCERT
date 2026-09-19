@@ -27,6 +27,14 @@ Pass the same spatial-field lengthscale band that training used. It is a plain a
 the field rather than a saved weight, so leaving it at the default renders a different field
 from identical weights.
 
+## Benchmark v4
+
+The reported SPAC-seq numbers come from the v4 protocol: `run_concert_v4_benchmark_eval.py`
+run through `genefix_wrap.py`, with `--cf_output poisson_depth --cf_seen_ref observed`, so the
+prediction is one Poisson draw at the measured library size and the LFC reference is the measured
+source spots in both settings. `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark_v4.sh`
+carries the full flag list. The v3 scripts remain as the record of the earlier protocol.
+
 ## Modules
 
 | File | Role |
@@ -38,6 +46,11 @@ from identical weights.
 | `eval_spatial_counterfactual.py` | Counterfactual prediction machinery the entry point builds on |
 | `eval_cf_una_multi_holdout.py`, `eval_cf_una_only.py` | Variants scoring unperturbed-anchored predictions |
 | `eval_utils.py` | Metric helpers shared across the above |
+| `run_concert_v4_benchmark_eval.py` | Benchmark v4 entry point (clonality-gated checkpoints): 85 KO-target-slide pairs in the unseen setting, Poisson output at measured depth |
+| `benchmark_v4_lib.py`, `benchmark_v4_eval_lib.py` | v4 holdout panel, shared source cells and unseen scoring |
+| `build_v4_source_cells.py` | The 5,000 shared source spots per target slide every v4 unseen evaluator predicts from |
+| `genefix_wrap.py` | Runs an eval script under the shared gene rule (slide HVGs in the CONCERT panel, minus the KO) |
+| `agg_clonegate_v4b.py` | Collects v4 per-unit results into paired summary statistics |
 | `spacseq_eval_common.py`, `spacseq_multi_common.py` | SPAC-seq data loading, slide handling, matching |
 | `perturbmap_common.py` | The same for the Perturb-seq sections |
 | `method_input_lib.py`, `train_manifest_lib.py` | Assemble the inputs and manifests an evaluation run needs |

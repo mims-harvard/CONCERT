@@ -290,6 +290,11 @@ class RunConfig:
     additive_decoder: bool = False
     gp_field_aux_lambda: float = 0.0
     basal_moran_output_lambda: float = 0.0
+    # clonality gate: guide spots whose (slide, perturbation) clone has fewer than clone_min_cells
+    # visible spots get weight 0 in the likelihood and the LFC targets ("none" = off)
+    clonality_gate: str = "none"
+    clone_min_cells: int = 100
+    slide_guide_shift: bool = False
     # Stage 1 GP guardrail: soft band prior on the SVGP kernel lengthscale
     ls_prior_lambda: float = 0.0
     ls_prior_min: float = 3.0
@@ -417,6 +422,46 @@ def _derive_grid_steps(n_cells: int, cfg) -> tuple:
         derived = int(round((n_cells / cfg.cells_per_inducing) ** 0.5))
         return int(np.clip(derived, cfg.inducing_steps_min, cfg.inducing_steps_max)), derived
     return cfg.inducing_point_steps, cfg.inducing_point_steps
+
+
+def clone_size_gate(sample_id, pert_code, has_guide, is_real_KO, min_cells, outdir=None):
+    """Per-spot clonality gate weight (1 keep, 0 gated out).
+
+    A guide label off the densely transduced slide is a noisy indicator of membership in a
+    perturbed clone: spots of small clones are spatially isolated and carry a diluted guide
+    shift. Clone = all visible guide spots with one perturbation code on one slide; NTC spots of
+    a slide form one clone. Unassigned spots always keep weight 1. Held-out cells are already
+    removed, so clone sizes use training-visible spots only.
+    """
+    sample_id = np.asarray(sample_id).astype(np.int64)
+    pert_code = np.asarray(pert_code).astype(np.int64)
+    hg = np.asarray(has_guide, dtype=bool)
+    rk = np.asarray(is_real_KO, dtype=bool)
+    ntc = hg & ~rk
+    key = np.where(rk, pert_code, -1)                 # NTC share key -1 per slide
+    w = np.ones(len(sample_id), dtype=np.float32)
+    summary = {"min_cells": int(min_cells), "slides": {}}
+    for s in np.unique(sample_id):
+        m = (sample_id == s) & hg
+        keys, inv, cnt = np.unique(key[m], return_inverse=True, return_counts=True)
+        size = cnt[inv]
+        idx = np.where(m)[0]
+        w[idx] = (size >= min_cells).astype(np.float32)
+        ko_m = rk[idx]
+        summary["slides"][int(s)] = {
+            "ko_spots": int(ko_m.sum()), "ko_spots_kept": int(w[idx][ko_m].sum()),
+            "ko_clones": int(len(np.unique(key[idx][ko_m]))),
+            "ko_clones_kept": int(len(np.unique(key[idx][ko_m & (size >= min_cells)]))),
+            "ntc_spots": int(ntc[idx].sum()), "ntc_spots_kept": int(w[idx][ntc[idx]].sum()),
+        }
+        logging.info("[clonality-gate] slide %d: KO spots kept %d/%d (%d/%d clones), NTC kept %d/%d",
+                     int(s), summary["slides"][int(s)]["ko_spots_kept"], summary["slides"][int(s)]["ko_spots"],
+                     summary["slides"][int(s)]["ko_clones_kept"], summary["slides"][int(s)]["ko_clones"],
+                     summary["slides"][int(s)]["ntc_spots_kept"], summary["slides"][int(s)]["ntc_spots"])
+    if outdir is not None:
+        np.save(Path(outdir) / "clone_weight.npy", w)
+        (Path(outdir) / "clone_gate_summary.json").write_text(json.dumps(summary, indent=2))
+    return w
 
 
 def tile_multislide_coords(pos_raw, sample_id, loc_range, gap_factor):
@@ -1402,6 +1447,13 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         else:
             logging.warning("Too few NTC/unassigned cells for mu_action anchor; disabled")
 
+    clone_weight = None
+    if cfg.clonality_gate != "none":
+        if sample_id_all is None:
+            raise SystemExit("--clonality_gate needs multi-slide input (per-cell slide id)")
+        clone_weight = clone_size_gate(sample_id_all, cell_atts[:, 1], has_guide, is_real_KO,
+                                       cfg.clone_min_cells, outdir)
+
     # Model
     model = CONCERT(
         cell_atts=cell_atts,
@@ -1500,6 +1552,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         additive_decoder=cfg.additive_decoder,
         gp_field_aux_lambda=cfg.gp_field_aux_lambda,
         basal_moran_output_lambda=cfg.basal_moran_output_lambda,
+        slide_guide_shift=cfg.slide_guide_shift,
         ls_prior_lambda=cfg.ls_prior_lambda,
         ls_prior_min=cfg.ls_prior_min,
         ls_prior_max=cfg.ls_prior_max,
@@ -1583,6 +1636,12 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             _pcode = cell_atts[:, 1].astype(int)
             _hg = has_guide.astype(bool); _rk = is_real_KO.astype(bool)
             _ntc_mask = _hg & (~_rk)
+            if clone_weight is not None:
+                _gate_keep = clone_weight > 0.5
+                _rk = _rk & _gate_keep
+                _ntc_mask = _ntc_mask & _gate_keep
+                logging.info("[lfc] clonality gate: %d KO + %d NTC spots eligible for LFC targets",
+                             int(_rk.sum()), int(_ntc_mask.sum()))
             tgts = {}
             if _ntc_mask.sum() >= 30:
                 # --- datasets WITH NTC (spac): per-niche KO-vs-NTC. mu_action absorbs the
@@ -1650,6 +1709,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             is_real_KO=is_real_KO.astype(np.float32),
             niche_id=niche_id_arr,
             sample_id=sample_id_all,
+            clone_weight=clone_weight,
             lr=cfg.lr,
             weight_decay=cfg.weight_decay,
             batch_size=bs,
@@ -1962,6 +2022,11 @@ def parse_args() -> RunConfig:
                    help="Weight of mini-bulk KO-vs-NTC LFC supervision on f_pert (0 = off).")
     p.add_argument("--disentangle_lambda", type=float, default=None,
                    help="Weight for HSIC(gs, coords) latent-disentanglement penalty (Change B). 0 = off.")
+    p.add_argument("--clonality_gate", choices=["none", "clone_size"], default=None,
+                   help="clone_size: weight 0 for guide spots of (slide, pert) clones below --clone_min_cells.")
+    p.add_argument("--clone_min_cells", type=int, default=None)
+    p.add_argument("--slide_guide_shift", type=str2bool, default=None,
+                   help="Per-slide guide shift added to mu_action for guide cells (multi-slide).")
     p.add_argument("--moran_lambda", type=float, default=None,
                    help="Weight for Moran's-I basal-latent spatial-autocorrelation penalty (Change C). 0 = off.")
     p.add_argument("--deamortize_gp", type=lambda x: str(x).lower() in ("1", "true", "yes"), default=None,

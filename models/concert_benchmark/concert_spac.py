@@ -612,6 +612,8 @@ class CONCERT(nn.Module):
         additive_decoder: bool = False,
         gp_field_aux_lambda: float = 0.0,
         basal_moran_output_lambda: float = 0.0,
+        # per-slide guide shift added to mu_action for guide cells (multi-slide only)
+        slide_guide_shift: bool = False,
         # Stage 1 GP guardrail: soft band prior on the SVGP kernel lengthscale
         ls_prior_lambda: float = 0.0,
         ls_prior_min: float = 3.0,
@@ -709,6 +711,16 @@ class CONCERT(nn.Module):
             self.mu_action = nn.Parameter(
                 torch.zeros(num_genes, dtype=dtype), requires_grad=True
             )
+        # Per-slide shared guide shift: guide cells on slide s get mu_action + mu_action_slide[s].
+        # Slides with few NTC share one guide-delivery shift that a single global vector cannot fit.
+        self.mu_action_slide = (
+            nn.Parameter(torch.zeros(self.n_slides, num_genes, dtype=dtype), requires_grad=True)
+            if (use_action_correction and slide_guide_shift and self.n_slides > 1) else None
+        )
+        # Eval-time rows of the TARGET slide (G,), set by the eval loader (the eval model is
+        # single-slide, so these are read from the checkpoint). None = not applied.
+        self.cf_slide_bias = None
+        self.cf_guide_shift = None
 
         # --- P0: deterministic RFF basal field + scale-aware disentanglement ---
         self.basal_field = str(basal_field)
@@ -1193,6 +1205,7 @@ class CONCERT(nn.Module):
         is_real_KO: Optional[torch.Tensor] = None,   # (B,) float 0/1 -- KO indicator
         niche_id: Optional[torch.Tensor] = None,     # (B,) long -- niche bin id for LFC supervision
         slide_index: Optional[torch.Tensor] = None,   # (B,) long -- per-cell slide id (C2)
+        clone_weight: Optional[torch.Tensor] = None,  # (B,) float in [0,1] -- clonality gate (None = all 1)
     ) -> Tuple[torch.Tensor, ...]:
         """Forward pass computing ELBO terms and reconstructions."""
         self.train()
@@ -1386,7 +1399,10 @@ class CONCERT(nn.Module):
         #   gene_KO    -> both terms       -> identifies f_pert per perturbation
         action_shift = None
         if self.use_action_correction and has_guide is not None:
-            mu_action_clamped = torch.clamp(self.mu_action, -5.0, 5.0)
+            mu_action_clamped = torch.clamp(self.mu_action, -5.0, 5.0).unsqueeze(0)   # (1, G)
+            if self.mu_action_slide is not None and slide_index is not None:
+                mu_action_clamped = mu_action_clamped + torch.clamp(
+                    self.mu_action_slide[slide_index.long()], -5.0, 5.0)             # (B, G)
             if self.detach_mu_action_for_ko and is_real_KO is not None:
                 # Constrain μ_action to control (NTC) cells: KO cells still receive
                 # μ_action in their decoder but with the gradient detached, so the
@@ -1395,10 +1411,10 @@ class CONCERT(nn.Module):
                 # NTC), and f_pert(g) carries the FULL gene-KO-vs-NTC effect.
                 rk = is_real_KO.float().unsqueeze(1)               # (B,1) KO cells
                 hg = has_guide.float().unsqueeze(1)                # (B,1) guide cells
-                action_shift = ((hg - rk) * mu_action_clamped.unsqueeze(0)
-                                + rk * mu_action_clamped.detach().unsqueeze(0))
+                action_shift = ((hg - rk) * mu_action_clamped
+                                + rk * mu_action_clamped.detach())
             else:
-                action_shift = has_guide.unsqueeze(1) * mu_action_clamped.unsqueeze(0)  # (B, G)
+                action_shift = has_guide.unsqueeze(1) * mu_action_clamped  # (B, G)
 
         # detach: niche is a conditioning signal, not a gradient path through the SVGP posterior
         niche_latent = gp_p_m.detach() if self.use_niche_interaction else None
@@ -1439,8 +1455,13 @@ class CONCERT(nn.Module):
                 disp = torch.exp(torch.clamp(torch.matmul(self.dec_disp, batch.T), -15.0, 15.0)).T
             mean_accum.append(mu)
             disp_accum.append(disp)
-            recon_loss = recon_loss + self.NB_loss(x=raw_y, mean=mu, disp=disp, scale_factor=size_factors)
-            recon_mse = recon_mse + self.mse(mu, raw_y)
+            recon_loss = recon_loss + self.NB_loss(x=raw_y, mean=mu, disp=disp, scale_factor=size_factors,
+                                                   weight=clone_weight)
+            if clone_weight is None:
+                recon_mse = recon_mse + self.mse(mu, raw_y)
+            else:
+                recon_mse = recon_mse + (((mu - raw_y) ** 2).mean(1) * clone_weight).sum() \
+                    / clone_weight.sum().clamp(min=1.0)
 
         recon_loss = recon_loss / max(1, num_samples)
         recon_mse = recon_mse / max(1, num_samples)
@@ -1500,6 +1521,8 @@ class CONCERT(nn.Module):
         if (self.lfc_lambda > 0 and self.lfc_targets is not None
                 and f_pert_shift is not None and is_real_KO is not None and niche_id is not None):
             ko = is_real_KO > 0.5
+            if clone_weight is not None:
+                ko = ko & (clone_weight > 0.5)                # gated-out spots carry no LFC signal
             pert_codes = cell_atts[:, 1].long()
             nid = niche_id.long()
             ko_idx = torch.where(ko)[0]
@@ -2055,6 +2078,9 @@ class CONCERT(nn.Module):
             if self.use_action_correction:
                 mu_action_clamped = torch.clamp(self.mu_action, -5.0, 5.0)
                 shift = hg_b.unsqueeze(1) * mu_action_clamped.unsqueeze(0)
+                if self.cf_guide_shift is not None:
+                    gsh = torch.clamp(self.cf_guide_shift.to(self.device, dtype=shift.dtype), -5.0, 5.0)
+                    shift = shift + hg_b.unsqueeze(1) * gsh.unsqueeze(0)
             niche_lat = gp_p_m if self.use_niche_interaction else None
             gate_state = torch.cat([gp_p_m, gs_mu], dim=-1).detach() if self.use_pert_gate else None
             # Diagnostic: _disable_fpert_field passes coords=None so _pert_log_shift_from_lord
@@ -2073,6 +2099,11 @@ class CONCERT(nn.Module):
                 para = paracrine_log_shift(self.graph, is_.long(), self.paracrine_radius,
                                            self.s_signature, pert_emb_table, clamp=self.f_pert_clamp)
                 shift = para if shift is None else (shift + para)
+            if self.cf_slide_bias is not None:
+                # training decodes every cell on slide s with slide_bias[s]; observed source
+                # spots carry it, so the prediction must too
+                sb = self.cf_slide_bias.to(self.device, dtype=torch.float32).unsqueeze(0).expand(B, -1)
+                shift = sb if shift is None else (shift + sb)
 
             zs = [dist.sample() for _ in range(max(1, n_samples))]
             mu_stack = []
@@ -2386,6 +2417,7 @@ class CONCERT(nn.Module):
         is_real_KO: Optional[np.ndarray] = None,  # (N,) float32 0/1 -- gene KO indicator
         niche_id: Optional[np.ndarray] = None,    # (N,) int -- niche bin id for LFC supervision (-1 = none)
         sample_id: Optional[np.ndarray] = None,   # (N,) int -- per-cell slide id (C2; None = single-slide)
+        clone_weight: Optional[np.ndarray] = None,  # (N,) float -- clonality gate weight (None = off)
         lr: float = 1e-3,
         weight_decay: float = 1e-3,
         batch_size: int = 512,
@@ -2456,6 +2488,12 @@ class CONCERT(nn.Module):
             np.asarray(sample_id) if sample_id is not None else np.zeros(_N),
             dtype=torch.long)
 
+        use_cw = clone_weight is not None
+        clone_w_t = torch.tensor(np.asarray(clone_weight, dtype=np.float32) if use_cw
+                                 else np.ones(_N, dtype=np.float32))
+        if use_cw and len(clone_weight) != _N:
+            raise ValueError(f"[train_model] clone_weight has {len(clone_weight)} rows, expected {_N}")
+
         # Ensure all array-like inputs are plain numpy arrays before tensoring
         _to_np = lambda a: a.values if hasattr(a, "values") else np.asarray(a)
         dataset = TensorDataset(
@@ -2472,6 +2510,7 @@ class CONCERT(nn.Module):
             is_real_KO_t,       # slot 10: is_real_KO float
             niche_id_t,         # slot 11: niche bin id (long, -1 = none)
             slide_id_t,         # slot 12: per-cell slide id (long, C2)
+            clone_w_t,          # slot 13: clonality gate weight (float)
         )
 
         is_ddp = world_size > 1
@@ -2546,7 +2585,7 @@ class CONCERT(nn.Module):
             # and bf16 precision causes NaN in encoder latent means.
             # fp32 on H100 is fast enough -- no autocast needed.
 
-            for xb, yb, yr, sf, si, ca, bt, cf, ip, hg, rk, ni, sid_b in train_loader:
+            for xb, yb, yr, sf, si, ca, bt, cf, ip, hg, rk, ni, sid_b, cw in train_loader:
                 xb = xb.to(self.device)
                 yb = yb.to(self.device)
                 yr = yr.to(self.device)
@@ -2560,6 +2599,7 @@ class CONCERT(nn.Module):
                 rk = rk.to(self.device)   # is_real_KO float
                 ni = ni.to(self.device, dtype=torch.long)   # niche bin id
                 sid_b = sid_b.to(self.device, dtype=torch.long)   # per-cell slide id (C2)
+                cw = cw.to(self.device) if use_cw else None       # clonality gate weight
 
                 with torch.autocast("cuda", enabled=False):
                     (
@@ -2583,6 +2623,7 @@ class CONCERT(nn.Module):
                         is_real_KO=rk,
                         niche_id=ni if self.lfc_lambda > 0 else None,
                         slide_index=sid_b,
+                        clone_weight=cw,
                     )
 
                 self.zero_grad(set_to_none=True)
@@ -2727,7 +2768,7 @@ class CONCERT(nn.Module):
             stop_flag = torch.tensor(0, device=self.device)
             if val_loader is not None:
                 val_elbo, val_n = 0.0, 0
-                for xb, yb, yr, sf, si, ca, bt, cf, ip, hg, rk, ni, sid_b in val_loader:
+                for xb, yb, yr, sf, si, ca, bt, cf, ip, hg, rk, ni, sid_b, cw in val_loader:
                     xb = xb.to(self.device)
                     yb = yb.to(self.device)
                     yr = yr.to(self.device)
@@ -2741,6 +2782,7 @@ class CONCERT(nn.Module):
                     rk = rk.to(self.device)
                     ni = ni.to(self.device, dtype=torch.long)
                     sid_b = sid_b.to(self.device, dtype=torch.long)   # per-cell slide id (C2)
+                    cw = cw.to(self.device) if use_cw else None
 
                     with torch.no_grad():
                         velbo, *_ = self.forward(
@@ -2758,6 +2800,7 @@ class CONCERT(nn.Module):
                             is_real_KO=rk,   # see train-loop note: f_pert gated by use_f_pert, not action
                             niche_id=ni if self.lfc_lambda > 0 else None,
                             slide_index=sid_b,
+                            clone_weight=cw,
                         )
                     val_elbo += float(velbo.item())
                     val_n += xb.shape[0]
