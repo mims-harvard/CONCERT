@@ -35,6 +35,16 @@ prediction is one Poisson draw at the measured library size and the LFC referenc
 source spots in both settings. `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark_v4.sh`
 carries the full flag list. The v3 scripts remain as the record of the earlier protocol.
 
+Every compared method is scored under that same draw. A competitor's predicted profile is
+converted to counts at each source cell's observed library size, drawn once from a Poisson, and
+returned to log-CP10K before the LFC is taken, so a prediction carries the count sparsity of the
+measurement it is scored against. The reference stays the measured source cells for every method.
+
+`diagnose_spatial_methods_unseen.py` reads the predicted LFC each method wrote for the cross-slide
+units and reports, beside the benchmark metrics, the RMSE of predicting no change, the predicted
+response magnitude relative to the observed one, the share of genes whose predicted LFC sits at the
+epsilon floor, and how much of a prediction is shared between different knockouts on one slide.
+
 ## Modules
 
 | File | Role |
@@ -54,4 +64,5 @@ carries the full flag list. The v3 scripts remain as the record of the earlier p
 | `spacseq_eval_common.py`, `spacseq_multi_common.py` | SPAC-seq data loading, slide handling, matching |
 | `perturbmap_common.py` | The same for the Perturb-seq sections |
 | `method_input_lib.py`, `train_manifest_lib.py` | Assemble the inputs and manifests an evaluation run needs |
+| `diagnose_spatial_methods_unseen.py` | Decomposes the cross-slide error of every method against the do-nothing prediction |
 | `make_umap.py` | Embedding plots used to inspect a checkpoint |
