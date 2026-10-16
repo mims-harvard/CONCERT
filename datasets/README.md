@@ -37,7 +37,7 @@ machine is wired up.
 | `03_dss_gut_case_study` | `dss_colitis/sections/` (MERFISH sections and `manifest.csv`), `dss_colitis/architecture/`, `dss_colitis/case_study/`, `dss_colitis/heldout_eval/` |
 | `04_kernel_interpretability` | `spacseq/kernel_params/`, `perturbfish/` |
 | `06_sensitivity_analysis` | `benchmark_assets/results/spacseq_sensitivity/`, `benchmark_assets/results/sensitivity_tables/` |
-| `07_stroke_case_study` | `stroke/slides/` (the PASTE2-aligned stacks), `stroke/Mouse_brain_stroke_all_data.h5` (ICA/PIA labels), `stroke/decodes_{2d,3d}/` |
+| `07_stroke_case_study` | `stroke/slides/` (the PASTE2-aligned stacks), `stroke/Mouse_brain_stroke_all_data.h5` (ICA/PIA labels), `stroke/decodes_{2d,3d}/` (decodes, gene axis `hvg_gene_names.txt`, lesion geometry `shape_sets/`) |
 | `08_deconvolution_imputation` | `deconvolution/spacseq_2-1/` (task 1) |
 
 ## Trained checkpoints
