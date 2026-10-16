@@ -134,9 +134,9 @@ names the configuration, the data and the output directory:
 
 | Dataset | Configuration file | Training script | Trained checkpoint |
 |---|---|---|---|
-| SPAC-seq | `models/concert_benchmark/configs/spacseq.yaml` | `experiments/01_spac_seq_benchmark/train/train_spac_seq.sh` | `checkpoints/spacseq_within_niche`, `checkpoints/spacseq_cross_slide` |
-| DSS colitis | `models/concert_temporal/configs/dss.yaml` | `experiments/03_dss_gut_case_study/train/train_dss.sh` | `checkpoints/dss_colitis` |
-| Perturb-map | `models/concert_benchmark/configs/perturbmap.yaml` | `experiments/02_perturb_seq_benchmark/train/train_perturb_seq.sh` | `checkpoints/perturbmap_within_niche`, `checkpoints/perturbmap_cross_slide` |
+| SPAC-seq | `models/concert_benchmark/configs/spacseq.yaml` | `experiments/01_spac_seq_benchmark/train/train.sh` | `checkpoints/spacseq_within_niche`, `checkpoints/spacseq_cross_slide` |
+| DSS colitis | `models/concert_temporal/configs/dss.yaml` | `experiments/03_dss_gut_case_study/train/train.sh` | `checkpoints/dss_colitis` |
+| Perturb-map | `models/concert_benchmark/configs/perturbmap.yaml` | `experiments/02_perturb_seq_benchmark/train/train.sh` | `checkpoints/perturbmap_within_niche`, `checkpoints/perturbmap_cross_slide` |
 
 **SPAC-seq** (five sections, within-niche setting):
 
@@ -148,12 +148,13 @@ python run_concert_spac.py --config configs/spacseq.yaml --stage train \
   --outdir $CONCERT_WORKDIR/spacseq_within_niche
 ```
 
-**DSS colitis** (all sections of the time course):
+**DSS colitis** (all sections of the time course, in the order of `manifest.csv`):
 
 ```bash
 cd models/concert_temporal
 python run_concert_spac.py --config configs/dss.yaml --stage train \
-  --multi_sample_files $(ls $CONCERT_DATA_DIR/dss_colitis/sections/*.h5ad | paste -sd,) \
+  --multi_sample_files $(awk -F, -v d=$CONCERT_DATA_DIR/dss_colitis/sections 'NR>1{print d"/"$1}' \
+      $CONCERT_DATA_DIR/dss_colitis/sections/manifest.csv | paste -sd,) \
   --arch_desc_dir $CONCERT_DATA_DIR/dss_colitis/architecture \
   --outdir $CONCERT_WORKDIR/dss_colitis
 ```
@@ -167,9 +168,9 @@ one the weights were trained with. Any flag on the command line overrides the fi
 The training scripts in the table are the commands of the reported runs:
 
 ```bash
-sbatch experiments/01_spac_seq_benchmark/train/train_spac_seq.sh seen
-sbatch experiments/03_dss_gut_case_study/train/train_dss.sh
-sbatch experiments/02_perturb_seq_benchmark/train/train_perturb_seq.sh seen
+sbatch experiments/01_spac_seq_benchmark/train/train.sh seen
+sbatch experiments/03_dss_gut_case_study/train/train.sh
+sbatch experiments/02_perturb_seq_benchmark/train/train.sh seen
 ```
 
 ### Example 2 - counterfactual prediction on chosen spots
