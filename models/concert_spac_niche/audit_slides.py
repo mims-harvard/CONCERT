@@ -48,4 +48,4 @@ print(f"Intersection: {len(inter):,}  (in ALL slides)")
 for i, n1 in enumerate(names):
     for n2 in names[i+1:]:
         shared = results[n1]["perts"] & results[n2]["perts"]
-        print(f"  {n1} ∩ {n2}: {len(shared):,}")
+        print(f"  {n1} & {n2}: {len(shared):,}")

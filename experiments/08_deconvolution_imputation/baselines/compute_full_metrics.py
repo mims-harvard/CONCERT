@@ -89,7 +89,7 @@ def main():
     assert imp_masked.shape[0] == len(masked_idx), "row mismatch"
     print(f"[{args.method}] imputed masked: {imp_masked.shape}")
 
-    # --- Unperturbed baseline: full-slide unassigned, EXCLUDING masked cells ---
+    # Unperturbed baseline: full-slide unassigned, EXCLUDING masked cells
     raw = anndata.read_h5ad(RAW_PATH)
     raw.var_names_make_unique()
     pert = raw.obs["perturbation"].values
@@ -108,7 +108,7 @@ def main():
 
     groups_unique = list(np.unique(masked_groups))
 
-    # --- E-distance ---
+    # E-distance
     np.random.seed(42)
     ed_rows = []
     for g in groups_unique:
@@ -120,14 +120,14 @@ def main():
     ed_df = pd.DataFrame(ed_rows)
     ed_df.to_csv(analysis_dir / "e_distance.csv", index=False)
 
-    # --- Null-aware LFC signature (local control + pure-control null + delta) ---
+    # Null-aware LFC signature (local control + pure-control null + delta)
     lfc_df = pm.compute_perturbation_table(
         gt_masked, imp_masked, masked_groups, masked_coords,
         gene_names, PERTURB_GROUPS,
     )
     lfc_df.to_csv(analysis_dir / "lfc_correlation.csv", index=False)
 
-    # --- SCC unpert vs obs/pred ---
+    # SCC unpert vs obs/pred
     sp_rows = []
     for g in PERTURB_GROUPS:
         m = masked_groups == g
@@ -142,7 +142,7 @@ def main():
     sp_df = pd.DataFrame(sp_rows)
     sp_df.to_csv(analysis_dir / "spearman_unpert_vs_pert.csv", index=False)
 
-    # --- Merge with main PCC/SCC/RMSE ---
+    # Merge with main PCC/SCC/RMSE
     imp_results = pd.read_csv(out_dir / "imputation_results.csv")
     summary = imp_results.merge(
         ed_df[ed_df["group"] != "OVERALL"][["group", "e_distance"]],

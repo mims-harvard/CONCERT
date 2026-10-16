@@ -55,9 +55,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# ---------------------------------------------------------------------------
 # Gradient Reversal Layer
-# ---------------------------------------------------------------------------
 class _GRL(torch.autograd.Function):
     """Gradient Reversal Layer (Ganin & Lempitsky, 2015).
 
@@ -79,9 +77,7 @@ def gradient_reversal(x: torch.Tensor, alpha: float = 1.0) -> torch.Tensor:
     return _GRL.apply(x, alpha)
 
 
-# ---------------------------------------------------------------------------
 # RBF-MMD
-# ---------------------------------------------------------------------------
 def _rbf_kernel(x: torch.Tensor, y: torch.Tensor, sigma: float) -> torch.Tensor:
     """Radial-basis-function (Gaussian) kernel: k(x,y) = exp(-||x-y||^2 / (2*sigma^2))."""
     diff = x.unsqueeze(1) - y.unsqueeze(0)          # (n, m, d)
@@ -100,7 +96,7 @@ def mmd_rbf(x: torch.Tensor, y: torch.Tensor, sigmas: tuple[float, ...] = (1.0, 
 
     Returns
     -------
-    Scalar MMD^2 (≥ 0; equals 0 iff P == Q).
+    Scalar MMD^2 (>= 0; equals 0 iff P == Q).
     """
     if x.shape[0] == 0 or y.shape[0] == 0:
         return x.new_zeros(())
@@ -114,9 +110,7 @@ def mmd_rbf(x: torch.Tensor, y: torch.Tensor, sigmas: tuple[float, ...] = (1.0, 
     return mmd / len(sigmas)
 
 
-# ---------------------------------------------------------------------------
 # PAD module
-# ---------------------------------------------------------------------------
 class PerturbActionDenoiser(nn.Module):
     """Perturbation Action Denoiser.
 
@@ -175,9 +169,7 @@ class PerturbActionDenoiser(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-    # ------------------------------------------------------------------
     # Forward: embed the is_perturbed flag
-    # ------------------------------------------------------------------
     def forward(self, is_perturbed: torch.Tensor) -> torch.Tensor:
         """Return action embedding for the given binary is_perturbed labels.
 
@@ -209,9 +201,7 @@ class PerturbActionDenoiser(nn.Module):
         idx = torch.zeros(n, dtype=torch.long, device=device)
         return self.action_embedding(idx)
 
-    # ------------------------------------------------------------------
     # Loss terms
-    # ------------------------------------------------------------------
     def adversarial_loss(
         self,
         z_basal: torch.Tensor,
@@ -296,9 +286,7 @@ class PerturbActionDenoiser(nn.Module):
         self.grl_alpha = alpha
 
 
-# ---------------------------------------------------------------------------
 # GRL alpha schedule (Ganin et al. 2015 ramp)
-# ---------------------------------------------------------------------------
 def grl_alpha_schedule(epoch: int, max_epochs: int, gamma: float = 10.0) -> float:
     """Smoothly ramp GRL alpha from ~0 to 1 over training.
 

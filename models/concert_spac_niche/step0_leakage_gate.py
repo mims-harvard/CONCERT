@@ -83,7 +83,7 @@ def main():
     model.eval()
     del adata
 
-    # ---- restrict to has-guide cells (NTC + KO); the LFC set ----
+    # restrict to has-guide cells (NTC + KO); the LFC set
     sub = np.where(has_guide)[0]
     sub.sort()
     logging.info("has-guide cells (NTC+KO): %d", len(sub))
@@ -108,7 +108,7 @@ def main():
     pert = perturb_raw[sub]
     cc = coords[sub]
 
-    # ---- niche grid ----
+    # niche grid
     step = args.loc_range / args.niche_grid
     bx = np.clip((cc[:, 0] / step).astype(int), 0, args.niche_grid - 1)
     by = np.clip((cc[:, 1] / step).astype(int), 0, args.niche_grid - 1)

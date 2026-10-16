@@ -84,7 +84,7 @@ fig = plt.figure(figsize=(15.0, 9.2))
 gs = fig.add_gridspec(2, 3, width_ratios=[1.3, 1.3, 1.0], height_ratios=[1.0, 1.15],
                       hspace=0.42, wspace=0.30, left=0.06, right=0.97, top=0.90, bottom=0.08)
 
-# --- A: per-cell Pearson, per mouse ---
+# A: per-cell Pearson, per mouse
 axA = fig.add_subplot(gs[0, 0])
 axA.bar(x, [r["pearson"] for r in rows], color=cols, edgecolor="white", lw=0.8, zorder=2)
 axA.axhline(0, color=ps.INK, lw=1.4, zorder=3)
@@ -100,7 +100,7 @@ axA.set_ylim(-0.04, 0.78); axA.set_xlim(-0.7, n_mice - 0.3)
 axA.xaxis.grid(False)
 ps.panel_label(axA, "A")
 
-# --- B: calibrated RMSE vs the best constant, paired ---
+# B: calibrated RMSE vs the best constant, paired
 axB = fig.add_subplot(gs[0, 1])
 for i, r in enumerate(rows):
     win = r["rmse_affine"] < r["rmse_const"]
@@ -122,7 +122,7 @@ axB.legend(handles=[
     loc="upper left", fontsize=8.5)
 ps.panel_label(axB, "B")
 
-# --- C: the calibration ladder ---
+# C: the calibration ladder
 axC = fig.add_subplot(gs[0, 2])
 lbls = [l for l, _ in LADDER]
 vals = [wins[k] for _, k in LADDER]
@@ -138,7 +138,7 @@ axC.set_title("Calibration ladder\n(every fit leave-one-mouse-out)")
 axC.xaxis.grid(False)
 ps.panel_label(axC, "C", dx=-0.16)
 
-# --- D: one mouse, per-cell ---
+# D: one mouse, per-cell
 axD = fig.add_subplot(gs[1, :2])
 r = next(r for r in rows if r["mouse"] == FEATURED)
 mm = mouse == FEATURED
@@ -160,7 +160,7 @@ cb.set_label("cells (log scale)", fontsize=9)
 cb.outline.set_visible(False)
 ps.panel_label(axD, "D", dx=-0.065, dy=1.05)
 
-# --- caption block ---
+# caption block
 axT = fig.add_subplot(gs[1, 2]); axT.axis("off"); axT.grid(False)
 axT.text(0.0, 1.0,
          f"$\\bf{{Leave\\ one\\ mouse\\ out\\ imputation}}$\n"

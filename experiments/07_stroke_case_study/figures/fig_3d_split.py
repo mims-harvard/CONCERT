@@ -91,7 +91,7 @@ npt, nsh = norm(xy_pt), norm(xy_sh)
 nsec = int(sec_pt.max()) + 1
 thr = float(np.quantile(pred, 1.0 - float(o_any.mean())))
 
-# --- figure 1: slides only ---
+# figure 1: slides only
 fig, ax = plt.subplots(2, nsec, figsize=(2.5 * nsec + 1.7, 5.4), squeeze=False)
 vo = [float(np.quantile(obs, .03)), float(np.quantile(obs, SAT_Q))]
 vp = [0.0, float(np.quantile(pred, SAT_Q))]
@@ -122,7 +122,7 @@ for ext in ("png", "pdf"):
     fig.savefig(figdir / f"fig_stroke_across_slides_{a.arm}_slides.{ext}", dpi=300)
 plt.close(fig)
 
-# --- figure 2: evidence only ---
+# figure 2: evidence only
 figb, axb = plt.subplots(figsize=(1.35 * nsec + 2.6, 4.0))
 x = np.arange(nsec); w = 0.36
 axb.bar(x - w/2, fo, w, color=paper_style.ACCENT, label="Observed")

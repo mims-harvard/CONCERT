@@ -52,9 +52,7 @@ sys.path.insert(0, str(SPAIM_SRC))
 from model import Imputation, ImputeModule
 
 
-# ============================================================
 # Paths
-# ============================================================
 SPAC_DIR = Path(
     "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
     "/SpatialScope/test_output/spac_2-2"
@@ -117,9 +115,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# ============================================================
 # Data Loading
-# ============================================================
 def load_data():
     """Load Phase 1 outputs: sp_adata, ground_truth, mask_info, reference."""
     log("Loading Phase 1 data...")
@@ -184,9 +180,7 @@ def load_context_pool(hvg_names: list, n_context: int = 0, seed: int = 1234):
     return ctx_expr, ctx_coords
 
 
-# ============================================================
 # SpaIM Data Preparation
-# ============================================================
 def aggregate_by_cell_type(adata, cell_type_col="cell_type"):
     """Aggregate expression by cell type (mean per cell type per gene).
 
@@ -226,7 +220,7 @@ def prepare_spaim_data(sp_adata, ref_adata, role, args):
     """
     log("Preparing SpaIM data...")
 
-    # --- Spatial: non-masked cells, convert to log1p ---
+    # Spatial: non-masked cells, convert to log1p
     non_masked_idx = np.where(role != 1)[0]
     st_X = sp_adata.X
     if issparse(st_X):
@@ -234,7 +228,7 @@ def prepare_spaim_data(sp_adata, ref_adata, role, args):
     st_data = np.log1p(st_X[non_masked_idx]).astype(np.float32)
     log(f"  Spatial (non-masked, log1p): {st_data.shape}")
 
-    # --- Reference: log1p then aggregate by cell type ---
+    # Reference: log1p then aggregate by cell type
     ref_X = ref_adata.X
     if issparse(ref_X):
         ref_X = ref_X.toarray()
@@ -248,7 +242,7 @@ def prepare_spaim_data(sp_adata, ref_adata, role, args):
     sc_agg, _, n_ct = aggregate_by_cell_type(ref_temp, "cell_type")
     log(f"  scRNA aggregated (log1p): ({n_ct}, {sc_agg.shape[1]})")
 
-    # --- Gene split: random train/val ---
+    # Gene split: random train/val
     n_genes = sp_adata.shape[1]
     all_gene_names = list(sp_adata.var_names)
     gene_indices = np.arange(n_genes)
@@ -262,9 +256,7 @@ def prepare_spaim_data(sp_adata, ref_adata, role, args):
     return sc_agg, st_data, train_genes_idx, val_genes_idx, all_gene_names, non_masked_idx, n_ct
 
 
-# ============================================================
 # SpaIM Training Dataset
-# ============================================================
 class SpaIMGeneDataset(Dataset):
     """Dataset where each sample is a gene.
 
@@ -313,9 +305,7 @@ class SpaIMInferenceDataset(Dataset):
         return seq_x, st_style
 
 
-# ============================================================
 # Data Augmentation (from SpaIM)
-# ============================================================
 def data_augmentation(data1, data2, data3, times=4, zero_fraction=0.5):
     """SpaIM's data augmentation: replicate with random zero masking."""
     all_data = [data1]
@@ -332,9 +322,7 @@ def data_augmentation(data1, data2, data3, times=4, zero_fraction=0.5):
     )
 
 
-# ============================================================
 # Training
-# ============================================================
 def train_spaim(sc_agg, st_data, train_genes_idx, n_cell_types, args):
     """Train SpaIM model.
 
@@ -414,9 +402,7 @@ def train_spaim(sc_agg, st_data, train_genes_idx, n_cell_types, args):
     return model, opt
 
 
-# ============================================================
 # Inference
-# ============================================================
 def run_inference(model, sc_agg, all_gene_indices, args):
     """Run SpaIM inference on specified genes.
 
@@ -456,9 +442,7 @@ def run_inference(model, sc_agg, all_gene_indices, args):
     return predictions
 
 
-# ============================================================
 # K-NN Spatial Interpolation (with background cells)
-# ============================================================
 def impute_masked_cells_knn(
     predictions, sp_adata, role, k=20,
     bg_expr=None, bg_coords=None,
@@ -545,9 +529,7 @@ def impute_masked_cells_knn(
     return imputed_counts
 
 
-# ============================================================
 # Evaluation
-# ============================================================
 def evaluate_imputation(imputed, ground_truth, role, group):
     """Evaluate imputed expression against ground truth for masked cells.
 
@@ -612,9 +594,7 @@ def evaluate_imputation(imputed, ground_truth, role, group):
     return pd.DataFrame(results)
 
 
-# ============================================================
 # Main
-# ============================================================
 def main():
     args = parse_args()
     log("=" * 60)
@@ -629,16 +609,16 @@ def main():
     seed_everything(args.random_seed)
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    # --- Phase 1: Load data ---
+    # Phase 1: Load data
     sp_adata, ground_truth, role, group, ref_adata = load_data()
 
-    # --- Phase 2: Prepare SpaIM data ---
+    # Phase 2: Prepare SpaIM data
     (
         sc_agg, st_data, train_genes_idx, val_genes_idx,
         all_gene_names, non_masked_idx, n_cell_types,
     ) = prepare_spaim_data(sp_adata, ref_adata, role, args)
 
-    # --- Phase 3: Train SpaIM ---
+    # Phase 3: Train SpaIM
     model, opt = train_spaim(
         sc_agg, st_data, train_genes_idx, n_cell_types, args,
     )
@@ -648,25 +628,25 @@ def main():
     model.save(str(model_path))
     log(f"Model saved to {model_path}")
 
-    # --- Phase 4: Inference on ALL genes ---
+    # Phase 4: Inference on ALL genes
     all_genes_idx = np.arange(len(all_gene_names))
     predictions = run_inference(model, sc_agg, all_genes_idx, args)
 
-    # --- Phase 4.5: Load honest spatial-context pool (~324k observed cells) ---
+    # Phase 4.5: Load honest spatial-context pool (~324k observed cells)
     bg_expr, bg_coords = load_context_pool(
         all_gene_names, n_context=args.n_context, seed=args.random_seed,
     )
 
-    # --- Phase 5: K-NN imputation over experiment + full context pool ---
+    # Phase 5: K-NN imputation over experiment + full context pool
     imputed_counts = impute_masked_cells_knn(
         predictions, sp_adata, role, k=args.k_neighbors,
         bg_expr=bg_expr, bg_coords=bg_coords,
     )
 
-    # --- Phase 6: Evaluate ---
+    # Phase 6: Evaluate
     results_df = evaluate_imputation(imputed_counts, ground_truth, role, group)
 
-    # --- Save results ---
+    # Save results
     results_path = OUT_DIR / "imputation_results.csv"
     results_df.to_csv(results_path, index=False)
     log(f"Results saved to {results_path}")

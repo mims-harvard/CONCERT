@@ -39,7 +39,7 @@ import numpy as np
 import pandas as pd
 
 
-# --- constants ---
+# constants
 LABEL_MULTIPLE   = "multiple"
 LABEL_UNASSIGNED = "unassigned"
 LABEL_CONTROL    = "control"
@@ -50,7 +50,7 @@ REASON_RARE      = "rare_target"
 REASON_LOW_EXPR  = "low_expr"
 
 
-# --- core filter logic ---
+# core filter logic
 def compute_filter_vectors(
     perturbation: np.ndarray,      # (N,) str array of perturbation labels
     n_counts: np.ndarray,          # (N,) int/float total UMI per spot
@@ -80,7 +80,7 @@ def compute_filter_vectors(
     N = len(perturbation)
     assert len(n_counts) == N and len(n_genes) == N
 
-    # --- count spots per target (gene-KO targets only) ---
+    # count spots per target (gene-KO targets only)
     # "unassigned" is a valid clear label, not a gene-KO target, so exclude from count
     NON_GENE_KO = {LABEL_MULTIPLE, LABEL_UNASSIGNED, LABEL_CONTROL}
     gene_ko_mask = ~np.isin(perturbation, list(NON_GENE_KO))
@@ -93,7 +93,7 @@ def compute_filter_vectors(
     for i, lbl in enumerate(perturbation):
         target_n_spots[i] = target_counts.get(lbl, 0)
 
-    # --- assign filter_reason (first failing rule wins) ---
+    # assign filter_reason (first failing rule wins)
     filter_reason = np.full(N, REASON_PASS, dtype=object)
 
     # Rule 1: multiple -- unclear state, always removed
@@ -109,7 +109,7 @@ def compute_filter_vectors(
     low_expr = still_pass & ((n_counts < min_counts) | (n_genes < min_genes))
     filter_reason[low_expr] = REASON_LOW_EXPR
 
-    # --- derived columns ---
+    # derived columns
     filter_pass = (filter_reason == REASON_PASS).astype(bool)
 
     # is_baseline: clear unperturbed reference -- both control and unassigned
@@ -173,7 +173,7 @@ def print_filter_summary(sample: str, perturbation: np.ndarray,
     print()
 
 
-# --- h5ad I/O ---
+# h5ad I/O
 def read_perturbation_and_qc(h5ad_path: Path):
     """Read perturbation labels, n_counts, n_genes from h5ad via h5py (no full X load)."""
     with h5py.File(h5ad_path, "r") as f:
@@ -213,7 +213,7 @@ def write_filter_columns(h5ad_path: Path, df: pd.DataFrame) -> None:
                            data=df["is_perturbed_pad"].values.astype(np.uint8))
 
 
-# --- CLI ---
+# CLI
 def parse_args():
     p = argparse.ArgumentParser(
         description="Add SPAC-seq filter columns to h5ad files.",

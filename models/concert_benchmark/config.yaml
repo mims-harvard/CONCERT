@@ -1,6 +1,6 @@
-# CONCERT-spac config — Visium HD CRISPR screen (SPAC-seq)
+# CONCERT-spac config -- Visium HD CRISPR screen (SPAC-seq)
 #
-# Integrated model — all components enabled by default.
+# Integrated model -- all components enabled by default.
 # To ablate a component, set the corresponding flag to false.
 
 maxiter: 5000
@@ -28,18 +28,18 @@ multi_kernel_mode: true
 fix_inducing_points: true
 fixed_gp_params: false
 
-# ── HVG selection (var['hvg_rank'] <= hvg_max_rank) ──────────────────────────
+# HVG selection (var['hvg_rank'] <= hvg_max_rank)
 hvg_max_rank: 10000
 
-# ── Explicit action correction (conceptual centerpiece) ────────────
-# 3-term decoder: log μ = f_basal + 𝟙[has_guide]·μ_action + 𝟙[is_real_KO]·f_pert
+# Explicit action correction (conceptual centerpiece)
+# 3-term decoder: log mu = f_basal + 1[has_guide]*mu_action + 1[is_real_KO]*f_pert
 use_action_correction: true
 
-# ── PAD — downgraded to soft regularizer (main removal via μ_action above) ────
+# PAD -- downgraded to soft regularizer (main removal via mu_action above)
 use_pad: true
 pad_action_dim: 64
-pad_lambda_mmd: 0.1   # was 1.0 — reduced to avoid over-suppression
-pad_lambda_adv: 0.01  # was 0.1 — reduced to avoid over-suppression
+pad_lambda_mmd: 0.1   # was 1.0 -- reduced to avoid over-suppression
+pad_lambda_adv: 0.01  # was 0.1 -- reduced to avoid over-suppression
 
-# ── SPAC-seq batch size for H100 ──────────────────────────────────────────────
+# SPAC-seq batch size for H100
 batch_size: 2048

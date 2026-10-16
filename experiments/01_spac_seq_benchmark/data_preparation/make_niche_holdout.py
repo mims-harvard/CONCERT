@@ -99,7 +99,7 @@ def main():
             if b < 0:
                 continue
             sel = una_local[una_bin == b]                   # unassigned cells in niche b
-            # Cap: hold out only the source cells the eval predicts on (≤ max_per_niche),
+            # Cap: hold out only the source cells the eval predicts on (<= max_per_niche),
             # deterministic (seed 42+b, matching eval's subsample convention).
             if args.max_per_niche > 0 and len(sel) > args.max_per_niche:
                 rng = np.random.default_rng(42 + int(b))

@@ -704,7 +704,7 @@ def make_lfc_scatter(n_hvg: int = 200):
             f"HVG corr={hvg_corr:.3f}"
         )
 
-    # --- per-KO facet scatter (same order as LFC Spearman bar: best -> left) ---
+    # per-KO facet scatter (same order as LFC Spearman bar: best -> left)
     panel_order = [
         r["group"]
         for r in sorted(rows, key=lambda r: -r["lfc_spearman"])
@@ -748,7 +748,7 @@ def make_lfc_scatter(n_hvg: int = 200):
     plt.close(fig)
     print("Wrote", out_facet)
 
-    # --- pooled scatter, colored by KO ---
+    # pooled scatter, colored by KO
     fig, ax = plt.subplots(figsize=(5.2, 5.0))
     all_o, all_m = [], []
     for g in KO_ORDER:

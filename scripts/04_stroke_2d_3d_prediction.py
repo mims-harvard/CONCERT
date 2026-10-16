@@ -249,7 +249,7 @@ def _style():
 
 
 def step_spatial(env, out):
-    """Section-by-section figure: measured beside predicted, with both region maps."""
+    """Section-by-section figure per gene: measured beside predicted, with both region maps."""
     import numpy as np
     import matplotlib.pyplot as plt
     from matplotlib.colors import ListedColormap
@@ -257,52 +257,51 @@ def step_spatial(env, out):
     ps = _style()
     core_c, rim_c, other_c = "#b2182b", "#ef8a62", "#dcdcdc"
     npt, nsh = norm_xy(env["xy_pt"]), norm_xy(env["xy_sh"])
-    gene = env["gene"]
+    for gene in env["gene"]:
+        for arm in env["arms_plot"]:
+            p = env["PRED"][arm]
+            if gene not in set(env["genes_obs"].tolist()) or gene not in set(p["genes"].tolist()):
+                raise KeyError(f"{gene} is not on both gene axes")
+            ov = env["L_pt"][:, int(np.where(env["genes_obs"] == gene)[0][0])]
+            pv = p["delta"][:, int(np.where(p["genes"] == gene)[0][0])]
+            keep = env["sections"] if env["sections"] is not None \
+                else list(range(int(env["sec_pt"].max()) + 1))
 
-    for arm in env["arms_plot"]:
-        p = env["PRED"][arm]
-        if gene not in set(env["genes_obs"].tolist()) or gene not in set(p["genes"].tolist()):
-            raise KeyError(f"{gene} is not on both gene axes")
-        ov = env["L_pt"][:, int(np.where(env["genes_obs"] == gene)[0][0])]
-        pv = p["delta"][:, int(np.where(p["genes"] == gene)[0][0])]
-        keep = env["sections"] if env["sections"] is not None \
-            else list(range(int(env["sec_pt"].max()) + 1))
+            reg_cmap = ListedColormap([other_c, rim_c, core_c])
+            o_reg = np.where(env["o_core"], 2, np.where(env["o_rim"], 1, 0))
+            p_reg = np.where(p["core"], 2, np.where(p["rim"], 1, 0))
+            vo, vp = np.quantile(ov, [.03, .97]), np.quantile(pv, [.03, .97])
 
-        reg_cmap = ListedColormap([other_c, rim_c, core_c])
-        o_reg = np.where(env["o_core"], 2, np.where(env["o_rim"], 1, 0))
-        p_reg = np.where(p["core"], 2, np.where(p["rim"], 1, 0))
-        vo, vp = np.quantile(ov, [.03, .97]), np.quantile(pv, [.03, .97])
-
-        fig, ax = plt.subplots(4, len(keep), figsize=(2.5 * len(keep) + 2.0, 10.0), squeeze=False)
-        for ci, s in enumerate(keep):
-            mp, ms = env["sec_pt"] == s, env["sec_sh"] == s
-            h0 = ax[0, ci].scatter(npt[mp, 0], npt[mp, 1], c=ov[mp], s=2.6, lw=0,
-                                   cmap=ps.FIELD_CMAP, vmin=vo[0], vmax=vo[1], rasterized=True)
-            h1 = ax[1, ci].scatter(nsh[ms, 0], nsh[ms, 1], c=pv[ms], s=2.6, lw=0,
-                                   cmap=ps.FIELD_CMAP, vmin=vp[0], vmax=vp[1], rasterized=True)
-            ax[2, ci].scatter(npt[mp, 0], npt[mp, 1], c=o_reg[mp], s=2.6, lw=0,
-                              cmap=reg_cmap, vmin=0, vmax=2, rasterized=True)
-            ax[3, ci].scatter(nsh[ms, 0], nsh[ms, 1], c=p_reg[ms], s=2.6, lw=0,
-                              cmap=reg_cmap, vmin=0, vmax=2, rasterized=True)
-            for r in range(4):
-                ax[r, ci].set_xticks([]); ax[r, ci].set_yticks([])
-                ax[r, ci].set_aspect("equal"); ax[r, ci].grid(False)
-                for sp in ax[r, ci].spines.values():
-                    sp.set_visible(False)
-            ax[3, ci].set_xlabel(f"Section {s + 1}", fontsize=13)
-        for r, lab in enumerate(["Measured\n(stroke animal)", "Predicted\n(sham animal)",
-                                 "Measured regions", "Imposed regions"]):
-            ax[r, 0].set_ylabel(lab, fontsize=12, labelpad=6)
-        fig.subplots_adjust(wspace=0.02, hspace=0.02, left=0.12, right=0.87, top=0.99, bottom=0.06)
-        for h, arow, lb in ((h0, ax[0, -1], f"measured {gene}"),
-                            (h1, ax[1, -1], "predicted induction")):
-            po = arow.get_position(); pad = 0.12 * po.height
-            cax = fig.add_axes([0.885, po.y0 + pad, 0.016, po.height - 2 * pad])
-            cb = fig.colorbar(h, cax=cax); cb.set_label(lb, fontsize=11, labelpad=2)
-            cb.ax.tick_params(labelsize=9); cb.set_ticks([cb.vmin, cb.vmax])
-        p_out = out / f"spatial_{arm}_{gene}.pdf"
-        fig.savefig(p_out, dpi=300); plt.close(fig)
-        print("written", p_out)
+            fig, ax = plt.subplots(4, len(keep), figsize=(2.5 * len(keep) + 2.0, 10.0), squeeze=False)
+            for ci, s in enumerate(keep):
+                mp, ms = env["sec_pt"] == s, env["sec_sh"] == s
+                h0 = ax[0, ci].scatter(npt[mp, 0], npt[mp, 1], c=ov[mp], s=2.6, lw=0,
+                                       cmap=ps.FIELD_CMAP, vmin=vo[0], vmax=vo[1], rasterized=True)
+                h1 = ax[1, ci].scatter(nsh[ms, 0], nsh[ms, 1], c=pv[ms], s=2.6, lw=0,
+                                       cmap=ps.FIELD_CMAP, vmin=vp[0], vmax=vp[1], rasterized=True)
+                ax[2, ci].scatter(npt[mp, 0], npt[mp, 1], c=o_reg[mp], s=2.6, lw=0,
+                                  cmap=reg_cmap, vmin=0, vmax=2, rasterized=True)
+                ax[3, ci].scatter(nsh[ms, 0], nsh[ms, 1], c=p_reg[ms], s=2.6, lw=0,
+                                  cmap=reg_cmap, vmin=0, vmax=2, rasterized=True)
+                for r in range(4):
+                    ax[r, ci].set_xticks([]); ax[r, ci].set_yticks([])
+                    ax[r, ci].set_aspect("equal"); ax[r, ci].grid(False)
+                    for sp in ax[r, ci].spines.values():
+                        sp.set_visible(False)
+                ax[3, ci].set_xlabel(f"Section {s + 1}", fontsize=13)
+            for r, lab in enumerate(["Measured\n(stroke animal)", "Predicted\n(sham animal)",
+                                     "Measured regions", "Imposed regions"]):
+                ax[r, 0].set_ylabel(lab, fontsize=12, labelpad=6)
+            fig.subplots_adjust(wspace=0.02, hspace=0.02, left=0.12, right=0.87, top=0.99, bottom=0.06)
+            for h, arow, lb in ((h0, ax[0, -1], f"measured {gene}"),
+                                (h1, ax[1, -1], "predicted induction")):
+                po = arow.get_position(); pad = 0.12 * po.height
+                cax = fig.add_axes([0.885, po.y0 + pad, 0.016, po.height - 2 * pad])
+                cb = fig.colorbar(h, cax=cax); cb.set_label(lb, fontsize=11, labelpad=2)
+                cb.ax.tick_params(labelsize=9); cb.set_ticks([cb.vmin, cb.vmax])
+            p_out = out / f"spatial_{arm}_{gene}.pdf"
+            fig.savefig(p_out, dpi=300); plt.close(fig)
+            print("written", p_out)
 
 
 def _depth_of(xy, inside):
@@ -443,7 +442,8 @@ def main():
                          "(about 20 min per arm, GPU)")
     ap.add_argument("--arms", nargs="+", choices=["2d", "3d"], default=["2d"],
                     help="arms to re-decode with --run-decode")
-    ap.add_argument("--gene", default="Gm42418", help="gene for the spatial figure")
+    ap.add_argument("--gene", nargs="+", default=["Lcn2", "Lgals1"],
+                    help="genes for the spatial figure (default: the injury markers Lcn2 and Lgals1)")
     ap.add_argument("--sections", nargs="+", type=int, default=None,
                     help="sections for the spatial figure (default: all four)")
     ap.add_argument("--outdir", default=None, help="default: $CONCERT_WORKDIR/04_stroke")

@@ -38,7 +38,7 @@ from make_umap import load_data, build_model as build_umap_model
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
-# --- Config ---
+# Config
 DATA_FILE  = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
 MODEL_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/src/CONCERT-spac/outputs/raw_output_1-1/model_spac_1-1_v2.pt"
 OUTDIR     = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/analysis/umap_v2"
@@ -62,7 +62,7 @@ def parse_args():
     return p.parse_args()
 
 
-# --- Extract diagnostics ---
+# Extract diagnostics
 def get_kernel_scales(model):
     """(n_batch, 2) learned Cauchy spatial scales."""
     return model.svgp.kernel.scale.detach().cpu().float().numpy().clip(1e-6, 1e6)
@@ -85,7 +85,7 @@ def get_mu_action(model):
     return None
 
 
-# --- Plot helpers ---
+# Plot helpers
 def _cmap(n):
     return [to_hex(plt.cm.tab20(i % 20)) for i in range(n)]
 
@@ -147,7 +147,7 @@ def plot_spatial_cells(ax, pos_scaled, perturb_idx, pert_names, top_codes, title
     ax.set_aspect("equal")
 
 
-# --- Main ---
+# Main
 def main():
     args   = parse_args()
     outdir = Path(args.outdir)

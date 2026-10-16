@@ -154,7 +154,7 @@ def main():
     Yobs = np.asarray(Yobs.todense() if hasattr(Yobs, "todense") else Yobs, dtype=np.float32)
     logging.info("N=%d pert_name=%s", N, pert_name)
 
-    # --- patches (model-row space via cell_index permutation) ---
+    # patches (model-row space via cell_index permutation)
     P = np.load(args.patch_file, allow_pickle=True)
     ci = P["cell_index"].astype(int)            # patch-row -> model-row
     role = P["role"]; pid = P["patch_id"]; tbin = P["target_bin"]
@@ -203,7 +203,7 @@ def main():
     with open(os.path.join(args.outdir, "basal_patch_lfc.json"), "w") as f:
         json.dump(out, f, indent=2)
 
-    # --- table ---
+    # table
     print("\n===== perturbmap basal-field gate: per-patch footprint Spearman (pred vs observed KO-vs-ctrl@target_bin) =====")
     hdr = "patch  gene    tbin niche  nsrc nko nct |" + "".join(f" {f:>8s}" for f in args.fields)
     print(hdr)

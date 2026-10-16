@@ -5,8 +5,8 @@ retrains anything: every notebook loads a `model.pt` and runs inference.
 
 | Notebook | What it reproduces | Checkpoints |
 |---|---|---|
-| [`01_spac_seq_benchmark.ipynb`](01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark, both settings, and the comparison against the published methods | `ms_spac1_niche_seen_lsfix`, `ms_spac1_niche_unseen_lsfix` |
-| [`02_perturb_map_benchmark.ipynb`](02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay | `ms_pmap_niche_seen_bandI`, `ms_pmap_niche_unseen_bandI` |
+| [`01_spac_seq_benchmark.ipynb`](01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark (v4), both settings, and the comparison against the published methods and the reference strategies | `ms_spac1_niche_seen_clonegate_v4`, `ms_spac1_niche_unseen_clonegate_v4` |
+| [`02_perturb_map_benchmark.ipynb`](02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay, scored with the v4 reference | `ms_pmap_niche_seen_bandI`, `ms_pmap_niche_unseen_bandI` |
 | [`03_dss_colitis_per_mouse_marker_trend.ipynb`](03_dss_colitis_per_mouse_marker_trend.ipynb) | The inflammation marker trajectory of each animal over the DSS time course - a longitudinal curve for animals measured once | `dss_timekernel_markersign_timefield_fixedt` |
 | [`04_stroke_2d_and_3d_prediction.ipynb`](04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, in a 2D and a 3D arm, against the measured lesion | `stroke_2d_cr`, `stroke_3d_cr` |
 
@@ -68,8 +68,9 @@ still come out.
 * the data described in each experiment's `README.md` under `../experiments/`;
 * two helper modules (`eval_utils`, `spac_edist_align`) from the evaluation working tree at
   `$CONCERT_HELPER_LIB`, which the scoring code imports by absolute path;
-* the reference tables under `$CONCERT_PAPER_NUMBERS`, used to check the reproduced numbers
-  against the reported ones.
+* the reported tables, used to check the reproduced numbers against the reported ones:
+  `$CONCERT_SCORING_LIB/v4_aggregate_sampled/` (01), `$CONCERT_SCORING_LIB/multi_pm_ho_v4/` (02)
+  and `$CONCERT_PAPER_NUMBERS` (03, 04).
 
 Every path is resolved and existence-checked in the first code cell of each notebook, so a
 missing input is reported there rather than three cells later.

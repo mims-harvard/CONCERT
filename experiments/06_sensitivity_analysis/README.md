@@ -28,7 +28,7 @@ time, everything else held fixed:
 
 Plus a **seed band**: five runs of the published configuration, differing only in seed. Nothing
 can be called an effect unless it leaves that band. Metrics are the two benchmark metrics, LFC
-rank correlation and LFC RMSE - no E-distance, no R², no PCC.
+rank correlation and LFC RMSE - no E-distance, no R^2, no PCC.
 
 The radius knob selects a scale-aware variant of the Moran term; it is *not* a disentanglement
 strength, and should not be described as one in reader-facing text. Two further knobs that look
@@ -47,7 +47,7 @@ panel of pure noise.
    `arm.json` manifest beside its checkpoint, because the checkpoints themselves are bare state
    dicts with no record of the configuration that produced them.
 2. **Aggregate.** `agg_sens_pmap.py` / `agg_sens_spac.py` walk the result trees and emit one tidy
-   row per arm × slide × perturbation. The SPAC-seq sweep straddles two storage roots because it
+   row per arm x slide x perturbation. The SPAC-seq sweep straddles two storage roots because it
    was moved mid-flight; the aggregator scans both and the first root holding a *complete* arm
    wins, so a half-written duplicate never shadows a finished one.
 3. **Plot.** `plot_sens_pmap.py` / `plot_sens_spac.py` write one figure per metric, plus a

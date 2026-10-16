@@ -112,7 +112,7 @@ print(f"[exemplars] residual rule, cell band [{_band.n_cells_total.min():.0f}, "
 print("[exemplars] dispersed:", list(hi["perturbation"]), " compact:", list(lo["perturbation"]))
 
 
-# ------------------------------------------------------------------- fig 1 -----
+# fig 1
 # 2 rows (one per learned knob) x 3 cols (distribution, then the two surviving descriptors).
 fig, axes = plt.subplots(2, 3, figsize=(16.2, 9.0))
 stats1 = {}
@@ -151,7 +151,7 @@ rho_cells_ls, p_cells_ls = spearmanr(b["ls_footprint"], b["n_cells_total"])
 print("[fig1] done")
 
 
-# ------------------------------------------------------------------- fig 3 -----
+# fig 3
 # Raw vs exposure-corrected, for BOTH knobs. Shows the correction is what creates the
 # occupancy/NNI result for the gain, and that it does not manufacture the lengthscale one.
 F3 = ["occupancy_frac", "nni", "radius_gyration", "mean_patch_size", "singleton_frac",
@@ -180,7 +180,7 @@ plt.close(fig)
 print("[fig3] done")
 
 
-# ------------------------------------------------------------------- fig 2 -----
+# fig 2
 def read_obs_str(f_obs, col):
     o = f_obs[col]
     if isinstance(o, h5py.Group) and "codes" in o and "categories" in o:
@@ -289,7 +289,7 @@ fig.savefig(os.path.join(OUT, "fig2_exemplar_maps.png"), dpi=200, bbox_inches="t
 plt.close(fig)
 print("[fig2] done")
 
-# ------------------------------------------------------------ companions -------
+# companions
 summ = b[["perturbation", "g_scale_niche", "ls_footprint", "eff_lengthscale", "n_cells_total",
           "nni", "occupancy_frac", "radius_gyration", "mean_patch_size", "singleton_frac",
           "n_patches_per_slide", "local_density", "max_patch_frac", "emb_l2"]]

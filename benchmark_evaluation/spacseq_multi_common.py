@@ -62,7 +62,7 @@ def add_random_patch_args(p):
     )
     p.add_argument(
         "--n_patch_boot", type=int, default=DEFAULT_N_PATCH_BOOT,
-        help="Resample random patch this many times for variance (uses mean±patch SD)",
+        help="Resample random patch this many times for variance (uses mean+/-patch SD)",
     )
     p.add_argument("--patch_boot_seed", type=int, default=1234)
 
@@ -687,12 +687,12 @@ def niche_lfc_seen_holdout_loop(
 
     If ``pred_basal`` (predicted basal counterfactual on the same source cells, aligned
     with src_idx) is given, the predicted LFC uses the DELTA pred_KO - pred_basal (cancels
-    basal reconstruction error, isolates μ_action + f_pert) instead of pred_KO - observed
+    basal reconstruction error, isolates mu_action + f_pert) instead of pred_KO - observed
     source. This is how counterfactual models are meant to be scored.
 
     Source = held-out unassigned cells (passed as src_idx). For gene g with niche b*,
     use the held-out source cells located in b*; observed = real KO g vs unassigned in b*
-    (with-noise = μ_action + f_pert).
+    (with-noise = mu_action + f_pert).
 
     If ``without_noise_out`` (a dict) is passed, ALSO compute the without-noise flavour
     per niche where NTC (control) cells exist: observed = KO vs NTC, predicted = with-noise

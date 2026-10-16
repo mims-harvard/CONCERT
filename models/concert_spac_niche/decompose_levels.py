@@ -99,7 +99,7 @@ def quick_umap(mat, seed, n_neighbors=30, min_dist=0.3, n_pcs=50):
     return a.obsm["X_umap"]
 
 
-# --- Plot helpers ---
+# Plot helpers
 CLASS_COLORS = {"unassigned": "#bbbbbb", "control": "#2166ac", "gene_KO": "#d73027"}
 
 def _cmap(n):
@@ -131,7 +131,7 @@ def umap_by_topk(ax, umap, perturb, cls, top, title):
     ax.legend(handles=pat, fontsize=4.5, ncol=2, loc="best", framealpha=0.8)
 
 
-# --- Main ---
+# Main
 def main():
     args   = parse_args()
     outdir = Path(args.outdir); outdir.mkdir(parents=True, exist_ok=True)
@@ -196,7 +196,7 @@ def main():
     del adata
     import gc; gc.collect()
 
-    # --- Subsample for expression-level UMAPs (L1, L4) ---
+    # Subsample for expression-level UMAPs (L1, L4)
     n_sub = min(args.subsample, N)
     sub = rng.choice(N, n_sub, replace=False); sub.sort()
     logging.info("Subsample for L1/L4 UMAP: %d cells", n_sub)
@@ -213,7 +213,7 @@ def main():
     # Temporarily set model.mask_cutoff to the subsample for denoise (it slices by row)
     model.mask_cutoff = torch.nn.Parameter(cut_sub.to(device), requires_grad=False)
 
-    # --- LEVEL 1: basal expression ---
+    # LEVEL 1: basal expression
     logging.info("[L1] Computing basal expression (force_basal=True)...")
     mu_basal, _ = model.batching_denoise_counts(
         pos_b_sub, idx_sub, atts_sub, n_samples=1, batch_size=BATCH_INF, force_basal=True,
@@ -221,7 +221,7 @@ def main():
     logging.info("[L1] mu_basal %s -> log1p + UMAP", mu_basal.shape)
     umap_basal = quick_umap(np.log1p(mu_basal), args.seed)
 
-    # --- LEVEL 4: combined, no pert noise (basal·exp(f_pert), no μ_action) ---
+    # LEVEL 4: combined, no pert noise (basal*exp(f_pert), no mu_action)
     logging.info("[L4] Computing combined no-noise (has_guide=None, is_real_KO set)...")
     mu_clean, _ = model.batching_denoise_counts(
         pos_b_sub, idx_sub, atts_sub, n_samples=1, batch_size=BATCH_INF,
@@ -233,14 +233,14 @@ def main():
     # restore full cutoff for any later full-data ops
     model.mask_cutoff = torch.nn.Parameter(cutoff_t.to(device), requires_grad=False)
 
-    # --- LEVEL 3: spatial effect = GP latent dims (all cells) ---
+    # LEVEL 3: spatial effect = GP latent dims (all cells)
     logging.info("[L3] Extracting latent z (GP dims = spatial) for all %d cells...", N)
     Z = model.batching_latent_samples(pos_batched, torch.arange(N), cell_atts, batch_size=BATCH_INF,
                                       Y=Yexpr)
     gp_latent = Z[:, :2]   # spatial GP dims
     logging.info("[L3] GP latent %s", gp_latent.shape)
 
-    # --- Phase 2.9 collapse + disentanglement diagnostics ---
+    # Phase 2.9 collapse + disentanglement diagnostics
     gp_std = gp_latent.std(axis=0)
     logging.info("[collapse-check] GP-dim per-dim std: %s  (COLLAPSED if < 1e-3)",
                  np.array2string(gp_std, precision=6))
@@ -257,10 +257,10 @@ def main():
     except Exception as e:
         logging.info("[disentangle-check] skipped: %s", e)
 
-    # --- Step 0: per-cell scalar gate histogram (over real-KO cells) ---
+    # Step 0: per-cell scalar gate histogram (over real-KO cells)
     # gate_i = sigmoid(pert_gate([gp_latent ; basal_latent])).  Z (full posterior-mean
     # latent) == cat([gp_p_m, gs_mu]) == the gate's input, so we reuse it directly.
-    # Degenerate (all ≈1) -> cell-specificity earned nothing; spread -> location/state
+    # Degenerate (all ~1) -> cell-specificity earned nothing; spread -> location/state
     # modulation is real.
     if getattr(model, "use_pert_gate", False) and model.pert_gate is not None:
         with torch.no_grad():
@@ -280,16 +280,16 @@ def main():
             axg.hist(gate_ko, bins=50, range=(0, 1), color="#4C72B0", edgecolor="white")
             axg.axvline(float(np.median(gate_ko)), color="crimson", ls="--",
                         label=f"median={np.median(gate_ko):.3f}")
-            axg.set_xlabel("gate = sigmoid(MLP([gp; basal]))  ∈ [0,1]")
+            axg.set_xlabel("gate = sigmoid(MLP([gp; basal]))  in [0,1]")
             axg.set_ylabel("KO cells")
-            axg.set_title("Step 0 per-cell gate (real-KO cells)\nall≈1 -> no modulation; spread -> real")
+            axg.set_title("Step 0 per-cell gate (real-KO cells)\nall~1 -> no modulation; spread -> real")
             axg.legend()
             gate_pdf = f"{args.outdir}/pert_gate_hist.pdf"
             figg.savefig(gate_pdf, dpi=150, bbox_inches="tight")
             plt.close(figg)
             logging.info("[gate] histogram -> %s", gate_pdf)
 
-    # --- LEVEL 2: pert effect = f_pert LFC per pert -> per-pert UMAP ---
+    # LEVEL 2: pert effect = f_pert LFC per pert -> per-pert UMAP
     logging.info("[L2] Computing f_pert LFC matrix (%d perts)...", n_batch)
     with torch.no_grad():
         codes    = torch.arange(n_batch, dtype=torch.long, device=device)
@@ -305,7 +305,7 @@ def main():
     top_lfc = [pert_names_arr[i] for i in np.argsort(lfc_norm)[::-1]
                if pert_names_arr[i] not in UNASSIGNED and pert_names_arr[i] not in CONTROL][:args.top_k]
 
-    # --- Figure ---
+    # Figure
     fig = plt.figure(figsize=(22, 16))
     gs  = fig.add_gridspec(3, 3, hspace=0.35, wspace=0.28)
 
@@ -328,7 +328,7 @@ def main():
     # Row 2: L3 spatial GP fields (2 dims) on tissue
     for d in range(2):
         ax = fig.add_subplot(gs[1, d])
-        # FIXED absolute color scale (±2.5 latent units). A collapsed near-constant
+        # FIXED absolute color scale (+/-2.5 latent units). A collapsed near-constant
         # field renders uniformly mid-color (flat); a real field varies. Prevents the
         # per-panel autoscale artifact that produced the false "L3 pass" in v3a/v3b.
         sc_ = ax.scatter(pos_scaled[:,0], pos_scaled[:,1], c=gp_latent[:,d],
@@ -349,19 +349,19 @@ def main():
 
     # Row 3: L4 combined no-noise (class + topK) + spacer
     umap_by_class(fig.add_subplot(gs[2,0]), umap_clean, cls_sub,
-                  "L4 COMBINED no-noise -- basal·exp(f_pert)\nμ_action dropped (expect pert STRUCTURE)")
+                  "L4 COMBINED no-noise -- basal*exp(f_pert)\nmu_action dropped (expect pert STRUCTURE)")
     umap_by_topk(fig.add_subplot(gs[2,1]), umap_clean, pert_sub, cls_sub, top_lfc,
                  f"L4 COMBINED no-noise -- top-{args.top_k} KOs (expect separation)")
     # compare panel: same cells, basal vs clean side note
     axn = fig.add_subplot(gs[2,2]); axn.axis("off")
     axn.text(0.0, 0.95,
              "Decomposition:\n"
-             "  log μ = f_basal(z) + μ_action + f_pert(p)\n\n"
+             "  log mu = f_basal(z) + mu_action + f_pert(p)\n\n"
              "L1 basal  = f_basal(z)            -> mixed\n"
              "L2 pert   = f_pert(p)             -> separates\n"
              "L3 spatial= GP latent (z[:,:2])   -> smooth field\n"
-             "L4 clean  = basal·exp(f_pert)     -> pert structure\n"
-             "            (μ_action 'pert noise' removed)\n\n"
+             "L4 clean  = basal*exp(f_pert)     -> pert structure\n"
+             "            (mu_action 'pert noise' removed)\n\n"
              f"cells (L1/L4 UMAP): {n_sub:,} of {N:,}\n"
              f"perts: {n_batch}  |  KO perts: {len(ko_codes)}",
              fontsize=7, family="monospace", va="top")

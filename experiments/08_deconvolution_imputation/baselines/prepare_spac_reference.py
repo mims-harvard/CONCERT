@@ -16,9 +16,7 @@ warnings.filterwarnings('ignore')
 def log(msg):
     print(msg, flush=True)
 
-# ============================================================
 # Configuration
-# ============================================================
 SPAC_PATH = '/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/processed/SPAC/raw_output_2-2.h5ad'
 MASK_PATH = '/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/imputation/patch_removal_2-2_top5_cellindex.npz'
 OUT_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2'
@@ -27,17 +25,13 @@ N_HVGS = 2000
 N_REF_SAMPLE = 30000
 N_CELL_TYPES_TARGET = 15  # the Leiden resolution is tuned towards this
 
-# ============================================================
 # Step 1: load the data
-# ============================================================
 log("[1/6] Loading SPAC-seq 2-2 data...")
 adata = anndata.read_h5ad(SPAC_PATH)
 adata.var_names_make_unique()
 log(f"    raw data: {adata.shape}")
 
-# ============================================================
 # Step 2: preprocessing + HVG selection
-# ============================================================
 log("[2/6] Preprocessing + HVG selection...")
 # Keep raw counts
 adata.layers['counts'] = adata.X.copy()
@@ -51,9 +45,7 @@ sc.pp.highly_variable_genes(adata, n_top_genes=N_HVGS)
 hvg_genes = adata.var_names[adata.var['highly_variable']].tolist()
 log(f"    number of HVGs: {len(hvg_genes)}")
 
-# ============================================================
 # Step 3: Leiden clustering (on all cells, before masking)
-# ============================================================
 log("[3/6] PCA + Neighbors + Leiden clustering...")
 adata_hvg = adata[:, hvg_genes].copy()
 sc.pp.scale(adata_hvg, max_value=10)
@@ -83,9 +75,7 @@ log(f"    selected resolution={best_res}: {n_ct} cell types")
 # Write the cell type labels back to the original adata
 adata.obs['cell_type'] = adata_hvg.obs[cell_type_col].values
 
-# ============================================================
 # Step 4: load the mask information
-# ============================================================
 log("[4/6] Loading the mask information...")
 mask_data = np.load(MASK_PATH, allow_pickle=True)
 mask_cell_index = mask_data['cell_index']
@@ -99,9 +89,7 @@ log(f"    to impute (role=1): {len(masked_indices)}")
 log(f"    kept (role=0): {(mask_role == 0).sum()}")
 log(f"    dispersed (role=2): {(mask_role == 2).sum()}")
 
-# ============================================================
 # Step 5: build the scRNA-seq reference
-# ============================================================
 log("[5/6] Building the scRNA-seq reference...")
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -154,9 +142,7 @@ log(f"    saved to: {ref_path}")
 log(f"    Reference shape: {ref_adata.shape}")
 log(f"    X range: [{ref_adata.X.min():.1f}, {ref_adata.X.max():.1f}]")
 
-# ============================================================
 # Step 6: Build sp_adata.h5ad (imputation input)
-# ============================================================
 log("[6/6] Building sp_adata.h5ad...")
 os.makedirs(IMPUTATION_DIR, exist_ok=True)
 

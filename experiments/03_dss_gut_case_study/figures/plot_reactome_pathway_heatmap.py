@@ -32,7 +32,7 @@ SETS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/"
 HERE = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study")
 DAYS = [0, 3, 9, 21]
 
-# --- load ---
+# load
 d = np.load(DUMP, allow_pickle=True)
 genes = [str(g) for g in d["gene_names"]]
 gidx = {g: i for i, g in enumerate(genes)}
@@ -56,14 +56,14 @@ for p, cols in pw_cols.items():
 def short(m):
     return ps.mouse_label(m, day=mday[mice.index(m)])
 
-# --- mean-of-set pathway score (for fold view + column ordering + validation) ---
+# mean-of-set pathway score (for fold view + column ordering + validation)
 pred = {p: gmean_pred[:, cols, :].mean(1) for p, cols in pw_cols.items()}       # (M,4)
 obs = {p: gmean_obs[:, cols].mean(1) for p, cols in pw_cols.items()}            # (M,)
 fold = {p: np.log2(pred[p] / pred[p][:, [0]] + 1e-9) for p in pw_names}          # (M,4)
 pop = {p: np.average(pred[p], axis=0, weights=ncell) for p in pw_names}          # (4,)
 order = sorted(pw_names, key=lambda p: (DAYS[int(np.argmax(pop[p]))], -pop[p].max()))
 
-# --- standardized pathway-activity score (the principled non-fold readout) ---
+# standardized pathway-activity score (the principled non-fold readout)
 # A GSEA NES is NOT appropriate here: this is a 942-gene TARGETED inflammation panel,
 # so the panel itself is the (biased) enrichment background -- rank-based ES (absolute
 # ssGSEA, delta ssGSEA, pre-ranked KS) do not recover the course (peaks scatter to
@@ -82,7 +82,7 @@ act = {p: gmean_pred[:, cols, :].mean(1) for p, cols in pw_cols.items()}        
 zact = {p: (a - a.mean(1, keepdims=True)) / (a.std(1, keepdims=True) + 1e-9)
         for p, a in act.items()}
 
-# --- observed values, placed on the SAME scale so they can sit beside the prediction ---
+# observed values, placed on the SAME scale so they can sit beside the prediction
 # Each mouse is measured once, so an observed value exists ONLY at that mouse's own day
 # (the diagonal). The counterfactual decode carries a level offset (~1.8x on these gene
 # means), so predictions are first put on the observed scale with ONE multiplicative
@@ -107,7 +107,7 @@ for p in pw_names:
 
 
 
-# --- cross-mouse diagonal validation r (predicted at own day vs observed) ---
+# cross-mouse diagonal validation r (predicted at own day vs observed)
 def diag_r(p):
     pd_ = np.array([pred[p][k, DAYS.index(int(round(mday[k])))] for k in range(M)])
     od_ = obs[p]
@@ -138,7 +138,7 @@ class _SplitKey(mpl_handler.HandlerBase):
                               fc="0.88", ec="0.3", lw=0.7, transform=trans)
         return [ul, lr]
 
-# --- shared heatmap drawer ---
+# shared heatmap drawer
 def draw(valmap, cbar_label, out_name, obsmap=None):
     """Heatmap of the counterfactual `valmap`; where an OBSERVED value exists, the cell is
     split by its anti-diagonal: upper-left triangle = CONCERT, lower-right = observed.
@@ -260,7 +260,7 @@ draw(fold, "Log2 fold over Day 0", "fig_reactome_pathway_heatmap.png", obsmap=fo
 # same thing more safely, against a like-for-like observed Day-0 baseline.
 draw(zact, "Pathway activity", "fig_reactome_pathway_heatmap_activity.png", obsmap=zobs)
 
-# --- curve plots of the activity-z values ---
+# curve plots of the activity-z values
 import matplotlib.colors as mcolors
 VDAYS = np.arange(4, dtype=float)            # evenly-spaced categorical x (Day 0/3/9/21)
 dpos = {d: i for i, d in enumerate(DAYS)}
@@ -318,7 +318,7 @@ fig.savefig(HERE / "fig_reactome_pathway_curves_permouse.png", dpi=300, bbox_inc
 plt.close(fig)
 print("[fig] fig_reactome_pathway_curves_permouse.png")
 
-# --- record table (adds population activity-z per timepoint) ---
+# record table (adds population activity-z per timepoint)
 with open(HERE / "reactome_pathway_trajectories.csv", "w", newline="") as fh:
     w = csv.writer(fh)
     pop_z = {p: np.average(zact[p], axis=0, weights=ncell) for p in order}

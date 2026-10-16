@@ -6,7 +6,7 @@ Question: does an UNSUPERVISED, batch-local coord-kNN aggregate of the content l
 directions? If yes, a niche-keyed sign-flip head can learn when to flip -> proceed. If no, the
 descriptor is too weak -> revisit before spending GPU.
 
-Comprehensive:
+Checks:
   - candidate z_niche (batch-local kNN of gs_mu) vs BASELINES gp_p_m (old 2-D coord latent) and raw coords
   - swept over k
   - per-slide + pooled

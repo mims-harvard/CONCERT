@@ -5,15 +5,15 @@ Design
 ------
 For each gene_KO cell i, find its nearest non-targeting control cell c(i).
 The contrastive loss penalizes the model if the predicted perturbation effect
-δ_i (difference between KO prediction and "no-KO" prediction) disagrees with
+delta_i (difference between KO prediction and "no-KO" prediction) disagrees with
 the empirically observed delta z = z_pert_i - z_ctrl_neighbor_i.
 
 Loss:
-    L_contra = (1/|KO|) Σ_i 1[is_real_KO_i] · ‖δ_i_pred - Δz_i‖²
+    L_contra = (1/|KO|) sum_i 1[is_real_KO_i] * ||delta_i_pred - Deltaz_i||^2
 
 where:
-    δ_i_pred  = z_mu_i - z_mu_i^{(ctrl)}     (pred minus ctrl-counterfactual)
-    Δz_i       = z_mu_KO_i - z_mu_ctrl_c(i)  (observed KO vs control residual)
+    delta_i_pred  = z_mu_i - z_mu_i^{(ctrl)}     (pred minus ctrl-counterfactual)
+    Deltaz_i       = z_mu_KO_i - z_mu_ctrl_c(i)  (observed KO vs control residual)
     z_mu_ctrl_c(i) = encoder output of the nearest control cell
 
 This loss acts as a "consistency regularizer": the perturbation effect in
@@ -21,8 +21,8 @@ latent space should match the empirically observable KO-vs-control difference
 among spatially proximal cells.
 
 Note: This is only useful AFTER Phase 2.6 action correction removes the
-technical action effect, so that Δz reflects real gene KO biology.
-If action correction is incomplete (μ_action under-fit), Δz will still
+technical action effect, so that Deltaz reflects real gene KO biology.
+If action correction is incomplete (mu_action under-fit), Deltaz will still
 contain technical noise and this loss may interfere. Use Phase 2.9 diagnostic
 to confirm action correction is working before enabling this.
 
@@ -108,7 +108,7 @@ class ContrastiveAlignmentLoss(nn.Module):
     """Control-anchored contrastive alignment loss (Phase 2.7).
 
     For each KO cell i, penalizes:
-        ‖(z_mu_i - z_mu_ctrl_i) - (z_mu_i^{ref} - z_mu_ctrl_i^{ref})‖²
+        ||(z_mu_i - z_mu_ctrl_i) - (z_mu_i^{ref} - z_mu_ctrl_i^{ref})||^2
 
     In practice (mini-batch setting), this simplifies to encouraging the
     KO cell's latent to differ from the nearest control in the same direction
@@ -166,7 +166,7 @@ class ContrastiveAlignmentLoss(nn.Module):
 
         # Loss: minimize MSE between the delta and its own L2-normalized version
         # (encourages consistent direction, not magnitude -- avoids collapse)
-        # Alternatively, just minimize ‖delta‖ for control cells (shouldn't move much)
+        # Alternatively, just minimize ||delta|| for control cells (shouldn't move much)
         # Here: L2 of the full delta (penalizes if KO moves far from nearby control
         # in an *inconsistent* direction across samples -> use L2 squared)
         loss = F.mse_loss(

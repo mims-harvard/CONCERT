@@ -770,7 +770,7 @@ def make_lfc_scatter(n_hvg: int = 200):
     plt.close(fig)
     print("Wrote", out_facet)
 
-    # --- pooled scatter, colored by KO ---
+    # pooled scatter, colored by KO
     fig, ax = plt.subplots(figsize=(5.2, 5.0))
     all_o, all_m = [], []
     for g in KO_ORDER:

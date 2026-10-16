@@ -293,7 +293,7 @@ def main():
     xlim = (xmin - pad * dx, xmax + pad * dx)
     ylim = (ymin - pad * dy, ymax + pad * dy)
 
-    # ---- 2-panel figure, shared legend on right ----
+    # 2-panel figure, shared legend on right
     fig, axes = plt.subplots(1, 2, figsize=(13.2, 5.8))
     ax = axes[0]
     draw_raw(ax)
@@ -319,7 +319,7 @@ def main():
     fig.savefig(out_path, dpi=200, bbox_inches="tight")
     plt.close(fig)
 
-    # ---- one-panel ----
+    # one-panel
     fig, ax = plt.subplots(figsize=(8.2, 6.2))
     draw_imputed_jak2(ax)
     draw_raw(ax, alpha=0.65, z0=3)

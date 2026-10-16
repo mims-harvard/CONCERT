@@ -4,9 +4,9 @@ The ONE prep script for every perturbmap slide, including slide 0 (`--slide 0`).
 Run all four via sub_prep_perturbmap_multi.sh (SLURM array 0-3).
 
 Two ORTHOGONAL axes (perturbmap has NO NTC; KP/periphery are tissue regions, not guides):
-  perturbation ∈ {Jak2, Tgfbr2, Ifngr2, unperturbed}  -- only the 3 real KO genes are guides;
+  perturbation in {Jak2, Tgfbr2, Ifngr2, unperturbed}  -- only the 3 real KO genes are guides;
                  unassigned/KP/periphery all -> "unperturbed" (basal).
-  tissue       ∈ {tumor, normal, periphery}    -- region axis (feeds basal path):
+  tissue       in {tumor, normal, periphery}    -- region axis (feeds basal path):
                  raw=="periphery"->periphery; raw=="KP"->tumor (KP = unperturbed tumor genotype,
                  forced to override any mislabeled obs.tissue); else original obs.tissue.
 No cells are excluded.
@@ -74,7 +74,7 @@ print("tissue:", dict(collections.Counter(tissue)))
 a.write_h5ad(OUT)
 print("wrote", OUT)
 
-# --- verify via driver loader + attribute builder ---
+# verify via driver loader + attribute builder
 import run_concert_spac as R
 una = frozenset({"unperturbed"})
 ctrl = frozenset({"__NONE__"})  # no NTC in perturbmap
@@ -88,7 +88,7 @@ print("[verify] pert_map:", pm)
 print("[verify] is_real_KO sum:", int(is_real_KO.sum()), "has_guide sum:", int(has_guide.sum()))
 # Per-slide composition may vary (a slide can lack a tissue class or a KO gene); WARN not assert.
 if len(td) != 3:
-    print(f"[verify][WARN] slide {SLIDE}: {len(td)} tissue classes (expected ≤3: tumor/normal/periphery)")
+    print(f"[verify][WARN] slide {SLIDE}: {len(td)} tissue classes (expected <=3: tumor/normal/periphery)")
 real_pm = {k for k in pm if k != R.BASAL_PERT_KEY}
 if not real_pm.issubset({"Jak2", "Tgfbr2", "Ifngr2"}):
     print(f"[verify][WARN] slide {SLIDE}: unexpected real pert classes: {real_pm}")

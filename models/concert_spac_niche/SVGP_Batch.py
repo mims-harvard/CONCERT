@@ -1,4 +1,3 @@
-# ================================================================================
 # Sparse Variational Gaussian Process (SVGP) model for batched spatial kernels.
 from __future__ import annotations
 
@@ -29,7 +28,7 @@ def _safe_cholesky(A: torch.Tensor) -> torch.Tensor:
 
     cuSOLVER does not support BFloat16 or Float16 for Cholesky/LU, so when
     bf16 autocast is active we temporarily upcast, compute, then cast back.
-    The SVGP matrices are small (M×M, M≤64) so the overhead is negligible.
+    The SVGP matrices are small (MxM, M<=64) so the overhead is negligible.
     """
     if A.dtype in (torch.bfloat16, torch.float16):
         return torch.linalg.cholesky(A.float()).to(A.dtype)
@@ -113,9 +112,7 @@ class SVGP(nn.Module):
 
         self.sample_kernel = SampleKernel().to(device)
 
-    # ---------------------------------------------------------------------
     # Kernel matrix helpers
-    # ---------------------------------------------------------------------
     def kernel_matrix(
         self,
         x: torch.Tensor,
@@ -198,9 +195,7 @@ class SVGP(nn.Module):
             return self.kernel.forward_diag(pos_x, pos_y)
         return self.kernel(pos_x, pos_y)
 
-    # ---------------------------------------------------------------------
     # Variational terms
-    # ---------------------------------------------------------------------
     def variational_loss(
         self,
         x: torch.Tensor,
@@ -266,9 +261,7 @@ class SVGP(nn.Module):
 
         return L_3_sum_term, KL_term
 
-    # ---------------------------------------------------------------------
     # Posterior parameter approximations
-    # ---------------------------------------------------------------------
     def approximate_posterior_params(
         self,
         index_points_test: torch.Tensor,

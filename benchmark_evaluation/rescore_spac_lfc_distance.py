@@ -440,7 +440,7 @@ def _write_outputs(outdir: Path, all_records: list[Record], prefix: str, concert
     macro = [r for r in summary if r["method"] == concert_method]
     if macro:
         print(f"CONCERT niche ({prefix}): {len(macro)} genes, "
-              f"mean LFC ρ={np.nanmean([r['lfc_spearman'] for r in macro]):.3f}, "
+              f"mean LFC rho={np.nanmean([r['lfc_spearman'] for r in macro]):.3f}, "
               f"mean LFC RMSE={np.nanmean([r['lfc_dist'] for r in macro]):.3f}")
 
 
@@ -506,7 +506,7 @@ def run_unseen(args) -> None:
     # n_boot=10) read straight from lfc_scores.json (see load_concert_v3_records unseen branch). The
     # niche-gated attach_concert_gene_bootstrap CANNOT be used for unseen (niche_key=-1: the rho
     # recompute never matches and every unit is rejected), and routing CONCERT through the competitor
-    # recompute path corrupts its point estimate (ρ 0.383 -> 0.011, a model_lfc format mismatch). For
+    # recompute path corrupts its point estimate (rho 0.383 -> 0.011, a model_lfc format mismatch). For
     # unseen the eval-native boot is comparable in width to the competitor gene bootstrap.
     master = load_concert_v3_records(args.concert_v3, "unseen", "concert_v3_unseen", load_eval_units())
     all_records: list[Record] = list(master)

@@ -256,7 +256,7 @@ def write_markdown(path: Path, macro: list[dict]) -> None:
             lines += [
                 f"## {dlabel} -- {regime}",
                 "",
-                "| Method | N records | LFC ρ (mean±SEM) | e-dist (mean±SEM) |",
+                "| Method | N records | LFC rho (mean+/-SEM) | e-dist (mean+/-SEM) |",
                 "| --- | ---: | ---: | ---: |",
             ]
             for r in sub:
@@ -264,8 +264,8 @@ def write_markdown(path: Path, macro: list[dict]) -> None:
                     continue
                 lines.append(
                     f"| {METHOD_LABEL[r['method']]} | {r['n_records']} | "
-                    f"{r['lfc_spearman']:.3f}±{r['lfc_sem']:.3f} | "
-                    f"{r['e_dist']:.3f}±{r['e_dist_sem']:.3f} |"
+                    f"{r['lfc_spearman']:.3f}+/-{r['lfc_sem']:.3f} | "
+                    f"{r['e_dist']:.3f}+/-{r['e_dist_sem']:.3f} |"
                 )
             lines.append("")
     path.write_text("\n".join(lines))

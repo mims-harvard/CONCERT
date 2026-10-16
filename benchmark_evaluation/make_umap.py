@@ -6,7 +6,7 @@ Loads the trained model, extracts 10-dim latent z for all cells,
 computes UMAP, and saves:
   - umap_concert_latent.pdf   -- colored by perturbation class and top KOs
   - umap_coords.npz           -- 2D UMAP coords + perturbation labels (lightweight)
-  - f_pert_lfc_matrix.npy     -- per-pert per-gene LFC matrix (n_pert × n_genes)
+  - f_pert_lfc_matrix.npy     -- per-pert per-gene LFC matrix (n_pert x n_genes)
 
 Output dir: --outdir (default: datasets/newdata/spac_seq/).
 """
@@ -29,7 +29,7 @@ import matplotlib.patches as mpatches
 from matplotlib.colors import to_hex
 from sklearn.preprocessing import MinMaxScaler
 
-# --- resolve CONCERT-spac source path ---
+# resolve CONCERT-spac source path
 SCRIPT_DIR = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR))
 
@@ -284,7 +284,7 @@ def _scatter(ax, xy, mask, color, s=0.3, alpha=0.5, label=None):
 def plot_umap(umap_coords, pert_class, perturb_raw, top_k, outpath):
     fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 
-    # --- Panel A: 3-class ---
+    # Panel A: 3-class
     ax = axes[0]
     # Plot in order so gene_KO is on top of unassigned
     for cls in ["unassigned", "control", "gene_KO"]:
@@ -302,7 +302,7 @@ def plot_umap(umap_coords, pert_class, perturb_raw, top_k, outpath):
                for c in ["unassigned", "control", "gene_KO"]]
     ax.legend(handles=patches, fontsize=8, loc="best", framealpha=0.8)
 
-    # --- Panel B: top-K gene KOs ---
+    # Panel B: top-K gene KOs
     ax = axes[1]
     gene_ko_perts = [p for p in perturb_raw if p not in UNASSIGNED_LABELS and p not in CONTROL_LABELS]
     top = [p for p, _ in Counter(gene_ko_perts).most_common(top_k)]

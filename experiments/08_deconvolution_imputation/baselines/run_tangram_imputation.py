@@ -76,9 +76,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# ============================================================
 # Paths
-# ============================================================
 SPAC_DIR = Path(
     "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
     "/SpatialScope/test_output/spac_2-2"
@@ -180,7 +178,7 @@ def prepare_tangram_inputs(
     """
     log("Preparing Tangram inputs...")
 
-    # --- Spatial data: non-masked experiment cells only ---
+    # Spatial data: non-masked experiment cells only
     non_masked_mask = role != 1  # role 0 + role 2
     adata_sp = sp_adata[non_masked_mask].copy()
     n_exp_nonmasked = adata_sp.shape[0]
@@ -190,7 +188,7 @@ def prepare_tangram_inputs(
     if issparse(adata_sp.X):
         adata_sp.X = adata_sp.X.toarray()
 
-    # --- Reference: either 30k ref or non-masked cells themselves ---
+    # Reference: either 30k ref or non-masked cells themselves
     if args.use_ref and REF_PATH.exists():
         log("  Loading 30k reference (Ref_SPAC_2-2.h5ad)...")
         adata_sc = anndata.read_h5ad(REF_PATH)
@@ -209,7 +207,7 @@ def prepare_tangram_inputs(
     if "cell_type" not in adata_sc.obs.columns:
         raise ValueError("adata_sc missing 'cell_type' in obs")
 
-    # --- Select training genes (marker genes per cell type) ---
+    # Select training genes (marker genes per cell type)
     log("  Selecting marker genes for training...")
     adata_sc_norm = adata_sc.copy()
     sc.pp.normalize_total(adata_sc_norm, target_sum=1e4)
@@ -516,15 +514,15 @@ def main() -> None:
 
     os.makedirs(OUT_DIR, exist_ok=True)
 
-    # --- Phase 1: Load data ---
+    # Phase 1: Load data
     sp_adata, ground_truth, role, group = load_data()
 
-    # --- Phase 2: Prepare Tangram inputs ---
+    # Phase 2: Prepare Tangram inputs
     adata_sc, adata_sp, training_genes, n_exp_nonmasked = prepare_tangram_inputs(
         sp_adata, role, args,
     )
 
-    # --- Phase 3: Run Tangram mapping + projection (experiment spots only) ---
+    # Phase 3: Run Tangram mapping + projection (experiment spots only)
     ad_map, ad_ge = run_tangram_mapping(
         adata_sc, adata_sp, training_genes, args,
     )
@@ -538,26 +536,26 @@ def main() -> None:
     ge_rows = [sp_name_to_row[n] for n in ad_ge.obs_names]
     exp_coords_nm = np.asarray(adata_sp.obsm["spatial"])[ge_rows]
 
-    # --- Phase 4: Load honest spatial-context pool (~324k observed cells) ---
+    # Phase 4: Load honest spatial-context pool (~324k observed cells)
     context = load_context_pool(
         list(ground_truth.var_names),
         n_context=args.n_context,
         seed=args.random_seed,
     )
 
-    # --- Phase 5: Impute masked cells via spatial K-NN over the pool ---
+    # Phase 5: Impute masked cells via spatial K-NN over the pool
     imputed_aligned = impute_masked_cells_knn(
         exp_aligned, exp_coords_nm, context, sp_adata, role,
         k=args.k_neighbors,
     )
 
-    # --- Phase 6: Evaluate ---
+    # Phase 6: Evaluate
     results_df = evaluate_imputation(
         imputed_aligned, ground_truth, role, group,
         matched_gene_mask=matched_gene_mask,
     )
 
-    # --- Save results ---
+    # Save results
     results_path = OUT_DIR / "imputation_results.csv"
     results_df.to_csv(results_path, index=False)
     log(f"Results saved to {results_path}")

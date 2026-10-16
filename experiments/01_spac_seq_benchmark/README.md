@@ -41,10 +41,23 @@ Two holdout settings are reported:
    (`--slide_guide_shift True`).
 5. **Score.** `sbatch evaluation/eval_spac_seq_benchmark_v4.sh unseen` scores every unseen
    pair in one job; `sbatch --array=1-5 evaluation/eval_spac_seq_benchmark_v4.sh seen` runs one
-   slide per array task. Collect the outputs with `agg_clonegate_v4b.py` in
-   `../../benchmark_evaluation/`. The v3 scripts (`build_v3_holdout_coords.py`,
-   `build_benchmark_v3_assets.py`, `eval_spac_seq_benchmark.sh`) remain as the record of the
-   earlier protocol; `build_v4_holdout_coords.py` asserts it reproduces their holdout files.
+   slide per array task. Both use the reported scoring rule: one Poisson draw at each source
+   spot's measured library size (`--cf_output poisson_depth`), the LFC taken against the
+   measured source spots (`--cf_seen_ref observed`), and the shared gene rule of
+   `genefix_wrap.py`. The competitors are scored under the same draw (`--sampled_output True`).
+6. **Aggregate.** `sbatch evaluation/aggregate_spac_seq_benchmark_v4.sh` collects every method's
+   per-record results from `${SCORING_LIB}/multi_1-5_ho_v4_sampled/`, rebuilds Mean target from
+   50 randomly drawn knockout cells per unit (`rescore_mean_target_capped_v4.py`), and writes the
+   reported tables, the paired significance tests, the supplementary-table workbook, every
+   benchmark figure (sorted by `evaluation/organize_v4_sampled_figures.sh`) and the per-knockout
+   panel numbers to `${SCORING_LIB}/v4_aggregate_sampled/`. STATE enters through
+   `spac_{seen,unseen}_state_our_rule.csv` (`rescore_state_our_rule.py`).
+7. **Mean target audit.** `mean_target_audit/` measures how Mean target depends on the number of
+   knockout cells it averages (`sbatch mean_target_audit/run_mean_target_audit.sh seen`, then
+   `unseen`, then `summarize_sweep.py`); it is the basis for the 50-cell rule.
+
+   The v3 scripts (`build_v3_holdout_coords.py`, `build_benchmark_v3_assets.py`,
+   `eval_spac_seq_benchmark.sh`) remain as the record of the earlier protocol; `build_v4_holdout_coords.py` asserts it reproduces their holdout files.
 
 ## Notes
 

@@ -204,7 +204,7 @@ def main():
     # Two rows, shared colorbar (legend) on the right
     fig, axes = plt.subplots(2, 1, figsize=(7.6, 11.6), sharex=True, sharey=True)
 
-    # ---- Row 1: raw observed ----
+    # Row 1: raw observed
     ax = axes[0]
     m = in_view
     sc0 = ax.scatter(
@@ -214,7 +214,7 @@ def main():
     )
     ax.set_title(f"Raw  $\\cdot$  {gene}", fontsize=TITLE_FS, pad=10)
 
-    # ---- Row 2: deconv subspots with imputed gene (fill only, no type borders) ----
+    # Row 2: deconv subspots with imputed gene (fill only, no type borders)
     ax = axes[1]
     keep = in_view & np.array([i not in peri_set for i in range(len(xy_d))])
     ax.scatter(

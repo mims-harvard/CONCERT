@@ -88,7 +88,7 @@ def main() -> None:
     stats = {"arm": a.arm, "markers": [str(genes[i]) for i in gidx],
              "target_slide": man["target_slide"], "no_ground_truth": True}
 
-    # --- A. multi-region: systemic + additivity ---
+    # A. multi-region: systemic + additivity
     singles = [n for n, r in recs.items() if r["meta"]["scenario"] == "multi_region"
                and n != "region_ALL"]
     if singles and "region_ALL" in recs:
@@ -122,7 +122,7 @@ def main() -> None:
             fig.savefig(figdir / f"fig_demo_multiregion_{a.arm}.{ext}", dpi=300)
         plt.close(fig)
 
-    # --- B. dose-response ---
+    # B. dose-response
     sz = sorted([r for r in recs.values() if r["meta"]["scenario"] == "size"],
                 key=lambda r: r["meta"]["requested_n"])
     if len(sz) > 2:
@@ -147,7 +147,7 @@ def main() -> None:
             fig.savefig(figdir / f"fig_demo_size_{a.arm}.{ext}", dpi=300)
         plt.close(fig)
 
-    # --- C. surface vs deep ---
+    # C. surface vs deep
     dep = [r for r in recs.values() if r["meta"]["scenario"] == "depth"]
     if len(dep) == 2:
         dep.sort(key=lambda r: r["meta"]["placement"] != "surface")

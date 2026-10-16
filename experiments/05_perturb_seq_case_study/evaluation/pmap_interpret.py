@@ -90,7 +90,7 @@ def main() -> None:
     Y_base = np.asarray(ctx["Y_expr"])[rows]
     results = {}
 
-    # ---------- Part A: where the niche signal dies ----------------------------------
+    # Part A: where the niche signal dies
     log("== Part A: niche-path diagnostic ==")
     to_enc, rt_err = CS.encoder_space_transform(np.asarray(ctx["Y_obs"])[rows], Y_base)
     log(f"  encoder-space round-trip max err {rt_err:.4f}")
@@ -127,7 +127,7 @@ def main() -> None:
         f"|beta|/|shift| {stages['core_beta_over_shift']:.4f}")
     results["niche_path_diagnostic"] = stages
 
-    # ---------- Part C: propagation vs neighbourhood overlap --------------------------
+    # Part C: propagation vs neighbourhood overlap
     # z_niche at the core did not move AT ALL, which is a geometry result, not an
     # architecture one: the descriptor takes k nearest neighbours, and a cell inside a
     # 75-spot patch has all k of them inside the patch. Only cells whose neighbourhood
@@ -167,7 +167,7 @@ def main() -> None:
         "max_edited_neighbours_among_core": int(core_nb.max()),
     }
 
-    # ---------- Part B: per-perturbation learned parameters ---------------------------
+    # Part B: per-perturbation learned parameters
     log("== Part B: per-perturbation parameters ==")
     name2code = {str(k): int(v) for k, v in ctx["name2code"].items()}
     emb_tab = model.lord_encoder.s_encoder["perturbation"].weight

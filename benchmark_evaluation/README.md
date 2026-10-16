@@ -45,6 +45,18 @@ units and reports, beside the benchmark metrics, the RMSE of predicting no chang
 response magnitude relative to the observed one, the share of genes whose predicted LFC sits at the
 epsilon floor, and how much of a prediction is shared between different knockouts on one slide.
 
+The reported tables and figures are written by
+`experiments/01_spac_seq_benchmark/evaluation/aggregate_spac_seq_benchmark_v4.sh`, which chains the
+rescoring, the 50-cell Mean target, the significance tables and the plotting modules listed below.
+
+### Perturb-map, benchmark v4
+
+The reported Perturb-map within-niche numbers rescore the stored predicted LFCs of every method
+against a reference built from the niche's control cells outside every held-out patch
+(`perturbmap_v4_scoring.py`), so reference and prediction share no cells.
+`experiments/02_perturb_seq_benchmark/evaluation/rescore_perturb_seq_v4.sh` runs
+`rescore_pm_v4.py` and then `analyze_pm_v4.py`.
+
 ## Modules
 
 | File | Role |
@@ -61,6 +73,17 @@ epsilon floor, and how much of a prediction is shared between different knockout
 | `build_v4_source_cells.py` | The 5,000 shared source spots per target slide every v4 unseen evaluator predicts from |
 | `genefix_wrap.py` | Runs an eval script under the shared gene rule (slide HVGs in the CONCERT panel, minus the KO) |
 | `agg_clonegate_v4b.py` | Collects v4 per-unit results into paired summary statistics |
+| `rescore_spac_lfc_distance_v4.py`, `rescore_spac_lfc_distance_v4_sampled.py` | Every method's per-record LFC rho and RMSE on the v4 record set (the sampled variant reads `multi_1-5_ho_v4_sampled/`) |
+| `attach_concert_unseen_gene_boot_v4.py` | Attaches the cross-slide bootstrap spread of CONCERT to the per-record table |
+| `rescore_collab_naive_baselines.py`, `rescore_collab_naive_baselines_seen_genefix.py`, `rescore_naive_baselines_unseen_v4_genefix.py` | The four reference strategies (Mean target, Mean niche, Local kNN, GEX kNN) under the shared rule, with `--sampled_output` |
+| `rescore_mean_target_capped_v4.py` | Mean target from a fixed number of knockout cells per unit (50 in the reported tables) |
+| `rescore_state_our_rule.py` | STATE predictions scored under the shared rule |
+| `agg_v4_sampled_unseen.py` | Paired summary of the sampled cross-slide results |
+| `build_v4_significance_tables.py` | Paired Wilcoxon tests with Benjamini-Hochberg adjustment, and the supplementary-table workbook |
+| `summarize_v4.py`, `panel_numbers_sampled.py` | Method summary and the per-knockout numbers of the figure panels |
+| `plot_spac_benchmark_bars.py`, `plot_spac_benchmark_v4.py`, `plot_spac_benchmark_v4_sampled.py`, `plot_spac_concert_vs_competitor_dots.py` | Per-knockout bar and paired-dot panels |
+| `plot_spac_overall_rank.py`, `plot_spac_condition_summary.py`, `plot_spac_rho_vs_rmse.py` | Overall rank, per-condition summary and rho-versus-RMSE figures |
+| `perturbmap_v4_scoring.py`, `rescore_pm_v4.py`, `analyze_pm_v4.py`, `plot_pmap_benchmark_v4.py` | Perturb-map benchmark v4: the reference rule, the rescore of every method, the tables and tests, and the Fig. 4j panel |
 | `spacseq_eval_common.py`, `spacseq_multi_common.py` | SPAC-seq data loading, slide handling, matching |
 | `perturbmap_common.py` | The same for the Perturb-seq sections |
 | `method_input_lib.py`, `train_manifest_lib.py` | Assemble the inputs and manifests an evaluation run needs |

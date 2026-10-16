@@ -58,7 +58,7 @@ inside the band.
 
 | # | Factor | Values (base **bold**) | New arms |
 |---|---|---|---|
-| 1 | footprint lengthscale band (normalized; ×20 = loc units) | [0.05,0.30] / [0.15,0.90] / [0.45,2.7] / **[3,18]** - ls_max = 6 / 18 / 54 / **360** loc | 3 |
+| 1 | footprint lengthscale band (normalized; x20 = loc units) | [0.05,0.30] / [0.15,0.90] / [0.45,2.7] / **[3,18]** - ls_max = 6 / 18 / 54 / **360** loc | 3 |
 | 2 | `fpert_svgp_inducing` | 16 / 32 / **64** / 128 | 3 |
 | 3 | `fpert_coord_scale` | 10 / **20** / 40 / 70 | 3 |
 | 4 | `moran_lambda` | 0 / 0.5 / **1** / 2 | 3 |
@@ -85,14 +85,14 @@ and were never presentable as one-factor curves.
 
 ## Metrics
 
-Whatever the existing scorer already emits per slide × per perturbation with bootstrap SDs
+Whatever the existing scorer already emits per slide x per perturbation with bootstrap SDs
 (`lfc_agg.json`): `spearman`, `lfc_dist`, `e_dist`, `sign_agreement`, `topk_overlap`. Headline
 panels use LFC Spearman rho and LFC distance, to stay commensurable with the main-text figure;
 `e_dist` secondary.
 
 ## Deliverables
 
-1. `sens_pmap_arms.csv` - one row per arm × slide × perturbation × metric.
+1. `sens_pmap_arms.csv` - one row per arm x slide x perturbation x metric.
 2. Small-multiples figure: one panel per factor, x = factor value, y = metric, grey band = seed
    spread, two rows (rho, LFC distance). House style per the `plotting-figures` skill.
 3. An SI note that cross-references Note 9 rather than replacing it.
@@ -122,13 +122,13 @@ First pass was 53 models: 21 first-wave arms + 32 replicates (every factor arm r
 seed band turned out to be as wide as the factor effects - one run per arm could not separate a
 real effect from initialisation variance, which is exactly the question a reviewer is asking).
 
-- **Base re-run reproduces the reported arm** within ≤0.02 rho on all 12 slide × perturbation
+- **Base re-run reproduces the reported arm** within <=0.02 rho on all 12 slide x perturbation
   cells -> no code drift since 2026-07-08.
 - **Five-seed band:** rho 0.443-0.566 (mean 0.507); LFC RMSE 1.93-2.19. The reported
   configuration used seed 42, the **best of the five**.
 - **Every hyper-parameter setting lies inside that band on both metrics.** Largest deviation from
   base: 0.051 rho (32 inducing points) and 0.14 RMSE (niche code width, footprint lengthscale
-  ceiling); the three penalty weights move rho by ≤0.005.
+  ceiling); the three penalty weights move rho by <=0.005.
 - `moran_lambda = 0` (penalty fully off) is indistinguishable from the reported weight -> the
   spatial smoothness penalty shapes what the latents represent, not prediction accuracy.
 
@@ -150,7 +150,7 @@ Artifacts (all paths absolute):
 
 **Open decision for Xianglin:** the main text reports the seed-42 Perturb-MAP run (rho 0.566)
 while the five-seed mean is 0.507. The SI note states this plainly. Either leave the main text as
-a single reported run, or switch the Perturb-MAP numbers to seed-averaged mean ± SD.
+a single reported run, or switch the Perturb-MAP numbers to seed-averaged mean +/- SD.
 
 ## Honest limitations to state in the note
 

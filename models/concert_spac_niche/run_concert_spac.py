@@ -44,9 +44,7 @@ from concert_spac import CONCERT
 from preprocess import normalize, geneSelection
 
 
-# -----------------------------------------------------------------------------
 # Logging
-# -----------------------------------------------------------------------------
 def setup_logging(verbosity: int = 1) -> None:
     level = logging.WARNING if verbosity <= 0 else logging.INFO if verbosity == 1 else logging.DEBUG
     logging.basicConfig(
@@ -55,9 +53,7 @@ def setup_logging(verbosity: int = 1) -> None:
         level=level,
     )
 
-# -----------------------------------------------------------------------------
-# --- Reporting (kernel scales & cutoffs) --------------------------------
-# -----------------------------------------------------------------------------
+# Reporting (kernel scales & cutoffs)
 def _report_and_save_final(
     *,
     model,
@@ -116,9 +112,7 @@ def _report_and_save_final(
     except Exception as e:
         logging.warning("Failed to save per-sample cutoffs CSV (%s).", e)
 
-# -----------------------------------------------------------------------------
 # Dataclasses / Config
-# -----------------------------------------------------------------------------
 @dataclass
 class RunConfig:
     # IO
@@ -180,22 +174,22 @@ class RunConfig:
     pad_lambda_mmd: float = 0.1    # MMD loss weight
     pad_lambda_adv: float = 0.01   # adversarial GRL loss weight
 
-    # --- HVG selection ---
+    # HVG selection
     # Genes with hvg_rank <= hvg_max_rank are used; ~10k genes in SPAC-seq data
     hvg_max_rank: int = 10000
 
-    # --- Multi-sample joint training (Phase 2.2) ---
+    # Multi-sample joint training (Phase 2.2)
     # Comma-separated list of h5ad file paths.  Empty string -> single-sample mode.
     # Example: "raw_output_1-1.h5ad,raw_output_1-2.h5ad,raw_output_1-3.h5ad,raw_output_1-4.h5ad"
     multi_sample_files: str = ""
 
-    # --- Phase 2.6: Control-anchored explicit action correction ---
+    # Phase 2.6: Control-anchored explicit action correction
     # 3-term decoder: log mu = f_basal + 1[has_guide]*mu_action + 1[is_real_KO]*f_pert
     use_action_correction: bool = True
     detach_mu_action_for_ko: bool = False
     mu_action_anchor_lambda: float = 0.0
 
-    # --- Phase 2.7: latent disentanglement (drop pert from encoder) ---
+    # Phase 2.7: latent disentanglement (drop pert from encoder)
     # When use_basal_encoder_only=True, the VAE encoder sees only [basal,
     # tissue] from LORD; the perturbation embedding feeds only the gene-space
     # f_pert term. This structurally guarantees z is pert-blind and makes
@@ -250,7 +244,7 @@ class RunConfig:
     use_consistency_loss: bool = False     # batch-level MMD on log mu_basal between KO and ctrl
     consistency_lambda: float = 1.0
 
-    # --- Phase 2.9: inductive expression encoder + collapse fixes ---
+    # Phase 2.9: inductive expression encoder + collapse fixes
     use_expr_encoder: bool = False         # amortized basal encoder on expression (inductive)
     expr_hidden_dims: tuple = (512, 256)
     expr_dropout: float = 0.1
@@ -262,7 +256,7 @@ class RunConfig:
     gp_free_bits: float = 0.0              # per-dim KL floor (nats) on GP block (v5a)
     use_pert_correction: bool = False      # default-off leakage fallback
 
-    # --- Phase 2.8: NNGP local field + precomputed spatial graph ---
+    # Phase 2.8: NNGP local field + precomputed spatial graph
     use_nngp: bool = False
     nngp_lambda: float = 1.0
     graph_file: Optional[str] = None
@@ -300,7 +294,7 @@ class RunConfig:
     ls_prior_min: float = 3.0
     ls_prior_max: float = 8.0
 
-    # --- SPAC-seq cell taxonomy labels ---
+    # SPAC-seq cell taxonomy labels
     # Comma-separated; extend if your data uses different naming.
     # "multiple" belongs in excluded_label: it represents co-captured cells with
     # distinct KOs -- their expression is a mixture of multiple perturbation effects
@@ -309,13 +303,13 @@ class RunConfig:
     control_label: str = "Non_targeting,non_targeting,NonTargeting,control,Control,CTRL,ctrl,NT"
     excluded_label: str = "multiple,Multiple"  # cells dropped entirely before training
 
-    # --- Perturbation frequency filter ---
+    # Perturbation frequency filter
     # Perturbation classes with fewer than this many cells are excluded from
     # training (their cells are dropped).  Prevents near-empty embeddings for
     # singleton or very-rare guides.  0 = no filtering.
     min_cells_per_pert: int = 10
 
-    # --- Negative-control label shuffle (ablation) ---
+    # Negative-control label shuffle (ablation)
     # If > 0, permute the perturbation labels of the top-N real-KO classes
     # (by post-filter cell count) AMONG those cells only. Marginal class counts
     # are preserved but the cell<->label link is destroyed, so the model has no
@@ -361,9 +355,7 @@ class RunConfig:
     wandb_mode: str = "online"  # online|offline|disabled
 
 
-# -----------------------------------------------------------------------------
 # Utilities
-# -----------------------------------------------------------------------------
 def ensure_dir(path: str | Path) -> Path:
     p = Path(path)
     p.mkdir(parents=True, exist_ok=True)
@@ -647,7 +639,7 @@ def _load_h5ad_dataset(
     logging.info("[load] Opening h5ad (sparse, lazy): %s", path)
     with h5py.File(path, "r") as f:
 
-        # --- perturbation labels ---
+        # perturbation labels
         perturb_raw_full = _read_obs_str_column(f["obs"], "perturbation")
         n_obs_full = len(perturb_raw_full)
 
@@ -656,10 +648,10 @@ def _load_h5ad_dataset(
         if "tissue" in f["obs"]:
             tissue_raw_full = _read_obs_str_column(f["obs"], "tissue")
 
-        # --- spatial coordinates ---
+        # spatial coordinates
         pos_full = np.array(f["obsm"]["array_coords"][:], dtype=np.float32)
 
-        # --- filter_pass row mask ---
+        # filter_pass row mask
         filter_pass_mask = None
         if "filter_pass" in f["obs"]:
             fp_str = _read_obs_str_column(f["obs"], "filter_pass")
@@ -672,7 +664,7 @@ def _load_h5ad_dataset(
         else:
             logging.warning("[load] No 'filter_pass' in obs; keeping all %d spots.", n_obs_full)
 
-        # --- HVG column mask from var ---
+        # HVG column mask from var
         # If force_hvg_mask is given (multi-sample mode), use it directly.
         # Otherwise: var['hvg_rank'] (1-based, lower = more variable) -> top-N;
         #   fallback: var['highly_variable'] bool; last-resort: all genes.
@@ -706,7 +698,7 @@ def _load_h5ad_dataset(
             logging.warning("[load] No hvg_rank or highly_variable in var -- using all %d genes!",
                             len(gene_names_full) if gene_names_full is not None else 0)
 
-        # --- sparse count matrix ---
+        # sparse count matrix
         x_grp   = f["X"]
         data    = np.array(x_grp["data"][:],    dtype=np.float32)
         indices = np.array(x_grp["indices"][:], dtype=np.int32)
@@ -716,7 +708,7 @@ def _load_h5ad_dataset(
                    else (int(indices.max()) + 1 if len(indices) > 0 else 0))
         X_sp = sp_scipy.csr_matrix((data, indices, indptr), shape=(n_obs, n_vars))
 
-    # --- Apply filter_pass row mask (stays sparse) ---
+    # Apply filter_pass row mask (stays sparse)
     if filter_pass_mask is not None:
         X_sp          = X_sp[filter_pass_mask]
         perturb_raw   = perturb_raw_full[filter_pass_mask]
@@ -728,7 +720,7 @@ def _load_h5ad_dataset(
         pos           = pos_full
         tissue_raw    = tissue_raw_full
 
-    # --- Column selection ---
+    # Column selection
     # force_gene_order (eval on a model trained with a DIFFERENT HVG set, e.g. a
     # multi-slide model whose avg-rank genes != this slide's per-slide HVG rank):
     # subset AND reorder to the model's exact training gene list so the decoder
@@ -751,11 +743,11 @@ def _load_h5ad_dataset(
     else:
         gene_names = gene_names_full
 
-    # --- Densify only the reduced submatrix ---
+    # Densify only the reduced submatrix
     X = X_sp.toarray().astype(np.float32)
     logging.info("[load] Final matrix: %d spots x %d genes", X.shape[0], X.shape[1])
 
-    # --- Derive 3-class indicators ---
+    # Derive 3-class indicators
     # has_guide : 1 for control + gene_KO (any guide delivered)
     # is_real_KO: 1 for gene_KO only (not unassigned, not non-targeting control)
     has_guide  = np.array([p not in unassigned_labels for p in perturb_raw], dtype=bool)
@@ -815,7 +807,7 @@ def load_h5ad_multi(
 
     logging.info("[multi-load] Loading %d samples with shared HVG set (avg-rank) ...", len(paths))
 
-    # --- Pass 1: collect hvg_rank arrays (var only, no X) ---
+    # Pass 1: collect hvg_rank arrays (var only, no X)
     all_ranks: List[Optional[np.ndarray]] = []
     gene_names_ref: Optional[np.ndarray] = None   # gene list from first sample
     in_panel_ref: Optional[np.ndarray] = None     # benchmark KO-panel genes to force-keep
@@ -1010,9 +1002,7 @@ def load_config_file(path: Optional[str]) -> dict:
         raise ValueError(f"Unsupported config format for {path}: {e}")
 
 
-# -----------------------------------------------------------------------------
 # Orchestration
-# -----------------------------------------------------------------------------
 def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     logging.info("Config: %s", asdict(cfg))
 
@@ -1041,7 +1031,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     # IO
     outdir = ensure_dir(cfg.outdir)
 
-    # --- Parse SPAC-seq taxonomy label sets ---
+    # Parse SPAC-seq taxonomy label sets
     unassigned_labels = frozenset(
         l.strip() for l in cfg.unassigned_label.split(",") if l.strip()
     )
@@ -1052,7 +1042,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         l.strip() for l in cfg.excluded_label.split(",") if l.strip()
     )
 
-    # --- Load (single-sample or multi-sample) ---
+    # Load (single-sample or multi-sample)
     multi_paths = [p.strip() for p in cfg.multi_sample_files.split(",") if p.strip()]
     sample_id_all = None  # only set in multi-sample mode
 
@@ -1094,7 +1084,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             hvg_max_rank=cfg.hvg_max_rank,
         )
 
-    # --- Filter 1: excluded labels (e.g. "multiple" -- mixed-KO spots) ---
+    # Filter 1: excluded labels (e.g. "multiple" -- mixed-KO spots)
     # These cells have ambiguous perturbation identity and are dropped entirely.
     if excluded_labels:
         keep_excl = np.array([p not in excluded_labels for p in perturb_raw], dtype=bool)
@@ -1111,7 +1101,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             if sample_id_all is not None:
                 sample_id_all = sample_id_all[keep_excl]
 
-    # --- Holdout unassigned cells (for unseen-cell eval, scenarios 2 & 3) ---
+    # Holdout unassigned cells (for unseen-cell eval, scenarios 2 & 3)
     if cfg.holdout_unassigned_frac > 0.0:
         rng_ho = np.random.default_rng(cfg.seed if cfg.seed is not None else 0)
         una_idx = np.where(~has_guide)[0]   # unassigned = no guide
@@ -1153,7 +1143,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if sample_id_all is not None:
             sample_id_all = sample_id_all[keep_ho]
 
-    # --- v3 benchmark holdout: coord-keyed (sample_id, array_coords) ---
+    # v3 benchmark holdout: coord-keyed (sample_id, array_coords)
     # Held-out cells are identified by matching each cell's (sid, int array_coords)
     # against the precomputed v3 holdout-coords file (build_v3_holdout_coords.py).
     #   unassigned : prediction-source patch -- excluded from train (guard: unassigned only)
@@ -1202,7 +1192,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if sample_id_all is not None:
             sample_id_all = sample_id_all[keep_ho]
 
-    # --- Filter 2: low-frequency perturbations ---
+    # Filter 2: low-frequency perturbations
     # Drop cells whose perturbation class has fewer than min_cells_per_pert cells.
     # Prevents near-empty embeddings for singleton or very-rare guides.
     if cfg.min_cells_per_pert > 0:
@@ -1227,7 +1217,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     logging.info("[filter] After filtering: %d cells, %d unique perturbations",
                  len(perturb_raw), len(set(perturb_raw.tolist())))
 
-    # --- Negative-control: shuffle labels of the top-N real-KO classes ---
+    # Negative-control: shuffle labels of the top-N real-KO classes
     # Permute perturbation labels AMONG the cells of the top-N real-KO genes only.
     # Marginal counts per gene are preserved (so embeddings/filters are unchanged),
     # but each cell's label is randomly reassigned within the pool -> no learnable
@@ -1560,7 +1550,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     logging.info("Model initialized: %s | action_correction=%s | num_perts=%d",
                  model.__class__.__name__, cfg.use_action_correction, n_batch)
 
-    # --- Phase 2.8: attach precomputed spatial graph (NNGP + paracrine) ---
+    # Phase 2.8: attach precomputed spatial graph (NNGP + paracrine)
     if cfg.use_nngp or cfg.use_paracrine or cfg.graph_file:
         from spatial_graph import SpatialGraph
         if not cfg.graph_file:
@@ -1587,7 +1577,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         logging.info("[graph] attached SpatialGraph N=%d from %s (emitter codes=%s, r_max=%.2f)",
                      n_graph, cfg.graph_file, emitter_codes, cfg.paracrine_r_max)
 
-    # --- DDP wrapping ---
+    # DDP wrapping
     ddp_model = None
     if world_size > 1:
         local_rank = int(os.environ.get("LOCAL_RANK", 0))
@@ -1611,7 +1601,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             logging.info("Resumed from checkpoint: %s", ckpt_path)
         bs = auto_batch_size(X.shape[0]) if cfg.batch_size == "auto" else int(cfg.batch_size)
 
-        # --- Phase 3: precompute mini-bulk KO-vs-NTC LFC targets (Change C) ---
+        # Phase 3: precompute mini-bulk KO-vs-NTC LFC targets (Change C)
         # niche grid MUST match eval --niche_grid (default 6), which bins each slide's own
         # MinMax*LOC_RANGE coordinates.
         niche_id_arr = None
@@ -1740,7 +1730,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             )
         return
 
-    # --- Deconvolution / patch-imputation stages (load ckpt, run, exit) ---
+    # Deconvolution / patch-imputation stages (load ckpt, run, exit)
     if cfg.stage.lower() in ("deconv", "impute_patch"):
         model.load_model(str(outdir / cfg.model_file))
         logging.info("Loaded weights for %s: %s", cfg.stage, outdir / cfg.model_file)
@@ -1817,9 +1807,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     )
 
 
-# -----------------------------------------------------------------------------
 # CLI
-# -----------------------------------------------------------------------------
 def str2bool(v):
     if v is None: return None
     if isinstance(v, bool): return v
@@ -2110,7 +2098,7 @@ def parse_args() -> RunConfig:
     return cfg
 
 if __name__ == "__main__":
-    # --- DDP bootstrap ---
+    # DDP bootstrap
     # torchrun sets LOCAL_RANK / RANK / WORLD_SIZE.  Fall back to single-GPU.
     _local_rank  = int(os.environ.get("LOCAL_RANK", 0))
     _rank        = int(os.environ.get("RANK", 0))

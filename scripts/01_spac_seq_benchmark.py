@@ -14,8 +14,13 @@ Two settings, named `seen` / `unseen` on disk and *within-niche prediction* /
 
   within-niche  the perturbation is removed from a patch of one slide but is still visible
                 elsewhere -- does its effect transfer to a new tissue context?
-  cross-slide   the perturbation is removed from every slide -- can its effect be inferred
-                from related perturbations?
+  cross-slide   the perturbation is removed from one target slide (85 knockout-target-slide
+                pairs) and its effect is carried over from the donor slides
+
+Scoring rule (benchmark v4), identical for every method: each source spot's predicted profile
+is turned into counts by one Poisson draw at the spot's measured library size, the predicted
+LFC is taken against the measured source spots, and the scored genes are the slide's highly
+variable genes inside the 2,000-gene CONCERT panel, minus the knocked-out gene.
 
 Two metrics: LFC Spearman (do the right genes move, higher better) and LFC RMSE, called
 `lfc_dist` in the tables (is the size of the response right, lower better). E-distance still
@@ -24,10 +29,11 @@ appears in some JSON files and is retired; it is not a reported metric.
 Steps
   weights      per-perturbation footprint lengthscale and niche gain, read out of the weights
   predict      one counterfactual prediction by hand, with a scatter against the measurement
-  slide        score one slide with the function the SLURM array job calls  (15-40 min, GPU)
+  slide        score one slide with the function the SLURM array job calls, checked against
+               the shipped result  (15-40 min, GPU)
   aggregate    the five slides together -- the reported within-niche number
   crossslide   the cross-slide panel, one unit run live plus the reported number
-  compare      CONCERT next to the published methods, paired per competitor
+  compare      CONCERT next to the published methods and the reference strategies, paired
 
 Examples
   python scripts/01_spac_seq_benchmark.py --steps weights aggregate compare
@@ -39,7 +45,6 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import concert_paths as cp
 
@@ -48,72 +53,111 @@ SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 MODEL_SRC = cp.MODELS / "concert_benchmark"
 SPAC_RAW = cp.DATA_ROOT / "newdata" / "spac_seq"
 PREPARED = cp.SCORING_LIB / "multi_1-5" / "prepared"
+BENCH_V4 = PREPARED / "benchmark_v4"
+# clonality gate + slide guide shift
 CKPT = {
-    "seen": cp.OUTPUT_ROOT / "ms_spac1_niche_seen_lsfix" / "model.pt",
-    "unseen": cp.OUTPUT_ROOT / "ms_spac1_niche_unseen_lsfix" / "model.pt",
+    "seen": cp.OUTPUT_ROOT / "ms_spac1_niche_seen_clonegate_v4" / "model.pt",
+    "unseen": cp.OUTPUT_ROOT / "ms_spac1_niche_unseen_clonegate_v4" / "model.pt",
 }
 SHIPPED = {
-    "seen": cp.SCORING_LIB / "multi_1-5_ho_v3" / "concert" / "seen_lsfix",
-    "unseen": cp.SCORING_LIB / "multi_1-5_ho_v3" / "concert" / "unseen_lsfix",
+    "seen": cp.SCORING_LIB / "multi_1-5_ho_v4_sampled" / "concert_clonegate" / "seen",
+    "unseen": cp.SCORING_LIB / "multi_1-5_ho_v4_sampled" / "concert_clonegate" / "unseen",
 }
-NUMBERS = cp.PAPER_NUMBERS / "benchmark_spac_seq"
+NUMBERS = cp.SCORING_LIB / "v4_aggregate_sampled"       # the reported per-record tables
+CONCERT_KEY = {"seen": "concert_nichefix_seen", "unseen": "concert_v4_unseen"}
 
 
-def spac_args(regime, outdir, target_slide=None, n_boot=10, force=True):
-    """Evaluation configuration for one SPAC-seq run.
+def spac_args(bench, regime, outdir, target_slide=None, units=None):
+    """Evaluation configuration for one SPAC-seq run, parsed by the entry point itself.
 
-    Mirrors the CLI defaults of benchmark_evaluation/run_concert_v3_benchmark_eval.py with the
-    values experiments/01_spac_seq_benchmark/train/train_spac_seq.sh trained with. Every flag
-    below the "model graph" line changes the shape of the graph and must match training.
+    The flags are the ones experiments/01_spac_seq_benchmark/evaluation/
+    eval_spac_seq_benchmark_v4.sh passes, so this script and the SLURM job cannot drift apart.
 
-    Two of them fail silently rather than loudly when they are wrong:
+    Three of them fail silently rather than loudly when they are wrong:
       fpert_ls_min / fpert_ls_max  the footprint lengthscale band. It is a plain float
         attribute of the field, not a saved weight, so identical weights render a different
         spatial field if it is left at the default.
-      fpert_svgp_inducing  the inducing-grid size. This one is a saved tensor, so a mismatch
-        would fail the load; build_concert_ctx reads the true count out of the checkpoint.
+      cf_output poisson_depth  the scored prediction is one Poisson draw at each source spot's
+        measured library size, seeded by the perturbation code.
+      cf_seen_ref observed  the predicted LFC is taken against the measured source spots.
     """
-    return SimpleNamespace(
-        # --- what to score ---------------------------------------------------------------
-        regime=regime,
-        target_slide=target_slide,
-        prepared_dir=PREPARED,
-        benchmark_v3_dir=None,                 # defaults to prepared_dir/benchmark_v3
-        model_file=CKPT[regime],
-        outdir=Path(outdir),
-        force=force,
-        # --- scoring protocol ------------------------------------------------------------
-        n_hvgs=2000,                           # genes the metrics are computed over
-        min_g_cells=20,                        # a record needs this many measured KO cells
-        max_src_cells=500,                     # cross-slide: source cells per unit
-        max_src_cells_per_niche=500,           # within-niche: source cells per niche
-        patch_role=1,                          # 1 = the held-out patch
-        n_samples=10,                          # decoder draws averaged per prediction
-        batch_size=512,
-        n_boot=n_boot, boot_frac=0.5, boot_seed=1234,
-        # --- model graph: MUST match training --------------------------------------------
-        hvg_max_rank=2000,
-        min_cells_per_pert=25,
-        use_expr_encoder=True, expr_hidden_dims=[512, 256], use_basal_encoder_only=True,
-        use_nngp=False, nngp_lambda=0.0,
-        use_paracrine=False, paracrine_l1=0.0,
-        use_niche_interaction=False,           # replaced by the FiLM head, auto-detected
-        niche_rank=8,
-        use_pert_gate=True, gate_hidden=64,
-        use_action_correction=True,            # SPAC-seq has non-targeting controls
-        inducing_point_steps=6,
-        spatial_basal_only=True,
-        basal_field="rff", basal_bayes=True,
-        # --- perturbation footprint field -------------------------------------------------
-        fpert_field="gp_pp",
-        fpert_rff_features=128, fpert_rff_bandwidth=0.15,
-        fpert_coord_scale=20.0, fpert_hidden=256,
-        fpert_svgp_inducing=16,
-        fpert_svgp_ls_init=0.25,
-        fpert_mb_bandwidths="", f_pert_clamp=5.0,
-        ls_prior_min=3.0, ls_prior_max=18.0,   # legacy band, in loc units
-        fpert_ls_min=0.15, fpert_ls_max=0.90,  # THE band that is used, in normalized units
-    )
+    import sys
+
+    argv = ["run_concert_v4_benchmark_eval.py", "--regime", regime,
+            "--prepared_dir", str(PREPARED), "--model_file", str(CKPT[regime]),
+            "--outdir", str(outdir), "--n_boot", "10", "--min_g_cells", "20",
+            "--ls_prior_min", "3", "--ls_prior_max", "18",
+            "--fpert_ls_min", "0.15", "--fpert_ls_max", "0.90",
+            "--cf_output", "poisson_depth", "--cf_seen_ref", "observed", "--force"]
+    if regime == "unseen":
+        argv += ["--benchmark_dir", str(BENCH_V4), "--max_src_cells", "5000"]
+        if units:
+            argv += ["--units", *units]
+    else:
+        argv += ["--target_slide", target_slide, "--max_src_cells_per_niche", "500"]
+    saved = sys.argv
+    try:
+        sys.argv = argv
+        return bench.parse_args()
+    finally:
+        sys.argv = saved
+
+
+def install_gene_rule(sec, genefix_wrap):
+    """The shared gene rule of genefix_wrap.py: slide HVGs AND the 2,000 CONCERT genes."""
+    import numpy as np
+
+    genes = set(genefix_wrap.load_concert_genes())
+    orig = sec.select_hvgs
+
+    def select_hvgs_genefix(adata_all, n_top, sa_):
+        mask = orig(adata_all, n_top, sa_)
+        names = np.asarray(adata_all.var_names).astype(str)
+        return np.asarray(mask, dtype=bool) & np.isin(names, list(genes))
+
+    sec.select_hvgs = select_hvgs_genefix
+    print(f"gene rule        : slide HVGs AND {len(genes)} CONCERT genes, minus the knockout")
+
+
+def read_seen_records(root, slides):
+    """One row per (perturbation, slide, niche) record from lfc_scores.json; records whose LFC
+    RMSE is undefined are dropped, as in the reported tables."""
+    import numpy as np
+    import pandas as pd
+
+    rows = []
+    for s in slides:
+        p = Path(root) / "patch" / f"slide_{s}" / "lfc_scores.json"
+        if not p.exists():
+            print(f"  slide {s}: no result at {p}")
+            continue
+        for gene, recs in json.loads(p.read_text())["L2"].items():
+            for r in recs:
+                rows.append({"slide": s, "perturbation": gene, "niche": r["niche"],
+                             "lfc_spearman": r.get("spearman"), "lfc_rmse": r.get("lfc_dist"),
+                             "n_scored_genes": r.get("n_scored_genes")})
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return df
+    return df[np.isfinite(df.lfc_rmse.astype(float))].reset_index(drop=True)
+
+
+def read_unseen_records(root):
+    """One row per cross-slide unit; lfc_scores.json is {"L2": {gene: [record]}} with exactly
+    one record (niche = -1, the whole slide)."""
+    import pandas as pd
+
+    rows = []
+    for d in sorted((Path(root) / "unseen_pert").glob("*__slide_*")):
+        p = d / "lfc_scores.json"
+        if not p.exists():
+            continue
+        gene, slide = d.name.split("__slide_")
+        rec = json.loads(p.read_text())["L2"][gene][0]
+        rows.append({"gene": gene, "slide": slide, "n_src_cells": rec.get("n_src"),
+                     "n_measured_ko": rec.get("n_real_g"),
+                     "lfc_spearman": rec.get("spearman"), "lfc_rmse": rec.get("lfc_dist")})
+    return pd.DataFrame(rows).dropna(subset=["lfc_spearman"]) if rows else pd.DataFrame()
 
 
 # ----------------------------------------------------------------------------- steps
@@ -168,9 +212,9 @@ def step_predict(env, out):
 
     The decoder is
         log mu = f_basal(x, expression) + 1[has_guide] * mu_action + 1[is_real_KO] * f_pert(g, x)
-    so a decode to perturbation g and a decode to the basal slot (code 0) differ by exactly the
-    perturbation terms -- the basal reconstruction cancels. Every score is computed on that
-    difference rather than on one decode.
+    The scored prediction is built as --cf_output poisson_depth builds it: each source spot's
+    profile mu_i / sum(mu_i) is drawn as counts at the spot's measured library size, and the
+    predicted LFC is taken against the measured counts of the same source spots.
 
     This is an illustration, not the reported protocol: it pools the whole held-out patch,
     where the reported score is per niche. `step_slide` runs the real thing.
@@ -195,9 +239,12 @@ def step_predict(env, out):
     code_g = ctx["name2code"][gene]
     print(f"predicting {gene} (code {code_g}) on {len(model_rows)} source cells")
 
-    pred_g = ecf._predict_swap(ctx, model_rows, code_g, args)
-    pred_basal = ecf._predict_swap(ctx, model_rows, 0, args)
-    model_lfc = eu.pseudobulk_lfc(pred_g, pred_basal)
+    y_src = ctx["Y_obs"][model_rows]
+    src_counts = np.asarray(y_src.toarray() if hasattr(y_src, "toarray") else y_src, dtype=np.float64)
+    mu_g = np.asarray(ecf._predict_swap(ctx, model_rows, code_g, args), dtype=np.float64)
+    p_g = mu_g / np.maximum(mu_g.sum(1, keepdims=True), 1e-12)
+    pred_g = np.random.default_rng(code_g).poisson(p_g * src_counts.sum(1, keepdims=True))
+    model_lfc = eu.pseudobulk_lfc(pred_g, src_counts)
 
     ko = np.where(ctx["perturb_raw"] == gene)[0]
     ref = np.where(ctx["cls"] == "unassigned")[0]
@@ -231,28 +278,26 @@ def step_slide(env, out):
     """Score one slide with the shipped harness -- the slow step (15-40 min on one H100).
 
     eval_seen_slide is exactly what experiments/01_spac_seq_benchmark/evaluation/
-    eval_spac_seq_benchmark.sh runs, one slide per array task: it finds the niches of the
+    eval_spac_seq_benchmark_v4.sh runs, one slide per array task: it finds the niches of the
     held-out patch and the perturbation dominating each, decodes every source cell to every
-    perturbation in the panel plus the basal slot, scores each (niche, perturbation) record
-    against the measured cells, and bootstraps the source cells within each niche.
+    perturbation in the panel and draws counts at depth, scores each (niche, perturbation)
+    record against the measured cells, and bootstraps the source cells within each niche.
+    The draw is seeded, so the records match the shipped ones.
     """
-    import pandas as pd
+    import numpy as np
 
     args, slide, bench = env["args"], env["slide"], env["bench"]
     bench.eval_seen_slide(args, slide)
-    agg_path = args.outdir / "patch" / f"slide_{slide}" / "lfc_agg.json"
-    agg = json.loads(agg_path.read_text())["L2"]
-    print("read", agg_path, "\n")
-
-    per_pert = pd.DataFrame([
-        {"perturbation": g, "lfc_spearman": v["spearman_mean"], "lfc_rmse": v["lfc_dist_mean"],
-         "n_niches": v["n_niches"], "n_scored_genes": v["n_scored_genes"]}
-        for g, v in agg.items()]).sort_values("lfc_spearman", ascending=False)
-    print(f"slide {slide}: {len(per_pert)} perturbations, "
-          f"mean LFC Spearman {per_pert.lfc_spearman.mean():.4f}, "
-          f"mean LFC RMSE {per_pert.lfc_rmse.mean():.4f}")
-    print(per_pert.round(4).to_string(index=False))
-    per_pert.to_csv(out / f"slide_{slide}_per_perturbation.csv", index=False)
+    df = read_seen_records(args.outdir, [slide])
+    print(f"slide {slide}: {len(df)} records, mean LFC Spearman {df.lfc_spearman.mean():.4f}, "
+          f"mean LFC RMSE {df.lfc_rmse.mean():.4f}")
+    ship = read_seen_records(SHIPPED["seen"], [slide])
+    both = df.merge(ship, on=["slide", "perturbation", "niche"], suffixes=("", "_shipped"))
+    print(f"vs shipped: {len(both)}/{len(ship)} records matched, "
+          f"max |d rho| {np.abs(both.lfc_spearman - both.lfc_spearman_shipped).max():.2e}, "
+          f"max |d RMSE| {np.abs(both.lfc_rmse - both.lfc_rmse_shipped).max():.2e}")
+    print(df.sort_values("lfc_spearman", ascending=False).round(4).to_string(index=False))
+    df.to_csv(out / f"slide_{slide}_per_record.csv", index=False)
 
 
 def step_aggregate(env, out):
@@ -263,28 +308,16 @@ def step_aggregate(env, out):
     exactly; --result-root fresh reads what `slide` wrote instead.
     """
     import numpy as np
-    import pandas as pd
 
     root = env["result_root"]("seen")
-    records = []
-    for s in SLIDES:
-        p = root / "patch" / f"slide_{s}" / "lfc_agg.json"
-        if not p.exists():
-            print(f"  slide {s}: no result at {p}")
-            continue
-        for gene, v in json.loads(p.read_text())["L2"].items():
-            records.append({"slide": s, "perturbation": gene,
-                            "lfc_spearman": v["spearman_mean"],
-                            "lfc_rmse": v["lfc_dist_mean"],
-                            "n_niches": v["n_niches"]})
-    df = pd.DataFrame(records)
+    df = read_seen_records(root, SLIDES)
     if df.empty:
         print("no per-slide results found -- run the `slide` step first, or drop --result-root fresh")
         return
 
     n = len(df)
     print(f"read {root}")
-    print(f"{n} perturbation x slide records over {df.slide.nunique()} slides\n")
+    print(f"{n} records ({df.perturbation.nunique()} knockouts) over {df.slide.nunique()} slides\n")
     print("WITHIN-NICHE (code name: seen)")
     print(f"  LFC Spearman : {df.lfc_spearman.mean():.4f}  "
           f"(s.e.m. {df.lfc_spearman.std(ddof=1) / np.sqrt(n):.4f})")
@@ -300,50 +333,35 @@ def step_aggregate(env, out):
 def step_crossslide(env, out):
     """The cross-slide setting: the panel, one unit run live, then the reported number.
 
-    A perturbation is removed from every slide, so the evaluation walks a panel of
-    (gene, target slide) units listed in benchmark_v3/eval_panel.json rather than the niches
-    of a held-out patch. Each unit names the donor slides where the gene was still visible.
+    A knockout is removed from one target slide and its effect is carried over from the donor
+    slides. benchmark_v4/eval_panel.json lists the 85 (knockout, target slide) units; every
+    method is scored on the same 5,000 source cells per target slide.
     """
-    import pandas as pd
+    import numpy as np
 
-    panel = json.loads((PREPARED / "benchmark_v3" / "eval_panel.json").read_text())
+    panel = json.loads((BENCH_V4 / "eval_panel.json").read_text())
+    import pandas as pd
     units = pd.DataFrame([{"gene": u["gene"], "target_slide": u["target_slide"],
-                           "donor_slides": ",".join(map(str, u.get("donor_slides", [])))}
+                           "donor_slides": ",".join(map(str, u.get("donor_slides", []))),
+                           "n_ko_target": u.get("n_ko_target")}
                           for u in panel["eval_units"]])
-    print(f"{len(units)} cross-slide evaluation units")
-    print(units.to_string(index=False))
+    print(f"{len(units)} cross-slide evaluation units "
+          f"{units.target_slide.value_counts().sort_index().to_dict()}")
     units.to_csv(out / "cross_slide_panel.csv", index=False)
 
     if env["run_unit"]:
-        u_args = spac_args("unseen", outdir=out / "unseen_eval_demo")
-        one = dict(panel)
-        one["eval_units"] = panel["eval_units"][:1]
-        demo = out / "demo_panel" / "benchmark_v3"
-        demo.mkdir(parents=True, exist_ok=True)
-        (demo / "eval_panel.json").write_text(json.dumps(one))
-        # the holdout coordinates live beside the real panel; symlink the rest of the directory
-        for f in (PREPARED / "benchmark_v3").glob("*"):
-            tgt = demo / f.name
-            if not tgt.exists():
-                tgt.symlink_to(f)
-        u_args.benchmark_v3_dir = demo
+        u0 = panel["eval_units"][0]
+        unit = f"{u0['gene']}@{u0['target_slide']}"
+        u_args = spac_args(env["bench"], "unseen", outdir=out / "unseen_eval_demo", units=[unit])
         env["bench"].eval_unseen_all(u_args)
-        print("\ndemo unit written to", u_args.outdir)
+        demo = read_unseen_records(u_args.outdir).merge(
+            read_unseen_records(SHIPPED["unseen"]), on=["gene", "slide"], suffixes=("", "_shipped"))
+        print(f"\ndemo unit {unit} (written to {u_args.outdir}):")
+        print(demo[["gene", "slide", "lfc_spearman", "lfc_spearman_shipped",
+                    "lfc_rmse", "lfc_rmse_shipped"]].to_string(index=False))
 
     root = env["result_root"]("unseen")
-    rows = []
-    for d in sorted((root / "unseen_pert").glob("*__slide_*")):
-        p = d / "lfc_scores.json"
-        if not p.exists():
-            continue
-        gene, slide = d.name.split("__slide_")
-        # lfc_scores.json is {"L2": {gene: [record]}}; a cross-slide unit has exactly one
-        # record (niche = -1, the whole slide).
-        rec = json.loads(p.read_text())["L2"][gene][0]
-        rows.append({"gene": gene, "slide": slide, "n_src_cells": rec.get("n_src"),
-                     "n_measured_ko": rec.get("n_real_g"),
-                     "lfc_spearman": rec.get("spearman"), "lfc_rmse": rec.get("lfc_dist")})
-    df = pd.DataFrame(rows).dropna(subset=["lfc_spearman"]) if rows else pd.DataFrame()
+    df = read_unseen_records(root)
     if df.empty:
         print(f"\nno cross-slide results under {root}")
         return
@@ -351,18 +369,19 @@ def step_crossslide(env, out):
     print(f"  {len(df)} units")
     print(f"  LFC Spearman : {df.lfc_spearman.mean():.4f}")
     print(f"  LFC RMSE     : {df.lfc_rmse.mean():.4f}")
-    print(df.sort_values("lfc_spearman", ascending=False).round(4).to_string(index=False))
     df.to_csv(out / "cross_slide_per_unit.csv", index=False)
 
 
 def step_compare(env, out):
-    """CONCERT next to the published methods, paired one competitor at a time.
+    """CONCERT next to the published methods and the reference strategies, paired per method.
 
-    The methods cover very different subsets of the 129 within-niche records -- Biolord, scGEN
-    and Steamboat all of them, GEARS 80, CelComen 15, CellAgentChat 11 -- so intersecting all
-    of them at once leaves nothing to compare. The reported comparison instead takes, per
-    competitor, the records that competitor and CONCERT both cover. Comparing unpaired means
-    would instead reward a method for skipping the hard records.
+    The reported tables (v4_aggregate_sampled/) hold the published methods
+    (spac_<setting>_lfc_dist_per_record.csv), the four reference strategies
+    (spac_<setting>_naive_baselines_our_rule.csv; Mean target = 50 knockout cells per unit) and
+    STATE (spac_<setting>_state_our_rule.csv). The methods cover very different subsets of the
+    129 within-niche records -- GEARS 80, CelComen 15, CellAgentChat 11 -- so intersecting all of
+    them at once leaves nothing to compare. The reported comparison takes, per method, the
+    records that method and CONCERT both cover.
 
     (The Perturb-map benchmark is the other way round -- there the methods overlap enough that
     an all-method intersection is the rule. See scripts/02_perturb_map_benchmark.py.)
@@ -373,55 +392,53 @@ def step_compare(env, out):
     import numpy as np
     import pandas as pd
 
-    def paired(csv_path, concert_key):
-        df = pd.read_csv(csv_path)
-        df["record"] = df.gene.astype(str) + "|" + df.slide.astype(str) + "|" + df.niche_key.astype(str)
-        con = df[df.method == concert_key].set_index("record")
+    def paired(setting):
+        parts = [NUMBERS / f"spac_{setting}_{n}.csv"
+                 for n in ("lfc_dist_per_record", "naive_baselines_our_rule", "state_our_rule")]
+        df = pd.concat([pd.read_csv(p, dtype={"slide": str, "niche_key": str}) for p in parts],
+                       ignore_index=True)
+        df["record"] = df.gene.astype(str) + "|" + df.slide + "|" + df.niche_key
+        con = df[df.method == CONCERT_KEY[setting]].set_index("record")
         rows = []
-        for _m, sub in df[df.method != concert_key].groupby("method"):
+        for _m, sub in df[df.method != CONCERT_KEY[setting]].groupby("method"):
             sub = sub.set_index("record")
             shared = con.index.intersection(sub.index)
             if len(shared) == 0:
                 continue
-            rows.append({"competitor": sub.method_label.iloc[0], "n_pairs": len(shared),
+            rows.append({"method": sub.method_label.iloc[0], "n_pairs": len(shared),
                          "concert_rho": con.loc[shared, "lfc_spearman"].mean(),
-                         "competitor_rho": sub.loc[shared, "lfc_spearman"].mean(),
+                         "method_rho": sub.loc[shared, "lfc_spearman"].mean(),
                          "concert_rmse": con.loc[shared, "lfc_dist"].mean(),
-                         "competitor_rmse": sub.loc[shared, "lfc_dist"].mean()})
+                         "method_rmse": sub.loc[shared, "lfc_dist"].mean()})
         o = pd.DataFrame(rows)
-        o["rho_advantage"] = o.concert_rho - o.competitor_rho
-        o["rmse_advantage"] = o.competitor_rmse - o.concert_rmse   # positive = CONCERT lower
-        return o.sort_values("n_pairs", ascending=False), len(con)
+        o["rho_advantage"] = o.concert_rho - o.method_rho
+        o["rmse_advantage"] = o.method_rmse - o.concert_rmse   # positive = CONCERT lower
+        return o.sort_values("n_pairs", ascending=False).reset_index(drop=True), len(con)
 
-    seen_cmp, n_seen = paired(NUMBERS / "spac_seen_lfc_dist_per_record.csv", "concert_v3_seen")
-    print(f"WITHIN-NICHE: CONCERT covers {n_seen} records; paired against each competitor:")
-    print(seen_cmp.round(4).to_string(index=False))
-    seen_cmp.to_csv(out / "within_niche_paired_comparison.csv", index=False)
+    cmp = {}
+    for setting, name in (("seen", "WITHIN-NICHE"), ("unseen", "CROSS-SLIDE")):
+        cmp[setting], n_con = paired(setting)
+        print(f"{name}: CONCERT covers {n_con} records; paired against each method:")
+        print(cmp[setting].round(4).to_string(index=False))
+        cmp[setting].to_csv(out / f"{setting}_paired_comparison.csv", index=False)
+        # the shipped statistics table carries the same n_pairs -- matching it is the check
+        # that the pairing above is the one the paper used
+        stats = pd.read_csv(NUMBERS / f"spacseq_{setting}_concert_vs_competitor_lfc_rho_stats_summary.csv")
+        chk = cmp[setting][["method", "n_pairs"]].merge(
+            stats[["method", "n_pairs", "p_adj"]].rename(columns={"n_pairs": "n_pairs_shipped"}),
+            on="method", how="left")
+        chk["matches"] = chk.n_pairs == chk.n_pairs_shipped
+        print("\n" + chk.to_string(index=False))
+        print(f"all counts match: {bool(chk.matches.all())}\n")
 
-    unseen_cmp, n_unseen = paired(NUMBERS / "spac_unseen_lfc_dist_per_record.csv", "concert_v3_unseen")
-    print(f"\nCROSS-SLIDE: CONCERT covers {n_unseen} records; paired against each competitor:")
-    print(unseen_cmp.round(4).to_string(index=False))
-    unseen_cmp.to_csv(out / "cross_slide_paired_comparison.csv", index=False)
-
-    # the shipped statistics table carries the same n_pairs -- matching it is the check that
-    # the pairing above is the one the paper used
-    stats = pd.read_csv(NUMBERS / "spacseq_seen_concert_vs_competitor_lfc_rho_stats_summary.csv")
-    chk = (seen_cmp[["competitor", "n_pairs"]]
-           .merge(stats[["method", "n_pairs"]].rename(columns={"method": "competitor",
-                                                               "n_pairs": "n_pairs_shipped"}),
-                  on="competitor", how="left"))
-    chk["matches"] = chk.n_pairs == chk.n_pairs_shipped
-    print("\n" + chk.to_string(index=False))
-    print("all counts match:", bool(chk.matches.all()))
-
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
-    for ax, (cmp_df, name) in zip(axes, [(seen_cmp, "within-niche"), (unseen_cmp, "cross-slide")]):
-        d = cmp_df.sort_values("concert_rho")
+    fig, axes = plt.subplots(1, 2, figsize=(11, 5.2))
+    for ax, (cmp_df, name) in zip(axes, [(cmp["seen"], "within-niche"), (cmp["unseen"], "cross-slide")]):
+        d = cmp_df.sort_values("method_rho")
         y = np.arange(len(d))
         ax.barh(y - 0.2, d.concert_rho, 0.4, color="#b2182b", label="CONCERT")
-        ax.barh(y + 0.2, d.competitor_rho, 0.4, color="#9ab8d4", label="competitor")
+        ax.barh(y + 0.2, d.method_rho, 0.4, color="#9ab8d4", label="other method")
         ax.set_yticks(y)
-        ax.set_yticklabels([f"{c}  (n={n})" for c, n in zip(d.competitor, d.n_pairs)])
+        ax.set_yticklabels([f"{c}  (n={n})" for c, n in zip(d.method, d.n_pairs)])
         ax.axvline(0, lw=0.8, color="0.4")
         ax.set_xlabel(f"LFC Spearman on paired records ({name})", fontsize=13)
         ax.tick_params(labelsize=10)
@@ -431,7 +448,7 @@ def step_compare(env, out):
     fig.tight_layout()
     fig.savefig(out / "benchmark_comparison.pdf", dpi=300)
     plt.close(fig)
-    print(f"\nwritten {out / 'benchmark_comparison.pdf'}")
+    print(f"written {out / 'benchmark_comparison.pdf'}")
 
 
 STEPS = {"weights": step_weights, "predict": step_predict, "slide": step_slide,
@@ -461,17 +478,18 @@ def main():
     cp.section("0. Inputs")
     cp.check([
         ("model source", MODEL_SRC / "concert_spac.py"),
-        ("scoring code", cp.EVAL_SRC / "run_concert_v3_benchmark_eval.py"),
+        ("scoring code", cp.EVAL_SRC / "run_concert_v4_benchmark_eval.py"),
         ("metric helper lib", cp.HELPER_LIB / "spac_edist_align.py"),
         ("raw section 1-1", SPAC_RAW / "raw_output_1-1.h5ad"),
         ("prepared cell sets", PREPARED / "slide_1-1.h5ad"),
-        ("eval panel", PREPARED / "benchmark_v3" / "eval_panel.json"),
+        ("cross-slide panel", BENCH_V4 / "eval_panel.json"),
         ("seen checkpoint", CKPT["seen"]),
         ("seen vocabulary", CKPT["seen"].parent / "pert_map.json"),
         ("unseen checkpoint", CKPT["unseen"]),
         ("unseen vocabulary", CKPT["unseen"].parent / "pert_map.json"),
-        ("shipped seen result", SHIPPED["seen"] / "patch" / "slide_1-1" / "lfc_agg.json"),
-        ("paper number table", NUMBERS / "spac_seen_lfc_dist_per_record.csv"),
+        ("shipped seen result", SHIPPED["seen"] / "patch" / "slide_1-1" / "lfc_scores.json"),
+        ("shipped unseen result", SHIPPED["unseen"] / "unseen_pert"),
+        ("reported table", NUMBERS / "spac_seen_lfc_dist_per_record.csv"),
     ])
     print(f"\noutput dir: {out}")
 
@@ -480,14 +498,20 @@ def main():
     import eval_spatial_counterfactual as ecf     # binds the released model copy first
     import spacseq_eval_common as sec
     import spacseq_multi_common as smc
-    import run_concert_v3_benchmark_eval as bench
+    import benchmark_v4_eval_lib as b4
+    import genefix_wrap
+    import run_concert_v4_benchmark_eval as bench
     eu, _sa = sec.import_eval_utils()
+    for m in (ecf, sec, smc, b4, genefix_wrap, bench):
+        assert Path(m.__file__).resolve().is_relative_to(cp.REPO_ROOT.resolve()), \
+            f"{m.__name__} loaded from outside the release: {m.__file__}"
     print(f"\nmodel source      : {ecf.__file__}")
     print(f"scoring entrypoint: {bench.__file__}")
     print(f"metric helpers    : {eu.__file__}")
+    install_gene_rule(sec, genefix_wrap)
     cp.describe_device()
 
-    args = spac_args("seen", outdir=out / "seen_eval", target_slide=args_cli.slide)
+    args = spac_args(bench, "seen", outdir=out / "seen_eval", target_slide=args_cli.slide)
     env = {"args": args, "slide": args_cli.slide, "ecf": ecf, "smc": smc, "bench": bench,
            "eu": eu, "run_unit": args_cli.run_unit,
            "result_root": lambda r: (SHIPPED[r] if args_cli.result_root == "shipped"
@@ -496,6 +520,7 @@ def main():
     if set(steps) & NEEDS_MODEL:
         cp.section(f"Loading the checkpoint on slide {args_cli.slide}")
         print(f"checkpoint  {args.model_file}")
+        print(f"output      {args.cf_output}, LFC reference = {args.cf_seen_ref}")
         print(f"band        [{args.fpert_ls_min}, {args.fpert_ls_max}] normalized "
               f"= [{args.fpert_ls_min * args.fpert_coord_scale:.0f}, "
               f"{args.fpert_ls_max * args.fpert_coord_scale:.0f}] section units")

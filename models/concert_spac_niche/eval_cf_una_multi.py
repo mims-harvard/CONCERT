@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Multi-slide model · per-niche unassigned-only counterfactual eval (SEEN only).
+"""Multi-slide model * per-niche unassigned-only counterfactual eval (SEEN only).
 
 Same scoring rule as the single-slide eval (eval_cf_una_only.py), but the model
 is the MULTI-slide checkpoint (trained on all 5 slides). For a target slide we

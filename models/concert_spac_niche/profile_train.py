@@ -66,7 +66,7 @@ def main() -> None:
 
     cfg = parse_args()
 
-    # --- Load data ---
+    # Load data
     from run_concert_spac import (
         load_h5_dataset, build_attributes_spac, ensure_dir,
         build_inducing_points, auto_batch_size,
@@ -146,7 +146,7 @@ def main() -> None:
     )
     logging.info("Model initialized.")
 
-    # --- Profile ---
+    # Profile
     trace_path = str(outdir / "trace")
     logging.info("Starting profiler. Trace -> %s", trace_path)
 
@@ -178,7 +178,7 @@ def main() -> None:
         )
         prof.step()
 
-    # --- Print summary ---
+    # Print summary
     summary = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=30
     )

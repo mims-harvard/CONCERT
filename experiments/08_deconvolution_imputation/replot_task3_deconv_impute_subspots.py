@@ -556,7 +556,7 @@ def main():
         flush=True,
     )
 
-    # ---- metric bars: raw peri vs deconv+impute for Jak2 / unpert / normal ----
+    # metric bars: raw peri vs deconv+impute for Jak2 / unpert / normal
     panels = [
         dict(
             key="jak2",
@@ -617,7 +617,7 @@ def main():
     m_raw = panel_means["jak2"]["m_raw"]
     m_imp = panel_means["jak2"]["m_imp"]
 
-    # ---- 3-panel slide: raw (peri highlighted) | decon pies | regular sub-spots ----
+    # 3-panel slide: raw (peri highlighted) | decon pies | regular sub-spots
     # Keep plot scope on the contiguous hex niche (same framing as before)
     focus = np.where(in_patch)[0]
     focus_xy = xy_d[focus]

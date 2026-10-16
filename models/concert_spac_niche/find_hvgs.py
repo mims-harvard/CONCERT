@@ -106,7 +106,7 @@ def main() -> None:
     sc.settings.verbosity = 2
     print(f"\n[1] Loading {in_path}")
     adata = sc.read_h5ad(in_path)
-    print(f"    Shape: {adata.n_obs:,} cells × {adata.n_vars:,} genes")
+    print(f"    Shape: {adata.n_obs:,} cells x {adata.n_vars:,} genes")
 
     print("\n[2] Computing HVG metrics (seurat_v3 on raw counts, copy only)")
     metrics = compute_hvg_metrics(adata, n_top_genes=args.n_top_genes)

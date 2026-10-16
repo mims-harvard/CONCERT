@@ -46,7 +46,7 @@ def _realize(log1p_mu):
 pred_all = {0.0: _realize(d["marker_pred_t0"]), 3.0: _realize(d["marker_pred_t3"]),
             9.0: _realize(d["marker_pred_t9"]), 21.0: _realize(d["marker_pred_t21"])}
 
-# --- keep only markers with a temporal trend (observed peak/baseline fold) ---
+# keep only markers with a temporal trend (observed peak/baseline fold)
 _obs_day = np.array([[obs_expr_all[np.isclose(src_day, day, atol=1e-3), j].mean()
                       for j in range(len(markers_all))] for day in DAYS])   # (4,G)
 _fold = _obs_day[2] / np.clip(_obs_day[0], 1e-3, None)      # d9 / d0

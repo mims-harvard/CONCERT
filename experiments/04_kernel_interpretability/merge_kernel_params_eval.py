@@ -102,7 +102,7 @@ params = params.merge(eff_df, on="pert_code", how="left")
 print(f"[field] gene-mean field on {args.grid}x{args.grid} grid for {len(eff_df)} perturbations")
 print(params[["field_sd", "field_range", "field_cv", "eff_lengthscale"]].describe().to_string())
 
-# ---------------------------------------- 2. within-slide benchmark accuracy ---
+# 2. within-slide benchmark accuracy
 recs = []
 for f in sorted(glob.glob(os.path.join(args.eval_dir, "slide_1-*", "per_pert_summary.json"))):
     sid = os.path.basename(os.path.dirname(f)).replace("slide_", "")
@@ -210,7 +210,7 @@ for grp_ in ["spatial_all547", "spatial_bench87", "accuracy_bench87"]:
     print(f"\n--- {grp_} ---")
     print(s[show].to_string(index=False, float_format=lambda v: f"{v:.4g}"))
 
-# ------------------------------------------------------------------- figure ----
+# figure
 fig, axes = plt.subplots(2, 4, figsize=(17.5, 8.2))
 ax = axes[0, 0]
 ax.hist(df["ls_footprint"], bins=45, color="#2563eb", alpha=.85)

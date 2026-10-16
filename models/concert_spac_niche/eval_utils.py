@@ -35,7 +35,7 @@ def score_lfc_agreement(model_lfc: np.ndarray, obs_lfc: np.ndarray, top_k: int =
     - spearman: rank correlation over all genes
     - lfc_dist: RMSE between LFC vectors (magnitude, not rank; lower is better)
     - sign_agreement: fraction of observed-significant genes with matching sign
-    - topk_overlap: |top-k |obs| genes ∩ top-k |model| genes| / k"""
+    - topk_overlap: |top-k |obs| genes & top-k |model| genes| / k"""
     m = np.asarray(model_lfc, dtype=np.float64)
     o = np.asarray(obs_lfc, dtype=np.float64)
     rho = float(spearmanr(m, o).correlation)
@@ -60,7 +60,7 @@ def energy_distance(X: np.ndarray, Y: np.ndarray, gene_mask: np.ndarray,
     Lower = more similar distributions.
 
     Steps: subset HVGs -> log1p normalize -> subsample -> joint PCA (50 PCs) -> e-distance.
-    E(X,Y) = 2·mean||x-y|| - mean||x-x'|| - mean||y-y'||
+    E(X,Y) = 2*mean||x-y|| - mean||x-x'|| - mean||y-y'||
     """
     X = np.log1p(np.asarray(X, dtype=np.float64)[:, gene_mask])
     Y = np.log1p(np.asarray(Y, dtype=np.float64)[:, gene_mask])
@@ -78,7 +78,7 @@ def energy_distance(X: np.ndarray, Y: np.ndarray, gene_mask: np.ndarray,
     # U-statistic: exclude diagonal (i==j, distance=0) so we average over
     # distinct pairs only.  cdist.mean() is the V-statistic which includes
     # n diagonal zeros, underestimating xx/yy by factor (n-1)/n -- a 5-10%
-    # downward bias for small niches (n≈10-20) that inflates the result.
+    # downward bias for small niches (n~10-20) that inflates the result.
     n, m = len(Xp), len(Yp)
     xx_d = cdist(Xp, Xp)
     xx = xx_d[np.triu_indices(n, k=1)].mean() if n > 1 else 0.0

@@ -1,12 +1,12 @@
-"""Test + visualize CRISPR delivery noise (= μ_action) across the 3 datasets.
+"""Test + visualize CRISPR delivery noise (= mu_action) across the 3 datasets.
 
 CRISPR noise = systematic transcriptional shift of guide-bearing NON-TARGETING (control/NTC)
 cells relative to no-guide (unassigned) basal cells -- i.e. an effect of guide delivery/selection
-that is NOT a gene knockout. The CONCERT model removes it via μ_action so f_pert = pure KO effect.
+that is NOT a gene knockout. The CONCERT model removes it via mu_action so f_pert = pure KO effect.
 
 Metric: pseudobulk log2-CPM LFC(control vs unassigned), genes filtered to expressed.
 Null  : split the unassigned pool into two random halves -> LFC (reliability floor ~0).
-If noise_LFC ≈ null -> no CRISPR noise (modeling μ_action unnecessary, e.g. claim for perturbmap).
+If noise_LFC ~ null -> no CRISPR noise (modeling mu_action unnecessary, e.g. claim for perturbmap).
 If noise_LFC >> null -> real CRISPR noise that must be disentangled (spac).
 
 Outputs: a 3-dataset figure + a quantitative summary table + npz of the LFC vectors.
@@ -86,7 +86,7 @@ for name, path, col in DATASETS:
              ctl_cpm=ctl_cpm[expressed], una_cpm=una_cpm[expressed])
     del a, X
 
-# --- figure: per-dataset MA scatter (top) + |LFC| hist real vs null (bottom) ---
+# figure: per-dataset MA scatter (top) + |LFC| hist real vs null (bottom)
 usable = [n for n, _, _ in DATASETS if not results[n].get("skip")]
 nc = len(DATASETS)
 fig, axes = plt.subplots(2, nc, figsize=(4.2 * nc, 8))
@@ -113,7 +113,7 @@ for j, (name, _, _) in enumerate(DATASETS):
     ax1.hist(np.abs(r["noise_lfc"]), bins=bins, color="#d62728", alpha=0.5, density=True, label=f"NTC-vs-basal med={r['noise_med']:.3f}")
     ax1.axvline(DE_THR, color="k", ls=":", lw=1)
     ax1.set_xlabel("|pseudobulk log2 fold-change|"); ax1.set_ylabel("density")
-    ax1.set_title(f"noise/null ratio = {r['noise_med']/max(r['null_med'],1e-9):.1f}×")
+    ax1.set_title(f"noise/null ratio = {r['noise_med']/max(r['null_med'],1e-9):.1f}x")
     ax1.legend(fontsize=8)
 fig.suptitle("CRISPR delivery noise (NTC vs basal) -- must disentangle where noise >> null", fontsize=13)
 fig.tight_layout(rect=[0, 0, 1, 0.97])
@@ -121,7 +121,7 @@ for ext in ("png", "pdf"):
     fig.savefig(f"{OUTDIR}/crispr_noise_3datasets.{ext}", dpi=150, bbox_inches="tight")
 print(f"\nsaved figure -> {OUTDIR}/crispr_noise_3datasets.png")
 
-# --- summary table ---
+# summary table
 print("\n================ CRISPR NOISE SUMMARY ================")
 print(f"{'dataset':12s} | {'n_ctrl':>7s} | {'n_una':>7s} | {'med|noise|':>10s} | {'med|null|':>9s} | {'ratio':>6s} | {'DE_noise':>8s} | {'DE_null':>7s}")
 for name, _, _ in DATASETS:
@@ -130,6 +130,6 @@ for name, _, _ in DATASETS:
         print(f"{name:12s} | {r['n_ctrl']:7d} | {r['n_una']:7d} |  (control too sparse -- not evaluable)"); continue
     ratio = r["noise_med"] / max(r["null_med"], 1e-9)
     print(f"{name:12s} | {r['n_ctrl']:7d} | {r['n_una']:7d} | {r['noise_med']:10.4f} | {r['null_med']:9.4f} | {ratio:5.1f}x | {r['noise_de']:8d} | {r['null_de']:7.0f}")
-print("\nInterpretation: ratio≈1 & DE_noise≈DE_null -> NO CRISPR noise (μ_action unnecessary).")
+print("\nInterpretation: ratio~1 & DE_noise~DE_null -> NO CRISPR noise (mu_action unnecessary).")
 print("                ratio>>1 & DE_noise>>DE_null -> real noise that the model must remove.")
 print("DONE")

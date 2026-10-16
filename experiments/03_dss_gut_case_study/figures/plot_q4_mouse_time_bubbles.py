@@ -77,7 +77,7 @@ def pivot_cmap(name, pivot, n=512):
         np.vstack([base(np.linspace(0.0, 0.5, k)), base(np.linspace(0.5, 1.0, n - k))]))
 
 
-# --- data: per-mouse per-gene means, all 15 mice ---
+# data: per-mouse per-gene means, all 15 mice
 d = np.load(DUMP, allow_pickle=True)
 genes = [str(g) for g in d["gene_names"]]
 midx = [genes.index(g) for g in MARKERS]              # all 17 markers are on the panel

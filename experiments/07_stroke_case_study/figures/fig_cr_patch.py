@@ -158,7 +158,7 @@ for g in [x.strip() for x in a.genes.split(",") if x.strip()]:
                              predicted_core=float(pv[p_core].mean()), predicted_rim=float(pv[p_rim].mean()),
                              observed_profile=po_, predicted_profile=pp_)
 
-# --- support panel: depth profile + core/rim bars, core markers ---
+# support panel: depth profile + core/rim bars, core markers
 cg = [x.strip() for x in a.core_genes.split(",") if x.strip() and x.strip() in stats["genes"]]
 fig, ax = plt.subplots(2, len(cg), figsize=(3.3 * len(cg) + 1.2, 6.4), squeeze=False)
 xs = np.arange(NB)

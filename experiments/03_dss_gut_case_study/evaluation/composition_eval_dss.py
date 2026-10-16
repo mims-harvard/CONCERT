@@ -1,14 +1,14 @@
-"""Descriptive-reconstruction validation for the DSS composition model (spec §6).
+"""Descriptive-reconstruction validation for the DSS composition model (spec Sec. 6).
 
-Trained on ALL 4 timepoints. Validates that the membership field π reproduces the observed
+Trained on ALL 4 timepoints. Validates that the membership field pi reproduces the observed
 inflammation COMPOSITION over time, is spatially contiguous, and is individualized per mouse --
 the capabilities the fixed-state (intensity-only) model lacked. NOT a held-out-peak test.
 
 Metrics written to <outdir>/composition_eval/:
-  1. composition_calibration.csv  -- predicted π-fraction vs observed label-fraction, per day
-  2. spatial_moran.csv            -- Moran's I of predicted π vs observed label, per slice/day
-  3. heterogeneity.csv            -- cross-mouse variance of π at a common projected day
-  4. counterfactual_flip.json     -- π->0 collapses the inflammation program (mechanism/identifiability)
+  1. composition_calibration.csv  -- predicted pi-fraction vs observed label-fraction, per day
+  2. spatial_moran.csv            -- Moran's I of predicted pi vs observed label, per slice/day
+  3. heterogeneity.csv            -- cross-mouse variance of pi at a common projected day
+  4. counterfactual_flip.json     -- pi->0 collapses the inflammation program (mechanism/identifiability)
   + composition_summary.png
 """
 from __future__ import annotations
@@ -59,7 +59,7 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
     bs = int(getattr(cfg, "loto_batch_size", 512))
     denom = float(getattr(cfg, "loto_day_denom", 21.0))
 
-    # --- π at each cell's OWN observed day (calibration should match observed fractions) ---
+    # pi at each cell's OWN observed day (calibration should match observed fractions)
     pi_obs = model.predict_membership(
         X=pos_batched, sample_index=sample_indices, cell_atts=cell_atts,
         Y=Y_expr, time_t=src_day, batch_size=bs)
@@ -77,7 +77,7 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
     logging.info("[comp] calibration by day (day, obs_frac, pred_pi): %s",
                  [(r["day"], round(r["obs_frac"], 3), round(r["pred_pi_mean"], 3)) for r in rows])
 
-    # 2. spatial Moran of π vs observed label, per slice
+    # 2. spatial Moran of pi vs observed label, per slice
     srows = []
     for s in np.unique(np.asarray(sample_id_all)):
         m = np.asarray(sample_id_all) == s
@@ -105,9 +105,9 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
     with open(outdir / "heterogeneity.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(hrows[0].keys())); w.writeheader(); w.writerows(hrows)
     spread = float(np.std([r["pred_pi_mean_at_peak"] for r in hrows]))
-    logging.info("[comp] cross-slide π spread at peak day = %.4f (interp baseline = 0)", spread)
+    logging.info("[comp] cross-slide pi spread at peak day = %.4f (interp baseline = 0)", spread)
 
-    # 4. counterfactual-flip / mechanism (spec §5 identifiability): decode inflamed cells with
+    # 4. counterfactual-flip / mechanism (spec Sec. 5 identifiability): decode inflamed cells with
     #    the program ON (perturbed) vs OFF (basal); the inflammation program must collapse.
     import torch
     inflamed = np.where(y_obs > 0.5)[0]
@@ -130,7 +130,7 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
     collapse = float(np.linalg.norm(np.log(_cp(mu_on) + 1e-3) - np.log(_cp(mu_off) + 1e-3)))
     (outdir / "counterfactual_flip.json").write_text(json.dumps(
         {"program_on_vs_off_lognorm_L2": collapse, "n_cells": int(sub.size),
-         "interpretation": "large L2 => π gates a real inflammation program (mechanism confirmed)"},
+         "interpretation": "large L2 => pi gates a real inflammation program (mechanism confirmed)"},
         indent=2))
     logging.info("[comp] counterfactual-flip program collapse (log-CP10K L2) = %.4f", collapse)
 
@@ -142,7 +142,7 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
 def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indices,
                               sample_id_all, multi_paths, gene_names, pert_map, cfg, outdir,
                               tier1_id=None, arch_desc=None, infl_score_all=None) -> Dict:
-    """THE MAKE-OR-BREAK TEST (v3 continuous inflammation field, spec §6).
+    """THE MAKE-OR-BREAK TEST (v3 continuous inflammation field, spec Sec. 6).
 
     Re-decode each cell at target days using counterfactualPrediction(time_t=...) and read the
     predicted DSS marker composition. SUCCESS = inflammation MOVES with time under re-decode:
@@ -198,10 +198,10 @@ def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indic
     mk_idx = [gnames.index(g) for g in DSS_MARKERS if g in gnames]
     logging.info("[traj] %d/%d marker genes present in model gene axis", len(mk_idx), len(DSS_MARKERS))
 
-    # --- shift-sign diagnostic ---
-    # a(t) = softplus(...) >= 0 only scales the MAGNITUDE of `shift` (= Φ·f_pert), which is
-    # SIGNED (clamped to ±f_pert_clamp). So the gate can be passed two ways:
-    #   shift > 0  -> basal is healthy and a(t)·shift ADDS inflammation      (intended)
+    # shift-sign diagnostic
+    # a(t) = softplus(...) >= 0 only scales the MAGNITUDE of `shift` (= Phi*f_pert), which is
+    # SIGNED (clamped to +/-f_pert_clamp). So the gate can be passed two ways:
+    #   shift > 0  -> basal is healthy and a(t)*shift ADDS inflammation      (intended)
     #   shift < 0  -> basal carries inflammation and the term SUBTRACTS it   (INVERTED:
     #                 a smaller a(9) attenuates a negative shift and markers rise, which
     #                 would pass the trajectory test while "f_pert = inflammation program"
@@ -462,7 +462,7 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
         m = np.isclose(src_day, d, atol=1e-3)
         diag[m] = pred[d][m]
 
-    # --- C1: per-mouse virtual longitudinal trajectories ---
+    # C1: per-mouse virtual longitudinal trajectories
     mice = sorted(set(mouse.tolist()))
     traj_rows = []
     for mid in mice:
@@ -476,7 +476,7 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
         w = csv.DictWriter(fh, fieldnames=list(traj_rows[0].keys())); w.writeheader(); w.writerows(traj_rows)
     logging.info("[case] C1 wrote %d per-mouse trajectories", len(traj_rows))
 
-    # --- C2: spatial Moran of the predicted diagonal field, per slice ---
+    # C2: spatial Moran of the predicted diagonal field, per slice
     moran_rows = []
     for s in np.unique(sid):
         m = sid == s
@@ -500,7 +500,7 @@ def run_case_study_deliverables(model, adata, cell_atts, pos_batched, sample_ind
     logging.info("[case] C2 Moran(pred_diag) by day: %s",
                  {d: round(v["moran_pred_diag"], 3) for d, v in moran_by_day.items()})
 
-    # --- C3: per-mouse heterogeneity at the peak day (t=9) ---
+    # C3: per-mouse heterogeneity at the peak day (t=9)
     het_rows = []
     for mid in mice:
         mm = mouse == mid
@@ -627,7 +627,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
     gnames = list(map(str, gene_names))
     mk_idx = [gnames.index(g) for g in DSS_MARKERS if g in gnames]
 
-    # --- observed ground truth in RAW-COUNT space ---
+    # observed ground truth in RAW-COUNT space
     # adata.X reaching this fn is normalized (negative after scaling), so re-read each held-out
     # file's raw counts and build the per-cell observed marker score in file/concat order (run()
     # concatenates multi_paths in order; cells with sample_id==i are contiguous in file-i order).
@@ -812,7 +812,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
             return float("nan")
         return float(np.corrcoef(a, b)[0, 1])
 
-    # --- per held-out mouse metrics ---
+    # per held-out mouse metrics
     rows = []
     for mid in sorted(set(mouse.tolist())):
         mm = mouse == mid
@@ -836,7 +836,7 @@ def run_heldout_mouse_eval(model, adata, cell_atts, pos_batched, sample_indices,
     with open(outdir / "heldout_per_mouse.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(rows[0].keys())); w.writeheader(); w.writerows(rows)
 
-    # --- spatial Moran per held-out slice: predicted field vs observed field ---
+    # spatial Moran per held-out slice: predicted field vs observed field
     srows = []
     for s in np.unique(sid):
         m = sid == s

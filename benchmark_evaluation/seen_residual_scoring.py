@@ -410,7 +410,7 @@ def score_gene_from_niche_lfc(
     pred_global, pred_resid = residualize_across_niches(pred_mat)
 
     niche_residual_rho = score_residual_flat(pred_resid, obs_resid)
-    cross_niche_pattern_rho = niche_residual_rho  # same flattening for (niche × gene)
+    cross_niche_pattern_rho = niche_residual_rho  # same flattening for (niche x gene)
 
     # Global pooled baseline: predict slide-global observed LFC in every niche
     pool_pred = np.tile(obs_global, (len(keys), 1))
@@ -496,7 +496,7 @@ def global_pooled_baseline_pm_slide(
     genes: Iterable[str],
     min_g_cells: int = 20,
 ) -> list[ResidualScore]:
-    """Baseline: predict slide-global observed LFC in every niche (residual ≈ 0)."""
+    """Baseline: predict slide-global observed LFC in every niche (residual ~ 0)."""
     adata = ad.read_h5ad(prepared_dir / f"slide_{slide_id}.h5ad")
     gene_names = np.asarray(adata.var_names)
     out: list[ResidualScore] = []

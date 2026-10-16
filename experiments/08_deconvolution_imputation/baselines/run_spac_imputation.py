@@ -15,9 +15,7 @@ import glob
 SPATIALSCOPE_SRC = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/src'
 sys.path.insert(0, SPATIALSCOPE_SRC)
 
-# ============================================================
 # Configuration
-# ============================================================
 CKPT_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2'
 SCREF_PATH = os.path.join(CKPT_DIR, 'Ref_SPAC_2-2.h5ad')
 IMPUTATION_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/test_output/spac_2-2'

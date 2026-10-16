@@ -44,9 +44,7 @@ from concert_spac import CONCERT
 from preprocess import normalize, geneSelection
 
 
-# -----------------------------------------------------------------------------
 # Logging
-# -----------------------------------------------------------------------------
 def setup_logging(verbosity: int = 1) -> None:
     level = logging.WARNING if verbosity <= 0 else logging.INFO if verbosity == 1 else logging.DEBUG
     logging.basicConfig(
@@ -55,9 +53,7 @@ def setup_logging(verbosity: int = 1) -> None:
         level=level,
     )
 
-# -----------------------------------------------------------------------------
-# --- Reporting (kernel scales & cutoffs) --------------------------------
-# -----------------------------------------------------------------------------
+# Reporting (kernel scales & cutoffs)
 def _report_and_save_final(
     *,
     model,
@@ -116,9 +112,7 @@ def _report_and_save_final(
     except Exception as e:
         logging.warning("Failed to save per-sample cutoffs CSV (%s).", e)
 
-# -----------------------------------------------------------------------------
 # Dataclasses / Config
-# -----------------------------------------------------------------------------
 @dataclass
 class RunConfig:
     # IO
@@ -174,28 +168,28 @@ class RunConfig:
     KL_loss: float = 0.025
 
     # Perturbation Action Denoiser (PAD) -- now downgraded to soft regularizer
-    # (explicit action correction is the primary mechanism)
+    # (Phase 2.6 explicit action correction is the primary mechanism)
     use_pad: bool = False          # muted for now; re-enable after action correction is validated
     pad_action_dim: int = 64       # binary action embedding dim
     pad_lambda_mmd: float = 0.1    # MMD loss weight
     pad_lambda_adv: float = 0.01   # adversarial GRL loss weight
 
-    # --- HVG selection ---
+    # HVG selection
     # Genes with hvg_rank <= hvg_max_rank are used; ~10k genes in SPAC-seq data
     hvg_max_rank: int = 10000
 
-    # --- Multi-sample joint training ---
+    # Multi-sample joint training (Phase 2.2)
     # Comma-separated list of h5ad file paths.  Empty string -> single-sample mode.
     # Example: "raw_output_1-1.h5ad,raw_output_1-2.h5ad,raw_output_1-3.h5ad,raw_output_1-4.h5ad"
     multi_sample_files: str = ""
 
-    # --- Control-anchored explicit action correction ---
+    # Phase 2.6: Control-anchored explicit action correction
     # 3-term decoder: log mu = f_basal + 1[has_guide]*mu_action + 1[is_real_KO]*f_pert
     use_action_correction: bool = True
     detach_mu_action_for_ko: bool = False
     mu_action_anchor_lambda: float = 0.0
 
-    # --- latent disentanglement (drop pert from encoder) ---
+    # Phase 2.7: latent disentanglement (drop pert from encoder)
     # When use_basal_encoder_only=True, the VAE encoder sees only [basal,
     # tissue] from LORD; the perturbation embedding feeds only the gene-space
     # f_pert term. This structurally guarantees z is pert-blind and makes
@@ -217,9 +211,30 @@ class RunConfig:
     # too large for gp_pp -- that pinned ls at its floor in ms_spac1_niche_*).
     fpert_ls_min: float = 0.0
     fpert_ls_max: float = 0.0
+    # 3D footprint field (stroke). >1 turns on the z axis of f_pert ONLY: the basal RFF and the
+    # niche FiLM descriptor stay 2D on purpose (Stage 0b: cross-slice neighbours HURT basal
+    # reconstruction). Sections of one z-stack share an XY frame and are tiled together; z is the
+    # ORDINAL section index normalised to [0,1] (Stage 0: similarity decays by index, not mm).
+    fpert_n_z_levels: int = 1
+    fpert_z_gain: float = 0.25
+    # Tile slides by z-STACK instead of individually: sections of one stack are registered
+    # (PASTE2) and share one XY frame. Required for 3D and used by the 2D arm too, so the two
+    # arms differ ONLY in whether f_pert can resolve z.
+    tile_by_stack: bool = False             # normalised distance between adjacent sections
+    z_index_obsm: str = "section_index"    # obsm key holding the ordinal section index
+    z_stack_obs: str = "mouse"             # obs column grouping slides into one z-stack
+    # Tissue class used as the LFC reference (unperturbed anatomy the lesion sits in, e.g. CTX).
+    # Empty => legacy Perturb-MAP behaviour (tissue "tumor", falling back to all basal spots).
+    lfc_ref_tissue: str = ""
+    # Write the paracrine/NNGP graph inputs (pos, pert code, emitter mask) and stop. Emitted from
+    # INSIDE run(), after every row filter and the coordinate scaling, because the graph is keyed
+    # by global spot index and the loader's alignment check compares it against the trained N --
+    # rebuilding it from the raw files would silently mis-key it.
+    dump_graph_inputs: str = ""
+    paracrine_r_max: float = 0.0           # radius the graph_file was built with (CF rebuild)
     fpert_mb_bandwidths: str = ""          # comma list, e.g. "0.05,0.15,0.5" (mb_rff)
     basal_bayes: bool = True               # M2: Bayes-linear basal head (generally on)
-    # deterministic RFF basal field + scale-aware disentanglement
+    # P0: deterministic RFF basal field + scale-aware disentanglement
     basal_field: str = "svgp"              # 'svgp' (legacy) | 'rff' (collapse-proof basal)
     basal_rff_features: int = 128
     basal_rff_bandwidth: float = 0.15
@@ -229,7 +244,7 @@ class RunConfig:
     use_consistency_loss: bool = False     # batch-level MMD on log mu_basal between KO and ctrl
     consistency_lambda: float = 1.0
 
-    # --- inductive expression encoder + collapse fixes ---
+    # Phase 2.9: inductive expression encoder + collapse fixes
     use_expr_encoder: bool = False         # amortized basal encoder on expression (inductive)
     expr_hidden_dims: tuple = (512, 256)
     expr_dropout: float = 0.1
@@ -241,11 +256,11 @@ class RunConfig:
     gp_free_bits: float = 0.0              # per-dim KL floor (nats) on GP block (v5a)
     use_pert_correction: bool = False      # default-off leakage fallback
 
-    # --- NNGP local field + precomputed spatial graph ---
+    # Phase 2.8: NNGP local field + precomputed spatial graph
     use_nngp: bool = False
     nngp_lambda: float = 1.0
     graph_file: Optional[str] = None
-    # paracrine spillover + niche x pert interaction
+    # Phase 2.8: paracrine spillover + niche x pert interaction
     use_paracrine: bool = False
     paracrine_l1: float = 0.0
     use_niche_interaction: bool = False
@@ -257,10 +272,10 @@ class RunConfig:
     niche_film_l2: float = 1e-3
     niche_film_rank: int = 8
     niche_film_dispersion: bool = False
-    # multiplicative per-cell scalar gate on the global pert effect
+    # Step 0: multiplicative per-cell scalar gate on the global pert effect
     use_pert_gate: bool = False
     gate_hidden: int = 64
-    # spatial-basal disentanglement + mini-bulk LFC supervision
+    # Phase 3: spatial-basal disentanglement + mini-bulk LFC supervision
     spatial_basal_only: bool = False
     lfc_lambda: float = 0.0
     disentangle_lambda: float = 0.0
@@ -279,7 +294,7 @@ class RunConfig:
     ls_prior_min: float = 3.0
     ls_prior_max: float = 8.0
 
-    # --- SPAC-seq cell taxonomy labels ---
+    # SPAC-seq cell taxonomy labels
     # Comma-separated; extend if your data uses different naming.
     # "multiple" belongs in excluded_label: it represents co-captured cells with
     # distinct KOs -- their expression is a mixture of multiple perturbation effects
@@ -288,13 +303,13 @@ class RunConfig:
     control_label: str = "Non_targeting,non_targeting,NonTargeting,control,Control,CTRL,ctrl,NT"
     excluded_label: str = "multiple,Multiple"  # cells dropped entirely before training
 
-    # --- Perturbation frequency filter ---
+    # Perturbation frequency filter
     # Perturbation classes with fewer than this many cells are excluded from
     # training (their cells are dropped).  Prevents near-empty embeddings for
     # singleton or very-rare guides.  0 = no filtering.
     min_cells_per_pert: int = 10
 
-    # --- Negative-control label shuffle (ablation) ---
+    # Negative-control label shuffle (ablation)
     # If > 0, permute the perturbation labels of the top-N real-KO classes
     # (by post-filter cell count) AMONG those cells only. Marginal class counts
     # are preserved but the cell<->label link is destroyed, so the model has no
@@ -340,9 +355,7 @@ class RunConfig:
     wandb_mode: str = "online"  # online|offline|disabled
 
 
-# -----------------------------------------------------------------------------
 # Utilities
-# -----------------------------------------------------------------------------
 def ensure_dir(path: str | Path) -> Path:
     p = Path(path)
     p.mkdir(parents=True, exist_ok=True)
@@ -463,6 +476,34 @@ def tile_multislide_coords(pos_raw, sample_id, loc_range, gap_factor):
         pos_scaled[m] = sc.astype(np.float32)
         layout.append((int(sid), int(r), int(c), int(m.sum())))
     return pos_scaled, layout, spacing
+
+
+def load_z_stack_axes(paths, z_index_obsm="section_index", z_stack_obs="mouse"):
+    """Per-cell ordinal section index and per-FILE z-stack id, in `paths` order.
+
+    Cells are concatenated per file by `load_h5ad_multi`, so the section index lines up with
+    the returned arrays without threading a new axis through the loader. The same filter_pass
+    mask the loader applies is applied here so the lengths keep matching.
+
+    Returns (z_index (N,) float32, stack_of_file (n_files,) str).
+    """
+    zs, stack_of_file = [], []
+    for path in paths:
+        with h5py.File(path, "r") as f:
+            if "obsm" not in f or z_index_obsm not in f["obsm"]:
+                raise KeyError(f"{path}: obsm/{z_index_obsm} missing -- required by a 3D f_pert field")
+            z = np.asarray(f["obsm"][z_index_obsm][:], dtype=np.float32).reshape(-1)
+            if z_stack_obs and z_stack_obs in f["obs"]:
+                st = _read_obs_str_column(f["obs"], z_stack_obs)
+                stack = str(st[0]) if len(st) else "all"
+            else:
+                stack = "all"
+            if "filter_pass" in f["obs"]:
+                fp = _read_obs_str_column(f["obs"], "filter_pass")
+                z = z[np.array([v.lower() in {"1", "true", "pass", "yes"} for v in fp], dtype=bool)]
+        zs.append(z)
+        stack_of_file.append(stack)
+    return np.concatenate(zs).astype(np.float32), np.asarray(stack_of_file, dtype=object)
 
 
 def build_tiled_inducing(pos_scaled, sample_id, n_batch, cfg):
@@ -598,7 +639,7 @@ def _load_h5ad_dataset(
     logging.info("[load] Opening h5ad (sparse, lazy): %s", path)
     with h5py.File(path, "r") as f:
 
-        # --- perturbation labels ---
+        # perturbation labels
         perturb_raw_full = _read_obs_str_column(f["obs"], "perturbation")
         n_obs_full = len(perturb_raw_full)
 
@@ -607,10 +648,10 @@ def _load_h5ad_dataset(
         if "tissue" in f["obs"]:
             tissue_raw_full = _read_obs_str_column(f["obs"], "tissue")
 
-        # --- spatial coordinates ---
+        # spatial coordinates
         pos_full = np.array(f["obsm"]["array_coords"][:], dtype=np.float32)
 
-        # --- filter_pass row mask ---
+        # filter_pass row mask
         filter_pass_mask = None
         if "filter_pass" in f["obs"]:
             fp_str = _read_obs_str_column(f["obs"], "filter_pass")
@@ -623,7 +664,7 @@ def _load_h5ad_dataset(
         else:
             logging.warning("[load] No 'filter_pass' in obs; keeping all %d spots.", n_obs_full)
 
-        # --- HVG column mask from var ---
+        # HVG column mask from var
         # If force_hvg_mask is given (multi-sample mode), use it directly.
         # Otherwise: var['hvg_rank'] (1-based, lower = more variable) -> top-N;
         #   fallback: var['highly_variable'] bool; last-resort: all genes.
@@ -657,7 +698,7 @@ def _load_h5ad_dataset(
             logging.warning("[load] No hvg_rank or highly_variable in var -- using all %d genes!",
                             len(gene_names_full) if gene_names_full is not None else 0)
 
-        # --- sparse count matrix ---
+        # sparse count matrix
         x_grp   = f["X"]
         data    = np.array(x_grp["data"][:],    dtype=np.float32)
         indices = np.array(x_grp["indices"][:], dtype=np.int32)
@@ -667,7 +708,7 @@ def _load_h5ad_dataset(
                    else (int(indices.max()) + 1 if len(indices) > 0 else 0))
         X_sp = sp_scipy.csr_matrix((data, indices, indptr), shape=(n_obs, n_vars))
 
-    # --- Apply filter_pass row mask (stays sparse) ---
+    # Apply filter_pass row mask (stays sparse)
     if filter_pass_mask is not None:
         X_sp          = X_sp[filter_pass_mask]
         perturb_raw   = perturb_raw_full[filter_pass_mask]
@@ -679,7 +720,7 @@ def _load_h5ad_dataset(
         pos           = pos_full
         tissue_raw    = tissue_raw_full
 
-    # --- Column selection ---
+    # Column selection
     # force_gene_order (eval on a model trained with a DIFFERENT HVG set, e.g. a
     # multi-slide model whose avg-rank genes != this slide's per-slide HVG rank):
     # subset AND reorder to the model's exact training gene list so the decoder
@@ -702,11 +743,11 @@ def _load_h5ad_dataset(
     else:
         gene_names = gene_names_full
 
-    # --- Densify only the reduced submatrix ---
+    # Densify only the reduced submatrix
     X = X_sp.toarray().astype(np.float32)
     logging.info("[load] Final matrix: %d spots x %d genes", X.shape[0], X.shape[1])
 
-    # --- Derive 3-class indicators ---
+    # Derive 3-class indicators
     # has_guide : 1 for control + gene_KO (any guide delivered)
     # is_real_KO: 1 for gene_KO only (not unassigned, not non-targeting control)
     has_guide  = np.array([p not in unassigned_labels for p in perturb_raw], dtype=bool)
@@ -766,7 +807,7 @@ def load_h5ad_multi(
 
     logging.info("[multi-load] Loading %d samples with shared HVG set (avg-rank) ...", len(paths))
 
-    # --- Pass 1: collect hvg_rank arrays (var only, no X) ---
+    # Pass 1: collect hvg_rank arrays (var only, no X)
     all_ranks: List[Optional[np.ndarray]] = []
     gene_names_ref: Optional[np.ndarray] = None   # gene list from first sample
     in_panel_ref: Optional[np.ndarray] = None     # benchmark KO-panel genes to force-keep
@@ -961,9 +1002,7 @@ def load_config_file(path: Optional[str]) -> dict:
         raise ValueError(f"Unsupported config format for {path}: {e}")
 
 
-# -----------------------------------------------------------------------------
 # Orchestration
-# -----------------------------------------------------------------------------
 def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     logging.info("Config: %s", asdict(cfg))
 
@@ -992,7 +1031,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     # IO
     outdir = ensure_dir(cfg.outdir)
 
-    # --- Parse SPAC-seq taxonomy label sets ---
+    # Parse SPAC-seq taxonomy label sets
     unassigned_labels = frozenset(
         l.strip() for l in cfg.unassigned_label.split(",") if l.strip()
     )
@@ -1003,12 +1042,12 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         l.strip() for l in cfg.excluded_label.split(",") if l.strip()
     )
 
-    # --- Load (single-sample or multi-sample) ---
+    # Load (single-sample or multi-sample)
     multi_paths = [p.strip() for p in cfg.multi_sample_files.split(",") if p.strip()]
     sample_id_all = None  # only set in multi-sample mode
 
     if multi_paths:
-        # joint training over multiple samples
+        # Phase 2.2: joint training over multiple samples
         logging.info("[run] Multi-sample mode: %d samples", len(multi_paths))
         X, pos_raw, tissue_raw, perturb_raw, has_guide, is_real_KO, gene_names, sample_id_all = \
             load_h5ad_multi(
@@ -1022,6 +1061,20 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if tissue_raw is not None:
             logging.info("[run] Multi-sample tissue axis active (%d classes) -> basal path",
                          len(set(tissue_raw.tolist())))
+        if cfg.fpert_n_z_levels > 1 or cfg.tile_by_stack:
+            # Carried AS A THIRD COLUMN OF pos_raw so every downstream row filter (excluded
+            # labels, holdouts, rare-class pruning) drops its z with the cell automatically.
+            z_idx, stack_of_file = load_z_stack_axes(
+                multi_paths, cfg.z_index_obsm, cfg.z_stack_obs)
+            if len(z_idx) != pos_raw.shape[0]:
+                raise ValueError(f"z index length {len(z_idx)} != {pos_raw.shape[0]} cells")
+            if cfg.fpert_n_z_levels > 1:
+                pos_raw = np.concatenate([pos_raw, z_idx[:, None]], axis=1).astype(np.float32)
+            logging.info("[3d] z axis attached: stacks=%s, section index per stack=%s",
+                         list(dict.fromkeys(stack_of_file.tolist())),
+                         {st: sorted(set(z_idx[np.isin(sample_id_all,
+                              np.where(stack_of_file == st)[0])].tolist()))
+                          for st in dict.fromkeys(stack_of_file.tolist())})
     else:
         # Single-sample mode (default)
         X, pos_raw, tissue_raw, perturb_raw, has_guide, is_real_KO, gene_names = load_h5_dataset(
@@ -1031,7 +1084,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             hvg_max_rank=cfg.hvg_max_rank,
         )
 
-    # --- Filter 1: excluded labels (e.g. "multiple" -- mixed-KO spots) ---
+    # Filter 1: excluded labels (e.g. "multiple" -- mixed-KO spots)
     # These cells have ambiguous perturbation identity and are dropped entirely.
     if excluded_labels:
         keep_excl = np.array([p not in excluded_labels for p in perturb_raw], dtype=bool)
@@ -1048,7 +1101,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             if sample_id_all is not None:
                 sample_id_all = sample_id_all[keep_excl]
 
-    # --- Holdout unassigned cells (for unseen-cell eval, scenarios 2 & 3) ---
+    # Holdout unassigned cells (for unseen-cell eval, scenarios 2 & 3)
     if cfg.holdout_unassigned_frac > 0.0:
         rng_ho = np.random.default_rng(cfg.seed if cfg.seed is not None else 0)
         una_idx = np.where(~has_guide)[0]   # unassigned = no guide
@@ -1068,11 +1121,14 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if sample_id_all is not None:
             sample_id_all = sample_id_all[keep_ho]
 
+    # --- Targeted holdout: explicit unassigned indices (post-exclusion concat space).
+    # Used for the niche-panel multi-slide unseen eval: hold out the unassigned
+    # SOURCE cells in each panel gene's most-abundant niche (never KO/NTC).
     elif cfg.holdout_unassigned_file:
         hold_idx = np.load(cfg.holdout_unassigned_file).astype(int)
         una_mask_all = ~has_guide                       # genuine unassigned only
         valid = hold_idx[(hold_idx >= 0) & (hold_idx < len(X))]
-        valid = valid[una_mask_all[valid]]
+        valid = valid[una_mask_all[valid]]              # never hold out KO/NTC
         hold_mask = np.zeros(len(X), dtype=bool); hold_mask[valid] = True
         np.save(str(outdir / "holdout_unassigned_indices.npy"), valid)
         logging.info("[holdout-file] Held out %d unassigned cells from %s "
@@ -1087,6 +1143,12 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if sample_id_all is not None:
             sample_id_all = sample_id_all[keep_ho]
 
+    # v3 benchmark holdout: coord-keyed (sample_id, array_coords)
+    # Held-out cells are identified by matching each cell's (sid, int array_coords)
+    # against the precomputed v3 holdout-coords file (build_v3_holdout_coords.py).
+    #   unassigned : prediction-source patch -- excluded from train (guard: unassigned only)
+    #   ko         : masked target-slide KO (UNSEEN only) -- excluded so G is unseen on T
+    # Resolved concat-space indices saved for the eval adapters.
     elif cfg.holdout_v3_file:
         import json as _json
         hv = _json.load(open(cfg.holdout_v3_file))
@@ -1109,6 +1171,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         w_ko = _want(hv.get("ko", {}))
         m_una = np.fromiter((k in w_una for k in keys), dtype=bool, count=len(keys)) & una_all
         m_ko = np.fromiter((k in w_ko for k in keys), dtype=bool, count=len(keys))
+        # sanity: KO coords must land on real KO cells, never on unassigned
         if w_ko:
             leaked = int((m_ko & una_all).sum())
             if leaked:
@@ -1129,7 +1192,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if sample_id_all is not None:
             sample_id_all = sample_id_all[keep_ho]
 
-    # --- Filter 2: low-frequency perturbations ---
+    # Filter 2: low-frequency perturbations
     # Drop cells whose perturbation class has fewer than min_cells_per_pert cells.
     # Prevents near-empty embeddings for singleton or very-rare guides.
     if cfg.min_cells_per_pert > 0:
@@ -1154,7 +1217,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     logging.info("[filter] After filtering: %d cells, %d unique perturbations",
                  len(perturb_raw), len(set(perturb_raw.tolist())))
 
-    # --- Negative-control: shuffle labels of the top-N real-KO classes ---
+    # Negative-control: shuffle labels of the top-N real-KO classes
     # Permute perturbation labels AMONG the cells of the top-N real-KO genes only.
     # Marginal counts per gene are preserved (so embeddings/filters are unchanged),
     # but each cell's label is randomly reassigned within the pool -> no learnable
@@ -1186,6 +1249,10 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     else:
         tissue_idx, tissue_dict, perturb_idx, pert_map = build_attributes(perturb_raw)
 
+    # Persist the perturbation vocabulary + label config as the single source of truth for
+    # eval. Eval MUST reproduce these exact codes to index the trained embedding table, and
+    # the same unassigned/control sets to recompute has_guide/is_real_KO. Never rebuild at
+    # eval -- load this file instead.
     with open(outdir / "pert_map.json", "w") as _fh:
         json.dump({
             "pert_map": {str(k): int(v) for k, v in pert_map.items()},
@@ -1212,25 +1279,65 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     batch = np.eye(n_batch, dtype=np.float32)[perturb_idx]
 
     # Scale spatial & append batch columns for kernel conditioning.
+    z_col, tile_key = None, sample_id_all
+    if cfg.fpert_n_z_levels > 1 or cfg.tile_by_stack:
+        if sample_id_all is None:
+            raise ValueError("3D / tile_by_stack requires --multi_sample_files (one file per "
+                             "section); a single slide has no z axis.")
+        # Sections of one stack are registered, so they share an XY frame and one tile.
+        stack_names = np.unique(stack_of_file)
+        stack_code = np.asarray(
+            [int(np.where(stack_names == stack_of_file[i])[0][0]) for i in sample_id_all],
+            dtype=np.int32)
+        tile_key = stack_code
+        if cfg.fpert_n_z_levels > 1:
+            # Split the ordinal section index off and normalise it to [0,1] WITHIN each stack, so
+            # a stack whose section codes run 4..7 lands on the same levels as one running 0..3.
+            z_ord, pos_raw = pos_raw[:, 2], pos_raw[:, :2]
+            z_col = np.zeros(len(z_ord), dtype=np.float32)
+            for code in np.unique(stack_code):
+                m = stack_code == code
+                lo, hi = float(z_ord[m].min()), float(z_ord[m].max())
+                z_col[m] = (z_ord[m] - lo) / max(hi - lo, 1.0)
+            logging.info("[3d] z normalised per stack: levels=%s (n_z_levels=%d, gain=%.3f)",
+                         sorted(set(np.round(z_col, 4).tolist())), cfg.fpert_n_z_levels,
+                         cfg.fpert_z_gain)
+        logging.info("[3d] tiling by stack: %d stacks %s (was %d slides)",
+                     len(stack_names), stack_names.tolist(), len(np.unique(sample_id_all)))
+
     if sample_id_all is not None:
-        # Multi-slide: tile each slide into a disjoint region so the GP has NO cross-slide
-        # neighbors (slides are unaligned 2D sections). Kernel params remain shared.
+        # Multi-slide: tile each slide (or, in 3D, each z-STACK) into a disjoint region so the GP
+        # has no cross-tile neighbors. Kernel params remain shared.
         pos_scaled, tile_layout, tile_spacing = tile_multislide_coords(
-            pos_raw, sample_id_all, cfg.loc_range, cfg.slide_tile_gap_factor)
+            pos_raw, tile_key, cfg.loc_range, cfg.slide_tile_gap_factor)
         logging.info(
             "[multi-tile] %d slides tiled (spacing=%.1f, gap_factor=%.2f, coord max=%.1f); "
             "layout (sid,row,col,n)=%s",
             len(tile_layout), tile_spacing, cfg.slide_tile_gap_factor,
             float(pos_scaled.max()), tile_layout)
     else:
-        pos_scaled = (MinMaxScaler().fit_transform(pos_raw) * cfg.loc_range).astype(np.float32)
+        pos_scaled = (MinMaxScaler().fit_transform(pos_raw[:, :2]) * cfg.loc_range).astype(np.float32)
     cutoff = np.full(pos_scaled.shape[0], 0.5, dtype=np.float32)  # learnable init (vector)
-    pos_batched = np.concatenate([pos_scaled, batch], axis=1).astype(np.float32)
+    # Design matrix layout: [x, y, (z), batch_onehot...]. Only f_pert reads the z column
+    # (CONCERT.pos_dim); the basal field, the niche descriptor and the GP all slice [:, :2].
+    pos_batched = np.concatenate(
+        [pos_scaled] + ([z_col[:, None]] if z_col is not None else []) + [batch],
+        axis=1).astype(np.float32)
+
+    if cfg.dump_graph_inputs:
+        Path(cfg.dump_graph_inputs).parent.mkdir(parents=True, exist_ok=True)
+        np.savez(cfg.dump_graph_inputs, pos=pos_scaled.astype(np.float32),
+                 pert_idx=perturb_idx.astype(np.int64),
+                 is_real_KO=is_real_KO.astype(np.int64))
+        logging.info("[graph-inputs] N=%d, %d emitters, coord max=%.1f -> %s",
+                     pos_scaled.shape[0], int(is_real_KO.sum()), float(pos_scaled.max()),
+                     cfg.dump_graph_inputs)
+        return
 
     # Inducing points.
     if sample_id_all is not None and cfg.grid_inducing_points:
         # Per-slide tiled grids (density-scaled per slide), concatenated.
-        inducing = build_tiled_inducing(pos_scaled, sample_id_all, n_batch, cfg)
+        inducing = build_tiled_inducing(pos_scaled, tile_key, n_batch, cfg)
         logging.info("[inducing] multi-slide tiled grids: M=%d total inducing points "
                      "(cells_per_inducing=%s)", inducing.shape[0], cfg.cells_per_inducing)
     else:
@@ -1278,6 +1385,12 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     N_after = adata.n_obs
 
     if N_after < N_before:
+        # obs_names are '0', '1', ..., 'N_before-1' originally; after filtering
+        # only a subset remains.  Recover the boolean keep-mask and re-index
+        # every companion array (pos, batch, cell_atts, cutoff, has_guide, ...)
+        # so they all have N_after rows before building TensorDataset.
+        # Note: n_batch does NOT change -- dropping 1-2 cells from 600k never
+        # eliminates an entire perturbation class.
         kept_idx = adata.obs_names.astype(int).values
         keep_mask = np.zeros(N_before, dtype=bool)
         keep_mask[kept_idx] = True
@@ -1299,7 +1412,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     spatial_dims = pos_batched.shape[1] - n_batch
     kernel_scale = np.full((n_batch, spatial_dims), cfg.kernel_scale, dtype=np.float32)
 
-    # empirical mu_action anchor = logmean(NTC) - logmean(unassigned).
+    # Fix 2: empirical mu_action anchor = logmean(NTC) - logmean(unassigned).
     # Use RAW counts / size_factors (non-negative) -- adata.X is standardized
     # (normalize_input=True) so its mean can be <=0 -> log -> NaN. adata.raw.X is the
     # HVG-subset raw counts (n_vars-dim -> matches mu_action).
@@ -1382,6 +1495,8 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         fpert_coord_scale=cfg.fpert_coord_scale,
         fpert_ls_min=(cfg.fpert_ls_min if cfg.fpert_ls_min > 0 else None),
         fpert_ls_max=(cfg.fpert_ls_max if cfg.fpert_ls_max > 0 else None),
+        fpert_n_z_levels=cfg.fpert_n_z_levels,
+        fpert_z_gain=cfg.fpert_z_gain,
         fpert_mb_bandwidths=(
             [float(x) for x in cfg.fpert_mb_bandwidths.split(",") if x.strip()]
             if cfg.fpert_mb_bandwidths else None),
@@ -1435,11 +1550,16 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     logging.info("Model initialized: %s | action_correction=%s | num_perts=%d",
                  model.__class__.__name__, cfg.use_action_correction, n_batch)
 
-    # --- attach precomputed spatial graph (NNGP + paracrine) ---
-    if cfg.use_nngp or cfg.graph_file:
+    # Phase 2.8: attach precomputed spatial graph (NNGP + paracrine)
+    if cfg.use_nngp or cfg.use_paracrine or cfg.graph_file:
         from spatial_graph import SpatialGraph
         if not cfg.graph_file:
-            raise ValueError("use_nngp=True requires --graph_file")
+            # Silent-inert paracrine cost us the 2dpara multidot panels: those evals ran with
+            # use_paracrine=True but no --graph_file, so this block was skipped, cf_graph stayed
+            # None and the spillover term vanished -- while the size/depth panels beside them in
+            # the same figure set DID have it. Two different effective models in one figure.
+            raise ValueError(
+                f"use_nngp={cfg.use_nngp} / use_paracrine={cfg.use_paracrine} requires --graph_file")
         graph = SpatialGraph.load(cfg.graph_file, device=cfg.device)
         n_graph = int(graph.knn_idx.shape[0])
         n_cells = int(cell_atts.shape[0])
@@ -1448,9 +1568,16 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
                 f"[graph] alignment mismatch: graph N={n_graph} != data N={n_cells}. "
                 f"Rebuild the graph on the SAME post-normalize cell order.")
         model.attach_graph(graph)
-        logging.info("[graph] attached SpatialGraph N=%d from %s", n_graph, cfg.graph_file)
+        # Emitting codes = every real-KO perturbation (the basal slot never emits). Passed with
+        # the radius so a counterfactual can rebuild the emitter graph for an IMPOSED lesion.
+        emitter_codes = sorted({int(c) for c in np.unique(perturb_idx[is_real_KO.astype(bool)])}) \
+            if is_real_KO.any() else []
+        if cfg.paracrine_r_max > 0:
+            model.set_paracrine_geometry(cfg.paracrine_r_max, emitter_codes)
+        logging.info("[graph] attached SpatialGraph N=%d from %s (emitter codes=%s, r_max=%.2f)",
+                     n_graph, cfg.graph_file, emitter_codes, cfg.paracrine_r_max)
 
-    # --- DDP wrapping ---
+    # DDP wrapping
     ddp_model = None
     if world_size > 1:
         local_rank = int(os.environ.get("LOCAL_RANK", 0))
@@ -1474,7 +1601,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             logging.info("Resumed from checkpoint: %s", ckpt_path)
         bs = auto_batch_size(X.shape[0]) if cfg.batch_size == "auto" else int(cfg.batch_size)
 
-        # --- precompute mini-bulk KO-vs-NTC LFC targets ---
+        # Phase 3: precompute mini-bulk KO-vs-NTC LFC targets (Change C)
         # niche grid MUST match eval --niche_grid (default 6), which bins each slide's own
         # MinMax*LOC_RANGE coordinates.
         niche_id_arr = None
@@ -1531,7 +1658,15 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
                 #    bin containing that gene (keys the forward (niche,pert) lookup). Without
                 #    this, lfc_targets={} and f_pert receives no gradient (frozen at init). ---
                 _tcol = cell_atts[:, 0].astype(int)
-                _tumor_code = tissue_dict.get("tumor")
+                # Reference = the unperturbed anatomy the lesion replaced. Perturb-MAP calls it
+                # "tumor"; stroke needs CTX. Without an override the lookup misses and the
+                # reference silently widens to EVERY basal spot in the section.
+                _ref_tissue = cfg.lfc_ref_tissue.strip() or "tumor"
+                _tumor_code = tissue_dict.get(_ref_tissue)
+                if _tumor_code is None:
+                    logging.warning("[lfc] reference tissue %r not in tissue_dict %s -> "
+                                    "falling back to ALL basal cells", _ref_tissue,
+                                    sorted(tissue_dict))
                 _basal = ~_hg
                 ref_mask = _basal & (_tcol == _tumor_code) if _tumor_code is not None else _basal
                 if ref_mask.sum() < 30:                       # too few tumor-basal -> all basal
@@ -1595,16 +1730,16 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             )
         return
 
-    # --- Deconvolution / patch-imputation stages (load ckpt, run, exit) ---
+    # Deconvolution / patch-imputation stages (load ckpt, run, exit)
     if cfg.stage.lower() in ("deconv", "impute_patch"):
         model.load_model(str(outdir / cfg.model_file))
         logging.info("Loaded weights for %s: %s", cfg.stage, outdir / cfg.model_file)
         if cfg.stage.lower() == "deconv":
             from deconv_impute import run_deconvolution
-            run_deconvolution(model, adata, pos_raw, pert_map, cfg, outdir)
+            run_deconvolution(model, adata, pos_raw[:, :2], pert_map, cfg, outdir)
         else:
             from deconv_impute import run_impute_patch
-            run_impute_patch(model, adata, pos_raw, pos_batched, cell_atts,
+            run_impute_patch(model, adata, pos_raw[:, :2], pos_batched, cell_atts,
                              sample_indices, pert_map, cfg, outdir)
         return
 
@@ -1626,12 +1761,16 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         # build lookup for names -> integer codes
         tissue_code = None
         if isinstance(cfg.target_cell_tissue, str):
-            # match exact name if present
-            if cfg.target_cell_tissue in tissue_dict:
+            # __KEEP__ leaves each perturbed spot's OWN anatomy in place. Required whenever the
+            # comparison is BETWEEN regions (e.g. a surface vs a deep lesion): forcing one tissue
+            # code would erase the regional identity that is being compared.
+            if cfg.target_cell_tissue.strip() in ("", "__KEEP__"):
+                tissue_code = None
+                logging.info("[cf] target tissue __KEEP__ -> perturbed spots keep their own anatomy")
+            elif cfg.target_cell_tissue in tissue_dict:
                 tissue_code = int(tissue_dict[cfg.target_cell_tissue])
             else: # error
                 raise ValueError(f"Target tissue '{cfg.target_cell_tissue}' not found in data; available: {list(tissue_dict.keys())}")
-                
         else:
             tissue_code = int(cfg.target_cell_tissue)
 
@@ -1640,7 +1779,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         else: # error
             raise ValueError(f"Target perturbation '{cfg.target_cell_perturbation}' not found in data; available: {list(pert_map.keys())}")
 
-    # under use_expr_encoder the basal latent is amortized from the cell's
+    # Phase 2.9: under use_expr_encoder the basal latent is amortized from the cell's
     # own normalized expression -- thread Y so counterfactuals use the trained encoder
     # rather than the untrained per-cell lookup (seen-cell pert-swap scenario).
     import scipy.sparse as sp_scipy
@@ -1668,9 +1807,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
     )
 
 
-# -----------------------------------------------------------------------------
 # CLI
-# -----------------------------------------------------------------------------
 def str2bool(v):
     if v is None: return None
     if isinstance(v, bool): return v
@@ -1763,16 +1900,16 @@ def parse_args() -> RunConfig:
     p.add_argument("--hvg_max_rank", type=int,
                    help="Select genes with hvg_rank <= this threshold (default 10000)")
 
-    # Multi-sample joint training
+    # Multi-sample joint training (Phase 2.2)
     p.add_argument("--multi_sample_files", type=str,
                    help="Comma-separated list of h5ad paths for joint training. "
                         "Overrides --data_file when set.")
 
-    # control-anchored explicit action correction
+    # Phase 2.6: control-anchored explicit action correction
     p.add_argument("--use_action_correction", type=str2bool,
                    help="Enable 3-term decoder with explicit mu_action (default True)")
 
-    # latent disentanglement (drop pert from encoder, add f_pert)
+    # Phase 2.7: latent disentanglement (drop pert from encoder, add f_pert)
     p.add_argument("--use_basal_encoder_only", type=str2bool,
                    help="If True, drop pert embedding from encoder input -> z becomes pert-blind. "
                         "Requires retraining from scratch (changes encoder input dim).")
@@ -1796,6 +1933,24 @@ def parse_args() -> RunConfig:
                         "coord_scale times too large for gp_pp.")
     p.add_argument("--fpert_ls_max", type=float, default=None,
                    help="gp_pp footprint lengthscale CEILING in normalized units.")
+    p.add_argument("--fpert_n_z_levels", type=int, default=None,
+                   help="Sections per z-stack. >1 makes the f_pert field 3D (basal/niche stay 2D).")
+    p.add_argument("--fpert_z_gain", type=float, default=None,
+                   help="Normalized distance between adjacent sections in the f_pert kernel.")
+    p.add_argument("--z_index_obsm", type=str, default=None,
+                   help="obsm key with the ordinal section index (default section_index).")
+    p.add_argument("--z_stack_obs", type=str, default=None,
+                   help="obs column grouping slides into one z-stack (default mouse).")
+    p.add_argument("--tile_by_stack", type=str2bool, default=None,
+                   help="Tile slides by z-stack rather than individually (registered sections "
+                        "share one XY frame). Implied by fpert_n_z_levels > 1.")
+    p.add_argument("--lfc_ref_tissue", type=str, default=None,
+                   help="Tissue class used as the LFC reference (e.g. CTX for stroke).")
+    p.add_argument("--dump_graph_inputs", type=str, default=None,
+                   help="Write pos/pert_idx/is_real_KO for build_spatial_graph.py and exit.")
+    p.add_argument("--paracrine_r_max", type=float, default=None,
+                   help="Radius the --graph_file was built with; enables counterfactual rebuild "
+                        "of the emitter graph so spillover follows an IMPOSED lesion.")
     p.add_argument("--fpert_mb_bandwidths", type=str, default=None,
                    help="comma list of RFF bandwidths for mb_rff, e.g. 0.05,0.15,0.5")
     p.add_argument("--basal_bayes", type=str2bool, default=None,
@@ -1812,7 +1967,7 @@ def parse_args() -> RunConfig:
                    help="Batch-level MMD between KO and control mu_basal -- forces f_pert to absorb pert variance")
     p.add_argument("--consistency_lambda", type=float, help="Weight for the consistency MMD term")
 
-    # inductive expression encoder + collapse fixes
+    # Phase 2.9: inductive expression encoder + collapse fixes
     p.add_argument("--use_expr_encoder", type=str2bool, default=None,
                    help="Amortized basal encoder on expression (inductive; cures posterior collapse)")
     p.add_argument("--expr_hidden_dims", nargs="+", type=int, default=None)
@@ -1828,7 +1983,7 @@ def parse_args() -> RunConfig:
                         ">0 keeps GP latent dims from collapsing to the SVGP prior.")
     p.add_argument("--use_pert_correction", type=str2bool, default=None)
 
-    # NNGP local field + precomputed spatial graph
+    # Phase 2.8: NNGP local field + precomputed spatial graph
     p.add_argument("--use_nngp", type=str2bool, default=None)
     p.add_argument("--nngp_lambda", type=float, default=None)
     p.add_argument("--graph_file", default=None)
@@ -1847,7 +2002,7 @@ def parse_args() -> RunConfig:
     p.add_argument("--detach_mu_action_for_ko", type=str2bool, default=None)
     p.add_argument("--mu_action_anchor_lambda", type=float, default=None)
     p.add_argument("--gate_hidden", type=int, default=None)
-    # spatial-basal disentanglement + mini-bulk LFC supervision
+    # Phase 3: spatial-basal disentanglement + mini-bulk LFC supervision
     p.add_argument("--spatial_basal_only", type=str2bool, default=None,
                    help="If True, NTC/KO basal z comes from the spatial field (no own-expr leak); "
                         "perturbation effect forced into f_pert. Requires retraining.")
@@ -1943,7 +2098,7 @@ def parse_args() -> RunConfig:
     return cfg
 
 if __name__ == "__main__":
-    # --- DDP bootstrap ---
+    # DDP bootstrap
     # torchrun sets LOCAL_RANK / RANK / WORLD_SIZE.  Fall back to single-GPU.
     _local_rank  = int(os.environ.get("LOCAL_RANK", 0))
     _rank        = int(os.environ.get("RANK", 0))

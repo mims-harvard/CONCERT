@@ -277,7 +277,7 @@ def run_setup(label, src_ctx, ko_ref, args, eu, _predict_swap):
                    knn_e_dist_mean=float(df["knn_e_dist"].mean()),
                    per_gene=agg.to_dict(orient="records"))
     (out / "summary.json").write_text(json.dumps(summary, indent=2))
-    log.info("[%s] DONE %d genes × %d rows | MODEL abs=%.3f lfc=%.3f e=%.3f | kNN abs=%.3f lfc=%.3f e=%.3f -> %s",
+    log.info("[%s] DONE %d genes x %d rows | MODEL abs=%.3f lfc=%.3f e=%.3f | kNN abs=%.3f lfc=%.3f e=%.3f -> %s",
              label, agg.shape[0], len(df), summary["abs_rho_mean"], summary["lfc_rho_mean"],
              summary["e_dist_mean"], summary["knn_abs_rho_mean"], summary["knn_lfc_rho_mean"],
              summary["knn_e_dist_mean"], out)

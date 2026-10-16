@@ -404,7 +404,7 @@ def run_plot2(args):
                        markerscale=1.5, **LEGEND_KW)
     leg.get_title().set_fontsize(LEGEND_FS)
 
-    # --- unassigned-cell patch removal: a random small contiguous patch (<1000) ---
+    # unassigned-cell patch removal: a random small contiguous patch (<1000)
     una_mask = np.array([classify(p) == "unassigned" for p in pert])
     pts_u = coords[una_mask]
     rem_u = sample_dense_patch(pts_u, size=args.una_patch_size)  # middle of a large unassigned region
@@ -451,7 +451,7 @@ def run_plot2(args):
                                            "n_kept", "n_removed"])
         w.writeheader(); w.writerows(removed_records)
 
-    # --- per-cell removal index (shared, fixed indices for all methods) ---
+    # per-cell removal index (shared, fixed indices for all methods)
     groups = np.array([r[0] for r in cell_rows], dtype=object)
     cidx = np.array([r[1] for r in cell_rows], dtype=np.int64)
     onames = np.array([r[2] for r in cell_rows], dtype=object)

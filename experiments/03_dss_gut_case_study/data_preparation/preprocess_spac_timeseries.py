@@ -45,7 +45,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 
-# --- guide-name utilities ---
+# guide-name utilities
 
 NON_TARGETING_RAW = "sgnon-targeting"
 
@@ -59,7 +59,7 @@ def guide_name_to_perturbation(raw: str) -> str:
     return raw
 
 
-# --- I/O helpers ---
+# I/O helpers
 
 def load_gex(gex_path: Path) -> ad.AnnData:
     """Load GEX h5 (Stereo-seq format) into AnnData with sparse X."""
@@ -168,7 +168,7 @@ def assign_perturbation(guide_mat: np.ndarray, guide_names: list):
     return perturbation.astype(str), n_guide_umi
 
 
-# --- spatial plots ---
+# spatial plots
 
 SPECIAL_PERT_COLORS = {
     "unassigned": "#CCCCCC",
@@ -282,7 +282,7 @@ def make_spatial_plot(
     gene_colors = {g: mcolors.to_hex(cmap_base(i % 20)) for i, g in enumerate(gene_labels)}
     label_to_color = {**SPECIAL_PERT_COLORS, **gene_colors}
 
-    # --- bar chart: spot counts per perturbation ---
+    # bar chart: spot counts per perturbation
     counts = pd.Series(perturbation).value_counts().sort_values(ascending=False)
     n_show = min(len(counts), 40)
     fig2, ax2 = plt.subplots(figsize=(14, 5))
@@ -300,7 +300,7 @@ def make_spatial_plot(
     print(f"  Bar plot     -> {bar_path}")
 
 
-# --- main ---
+# main
 
 def parse_args():
     p = argparse.ArgumentParser(

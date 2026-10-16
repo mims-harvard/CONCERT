@@ -42,7 +42,7 @@ alle = np.concatenate([E[s] for s in SIZES])
 vlo, vhi = float(np.quantile(alle, 0.02)), float(np.quantile(alle, 0.98))
 print(f"figure colour range vlo={vlo:.4f} vhi={vhi:.4f}")
 
-# ---- fine radial profile in units of lesion radius -------------------------------------
+# fine radial profile in units of lesion radius
 print("\nRADIAL PROFILE, r/R bins, MASKED spots only (so mask leakage cannot fake a ring)")
 for s in SIZES:
     m = M[s]; cen = xy[m].mean(0)
@@ -63,7 +63,7 @@ for s in SIZES:
     d_out = (E[s] - base)[~m]
     print(f"   unmasked spots: max|delta|={np.abs(d_out).max():.2e}  n_nonzero={int((d_out!=0).sum())}")
 
-# ---- is the in-mask effect multiplicative on the baseline? ------------------------------
+# is the in-mask effect multiplicative on the baseline?
 print("\nIN-MASK delta vs control baseline (multiplicative test)")
 for s in SIZES:
     m = M[s]; b = base[m]; d = (E[s] - base)[m]
@@ -74,7 +74,7 @@ for s in SIZES:
         line.append(f"base~{b[sel].mean():.3f}->d={d[sel].mean():+.3f}")
     print(f" size {s:4d}  r(base,delta)={np.corrcoef(b, d)[0,1]:+.3f}   " + "  ".join(line))
 
-# ---- diagnostic figure ------------------------------------------------------------------
+# diagnostic figure
 lo_, hi_ = xy.min(0), xy.max(0); xyn = (xy - lo_) / np.maximum(hi_ - lo_, 1e-8)
 show = (100, 200, 400, 800)
 fig, ax = plt.subplots(len(show), 4, figsize=(14, 3.2 * len(show)), squeeze=False)

@@ -20,7 +20,7 @@ cells + observed-unassigned LFC reference) is taken from the FULL target-slide c
 -- KO cells are never held out (seen-task) or are simply present in the eval h5ad
 even when masked from training (unseen-task).
 
-Metrics per gene×niche (via run_setup, single source of truth):
+Metrics per genexniche (via run_setup, single source of truth):
   abs_rho   pseudobulk Spearman over HVGs (spatial advantage vs baselines)
   lfc_rho   LFC Spearman  (with-noise: pred(una->g)-pred(una->0) vs KO-una)
   lfc_dist  LFC-RMSE      (magnitude agreement; lower is better)
@@ -70,7 +70,7 @@ def parse_args():
     p.add_argument("--n_samples",       type=int, default=10)
     p.add_argument("--batch_size",      type=int, default=512)
     p.add_argument("--n_hvg",           type=int, default=2000)
-    # --- Architecture -- MUST match training (state_dict load) ---
+    # Architecture -- MUST match training (state_dict load)
     p.add_argument("--use_expr_encoder",      type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--expr_hidden_dims",      type=int, nargs="+", default=[512, 256])
     p.add_argument("--use_basal_encoder_only",type=lambda x: x.lower()=="true", default=True)
@@ -176,7 +176,7 @@ def main():
     log.info("Multi ctx: target %s (sid=%d) -> %d cells, %d combined perts",
              args.target_slide, target_idx, ctx["N"], ctx["n_batch"])
 
-    # --- Restrict SOURCE to held-out unassigned patches ---
+    # Restrict SOURCE to held-out unassigned patches
     holdout = json.load(open(args.holdout_v3_file))
     hold_mask, n_una_total, n_coords = heldout_unassigned_mask(ctx, holdout, target_idx)
     n_hold = int(hold_mask.sum())

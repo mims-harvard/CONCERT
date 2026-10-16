@@ -39,12 +39,23 @@ The model is the same (`models/concert_benchmark`); the settings differ where th
    count are passed again there and must match the training values - the band defines the
    squashing function inside the spatial field, so a checkpoint read back under a different
    band reconstructs different lengthscales rather than failing.
-5. **Compare against the published methods.**
-   `../../benchmark_evaluation/rescore_pm_lfc_distance.py` rescores every method under one
-   rule and writes a per-record CSV; `figures/plot_pmap_benchmark.py` turns that into the
-   panel.
+5. **Compare against the published methods (benchmark v4, the reported numbers).**
+   `sbatch evaluation/rescore_perturb_seq_v4.sh` rescores the stored predicted LFCs of every
+   method, the four reference strategies and STATE against the v4 reference: the knockout cells
+   of the niche against the niche's control cells outside every held-out patch (patch role 0),
+   with the slide's role-0 controls as the fallback below 5 cells. The held-out source spots carry
+   the `control` label on this assay, and v4 asserts that the reference is disjoint from them.
+   `perturbmap_v4_scoring.py` holds the rule, `rescore_pm_v4.py` applies it, and
+   `analyze_pm_v4.py` writes the per-record tables, the paired tests and the Fig. 4j panel
+   (`plot_pmap_benchmark_v4.py`) to `${SCORING_LIB}/multi_pm_ho_v4/`. The predictions are the
+   ones on disk; nothing is retrained or re-run.
 
-   **Scoring must be restricted to the records all methods cover.** The methods do not all
-   produce a prediction for every held-out niche patch, and scoring each on whatever it happens
-   to cover is not a like-for-like comparison. `plot_pmap_benchmark.py` takes the intersection
-   itself; anything else reading the CSV has to do the same.
+   The earlier v3 rescore (`../../benchmark_evaluation/rescore_pm_lfc_distance.py`,
+   `figures/plot_pmap_benchmark.py`) stays as the record of the previous reference;
+   `rescore_pm_v4.py` reproduces its numbers exactly as a check.
+
+   **The comparison uses the records every method covers.** Under v4 the model methods cover 31
+   niche records and the reference strategies and STATE 27; the reported comparison is the
+   27-record intersection (Tgfbr2 22, Ifngr2 3, Jak2 2), which `analyze_pm_v4.py` and
+   `plot_pmap_benchmark.py` take themselves. Any other reader of the per-record CSVs applies the
+   same intersection.

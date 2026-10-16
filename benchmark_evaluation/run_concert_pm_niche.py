@@ -99,7 +99,7 @@ def parse_args():
     p.add_argument("--setup_only", action="store_true")
     # v3 UNSEEN: score with the unseen-trained model; GT restricted to the held-out
     # (masked) KO cells named in this coords file. Non-masked genes auto-drop (empty
-    # ko_idx∩holdout). When set, run_seen writes to unseen_pert and donor run_unseen is skipped.
+    # ko_idx&holdout). When set, run_seen writes to unseen_pert and donor run_unseen is skipped.
     p.add_argument("--v3_unseen_ko_file", type=Path, default=None)
     # Diagnostic: disable the coord-conditioned FpertField at inference (core f_pert /
     # niche / gate kept). Tests whether the spatial field corrupts unseen/multimodal perts.
@@ -254,7 +254,7 @@ def _v3_ko_gt_rows(args, sid: str, ctx: dict) -> np.ndarray:
     """Model-row indices of the HELD-OUT (masked) KO cells for this slide, from the
     v3 unseen coords file. Matched by (array_coords) against ctx['coords_raw'].
     Coords are pooled across masked genes; the per-gene GT falls out of the
-    canon==g ∩ ko_gt_rows intersection in niche_lfc_seen_loop."""
+    canon==g & ko_gt_rows intersection in niche_lfc_seen_loop."""
     hv = json.load(open(args.v3_unseen_ko_file))
     sid_key = str(hv.get("slide_to_sid", {}).get(sid, sid))
     coords = hv.get("ko", {}).get(sid_key, [])

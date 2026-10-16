@@ -15,6 +15,10 @@ DSS_DIR="${DSS_DIR:-/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/p
 OUTPUT_ROOT="${OUTPUT_ROOT:-/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs}"
 LOG_DIR="${LOG_DIR:-${OUTPUT_ROOT}/logs}"
 
+# Scoring tree of the benchmarks: prepared cell sets, every method's per-record results, and the
+# aggregation outputs. The aggregation and rescoring drivers run inside it.
+SCORING_LIB="${SCORING_LIB:-/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval}"
+
 # Python environment. Replace with your own conda installation or drop the two lines below
 # and activate the environment before submitting.
 CONDA_SH="${CONDA_SH:-/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh}"

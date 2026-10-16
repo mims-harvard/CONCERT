@@ -225,7 +225,7 @@ def main():
     tgt_c = orig_flat[cy0:cy1, cx0:cx1]
     report = {}
 
-    # ---- reproduction check with the OLD numbers ----
+    # reproduction check with the OLD numbers
     pc_old, _, _ = bar_panel(pc_vals, (0, 0.42), np.arange(0, 0.401, 0.05), "Per-cell Spearman",
                              PC_AX_LEFT, PC_AX_BOTTOM, PC_DPI, AX_H_PT, 11.84, legend=False)
     lf_old, _, _ = bar_panel(lfc_old, (0, 1.05), np.arange(0, 1.001, 0.2), "LFC Spearman",
@@ -249,7 +249,7 @@ def main():
     Image.fromarray(np.concatenate([tgt_b, b_old], 1)).save(CHECK_DIR / "repro_check_b.png")
     Image.fromarray(np.concatenate([tgt_c, c_old_s], 0)).save(CHECK_DIR / "repro_check_c.png")
 
-    # ---- new panels ----
+    # new panels
     pc_new, pc_means, pc_sems = bar_panel(pc_vals, (0, 0.42), np.arange(0, 0.401, 0.05),
                                           "Per-cell Spearman", PC_AX_LEFT, PC_AX_BOTTOM,
                                           PC_DPI, AX_H_PT, 11.84, legend=False)

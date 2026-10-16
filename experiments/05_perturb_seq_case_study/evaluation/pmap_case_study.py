@@ -289,7 +289,7 @@ def main() -> None:
     obs_jak2 = np.where(pert_raw == "Jak2")[0]
     obs_peri = np.where(pert_raw == "periphery")[0]
 
-    # ---- Analysis 1: transplantation ------------------------------------------------
+    # Analysis 1: transplantation
     if True:
         jak2_code = maps["perturbation"].get("Jak2")
         tumor_code = maps["tissue"].get("tumor")
@@ -314,7 +314,7 @@ def main() -> None:
             log(f"  {dest}: {json.dumps(entry, indent=4)}")
         results["transplantation"] = trans
 
-    # ---- Analysis 2: niche editing ---------------------------------------------------
+    # Analysis 2: niche editing
     if True:
         peri_tissue = maps["tissue"].get("periphery")
         # The ring keeps a basal (non-knockout) perturbation identity: only its tissue
@@ -347,7 +347,7 @@ def main() -> None:
         results["niche_editing"]["mean_abs_change_in_edited_ring"] = ring_delta
         log(f"  sanity: mean |change| in the EDITED ring = {ring_delta:.6f}")
 
-    # ---- Niche-propagation probe -----------------------------------------------------
+    # Niche-propagation probe
     # The core's prediction is only worth reporting as "propagated" if it moves by more
     # than decoder sampling noise, so measure that floor, and try a much stronger ring
     # edit to establish whether ANY surrounding edit reaches an unedited core.
@@ -408,7 +408,7 @@ def main() -> None:
             f"core {d_core:.6f} ({probe[name]['core_over_noise']:.2f}x noise)")
     results["niche_propagation_probe"] = probe
 
-    # ---- Two-pass niche refresh -------------------------------------------------------
+    # Two-pass niche refresh
     # The single-pass edit cannot propagate: the neighbourhood descriptor is built from
     # OBSERVED expression, while the edit changes labels, and with use_basal_encoder_only
     # the label never reaches the encoder. So run the edit, take the edited cells' PREDICTED

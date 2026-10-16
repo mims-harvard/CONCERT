@@ -56,7 +56,7 @@ def diagnostics(obs_days, pred_days, baseline_obs, a, pred_baseline):
             "mae": round(float(np.abs(cal - obs_days).mean()), 5)}
 
 
-# --- aggregate 17-marker DSS score (trajectories, velocity, spatial maps) ---
+# aggregate 17-marker DSS score (trajectories, velocity, spatial maps)
 obs_rows = list(csv.DictReader(open(f"{HERE}/per_mouse_observed.csv")))
 obs_agg = np.array([np.average(
     [float(r["observed_marker_log1p"]) for r in obs_rows if int(float(r["day"])) == t],
@@ -86,7 +86,7 @@ print("  observed  ", np.round(obs_agg, 4))
 print("  calibrated", np.array(out["aggregate"]["calibrated_day_means"]),
       " ratio", np.array(out["aggregate"]["ratio_to_observed"]), f" a={a_agg:.4f}")
 
-# --- per marker (dot plots) ---
+# per marker (dot plots)
 d = np.load(DUMP, allow_pickle=True)
 markers = [str(x) for x in d["marker_names"]]
 obs_cell = np.log1p(d["obs_marker_expr"])

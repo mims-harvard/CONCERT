@@ -47,7 +47,7 @@ def per_mouse(pw):
 # OWN day correlates with that mouse's observed score across the 15 mice (r >= threshold).
 TRACK_THR = 0.35
 
-# --- Figure A: cascade (population-mean fold-over-t0) ---
+# Figure A: cascade (population-mean fold-over-t0)
 fig, ax = plt.subplots(figsize=(7.2, 5.0))
 warm = colormaps["YlOrRd"](np.linspace(0.45, 0.95, len(INFLAM)))
 cool = colormaps["GnBu"](np.linspace(0.55, 0.95, len(REPAIR)))
@@ -75,7 +75,7 @@ fig.tight_layout()
 fig.savefig(HERE / "fig_pathway_cascade.png"); plt.close(fig)
 print("[fig] fig_pathway_cascade.png")
 
-# --- Figure B: per-mouse small multiples (fold-over-t0 of RAW prediction) ---
+# Figure B: per-mouse small multiples (fold-over-t0 of RAW prediction)
 # Fold-over-baseline avoids the per-pathway affine inversion (negative a flips the d9
 # peak into a trough) and cancels each pathway's absolute-level differences, so the
 # panels compare SHAPE/heterogeneity honestly. Each line = one mouse's counterfactual
@@ -110,7 +110,7 @@ fig.tight_layout()
 fig.savefig(HERE / "fig_pathway_permouse.png"); plt.close(fig)
 print("[fig] fig_pathway_permouse.png")
 
-# --- Figure C: cross-mouse diagonal validation ---
+# Figure C: cross-mouse diagonal validation
 # For each pathway, across the 15 mice, does the predicted score at each mouse's OWN
 # (seen) day track that mouse's observed score? High r = the counterfactual is anchored
 # to real per-mouse biology, not a population template.

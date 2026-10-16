@@ -14,9 +14,7 @@ from scvi.nn import FCLayers
 from VAE_utils import BasalEncoder
 
 
-# ---------------------------------------------------------------------
 # Utilities
-# ---------------------------------------------------------------------
 def init_weights(m: nn.Module) -> None:
     """Initialize linear layers with Xavier init."""
     if isinstance(m, nn.Linear):
@@ -41,9 +39,7 @@ class RegularizedEmbedding(nn.Module):
         return out
 
 
-# ---------------------------------------------------------------------
 # LORD Encoder
-# ---------------------------------------------------------------------
 class LordEncoder(nn.Module):
     """
     LORD encoder for attribute-aware latent representations.
@@ -145,9 +141,7 @@ class LordEncoder(nn.Module):
         self.to(self.device)
         self.history = {"epoch": [], "stats_epoch": []}
 
-    # -----------------------------------------------------------------
     # Forward utilities
-    # -----------------------------------------------------------------
     def predict(
         self,
         sample_indices: torch.Tensor,

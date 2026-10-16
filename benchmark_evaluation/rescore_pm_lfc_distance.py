@@ -198,7 +198,7 @@ def main():
         sub = [r for r in summary if r["gene"] == gene and r["n_records"] > 0]
         sub.sort(key=lambda r: r["lfc_spearman"], reverse=True)
         print(f"### {gene}")
-        print("| Method | N | LFC ρ | LFC RMSE |")
+        print("| Method | N | LFC rho | LFC RMSE |")
         print("| --- | ---: | ---: | ---: |")
         for r in sub:
             print(f"| {r['method_label']} | {r['n_records']} | {r['lfc_spearman']:.3f} | {r['lfc_dist']:.3f} |")

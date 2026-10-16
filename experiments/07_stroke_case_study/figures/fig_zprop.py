@@ -96,7 +96,7 @@ stats["off_section_mean"] = dict(
     model_2d=float(np.mean([stats["per_section"][f"section_{s+1}"]["model_2d"] for s in off_only])),
     model_3d=float(np.mean([stats["per_section"][f"section_{s+1}"]["model_3d"] for s in off_only])))
 
-# --- maps: both models, same scale ---
+# maps: both models, same scale
 vhi = float(np.quantile(np.concatenate([d2, d3]), 0.995)); vlo = 0.0
 fig, ax = plt.subplots(2, nsec, figsize=(2.5 * nsec + 1.8, 5.6), squeeze=False)
 for c in range(nsec):
@@ -121,7 +121,7 @@ for ext in ("png", "pdf"):
     fig.savefig(figdir / f"fig_zprop_maps.{ext}", dpi=300)
 plt.close(fig)
 
-# --- bars: response per section, unperturbed spots only ---
+# bars: response per section, unperturbed spots only
 figb, axb = plt.subplots(figsize=(1.25 * nsec + 2.6, 3.9))
 x = np.arange(nsec); w = 0.38
 v2 = [stats["per_section"][f"section_{s+1}"]["model_2d"] for s in range(nsec)]

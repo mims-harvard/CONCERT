@@ -72,7 +72,7 @@ pred_core, pred_rim = pred_core & pred_in, pred_rim & pred_in
 
 res = {"n_lesion_spots": int(pred_in.sum())}
 
-# --- H1: is the predicted delta field rank-1 inside the lesion? ---
+# H1: is the predicted delta field rank-1 inside the lesion?
 M = D[pred_in]                                    # spots x all HVGs
 sv = np.linalg.svd(M, full_matrices=False)[1]
 res["rank1"] = {
@@ -87,7 +87,7 @@ res["rank1"]["marker_pairwise_r_across_spots"] = {
 res["rank1"]["marker_corr_matrix"] = {g: {h: round(float(C[i, j]), 3) for j, h in enumerate(GENES)}
                                       for i, g in enumerate(GENES)}
 
-# --- H2: depth profiles, predicted vs observed ---
+# H2: depth profiles, predicted vs observed
 depth_pred = depth_of(xy_sh, pred_in)
 A_pt, xy_pt = load_stack("stroke_paste2", "PT")
 Lpt = log1p_cpm(np.asarray(A_pt.X.todense(), np.float32))
@@ -112,7 +112,7 @@ res["depth_spearman"] = {g: {
     "observed": float(spearmanr(range(6), v["observed"]).statistic)}
     for g, v in res["profiles_rim_to_core"].items()}
 
-# --- how much of a gene's predicted map is explained by the pooled field? ---
+# how much of a gene's predicted map is explained by the pooled field?
 pi = [int(np.where(gp == g)[0][0]) for g in POOLED if g in set(gp.tolist())]
 f = D[:, pi].mean(1)
 res["r_vs_pooled_field"] = {g: float(np.corrcoef(D[pred_in, int(np.where(gp == g)[0][0])], f[pred_in])[0, 1])

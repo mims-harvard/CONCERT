@@ -2,7 +2,7 @@
 
 perturbmap s0 has 1 Jak2 patch + 2 Tgfbr2 patches. There is NO NTC class here (all
 non-KO cells collapsed to "unperturbed"), so we use the WITH-noise footprint: for each
-patch compare the model's predicted (KO target vs unperturbed target = μ_action+f_pert)
+patch compare the model's predicted (KO target vs unperturbed target = mu_action+f_pert)
 against the observed KO-vs-unperturbed pseudobulk LFC, by Spearman over HVG genes.
 Runs all 4 field variants (constant/rff/svgp/hybrid) and prints a table.
 """
@@ -23,7 +23,7 @@ VARIANTS = {
 }
 N_PATCH = {"Jak2": 1, "Tgfbr2": 2}
 
-# --- data (shared across variants; load once) ---
+# data (shared across variants; load once)
 (adata, pos_batched, cell_atts, batch_oh, pert_name, cutoff_t,
  perturb_raw, has_guide, is_real_KO, n_batch, perturb_idx) = load_data(
     DATA, hvg_max_rank=2000, min_cells_per_pert=20)
@@ -38,7 +38,7 @@ ctrl_mask = perturb_raw == "unperturbed"
 logging.info("N=%d  unperturbed=%d  Jak2=%d  Tgfbr2=%d  codes=%s",
              N, ctrl_mask.sum(), (perturb_raw=="Jak2").sum(), (perturb_raw=="Tgfbr2").sum(), pert_name)
 
-# --- define patches (spatial KMeans per KO gene) ---
+# define patches (spatial KMeans per KO gene)
 patches = []  # (label, gene, code, idx_array)
 for gene, k in N_PATCH.items():
     gidx = np.where(perturb_raw == gene)[0]
@@ -71,12 +71,12 @@ def eval_variant(v, extra):
     out = {}
     for gene in N_PATCH:
         gcode = name2code[gene]
-        # KO target: force μ_action + f_pert ON even if the KO maps to code 0 (Jak2=0).
+        # KO target: force mu_action + f_pert ON even if the KO maps to code 0 (Jak2=0).
         pred_g, _ = model.counterfactualPrediction(
             X=pos_batched, sample_index=si, cell_atts=cell_atts, perturb_cell_id=allids,
             target_cell_perturbation=gcode, target_has_guide=True, target_is_real_KO=True,
             n_samples=5, batch_size=512, Y=Yexpr)
-        # basal baseline: force shift OFF (no μ_action, no f_pert) regardless of ctrl code.
+        # basal baseline: force shift OFF (no mu_action, no f_pert) regardless of ctrl code.
         pred_b, _ = model.counterfactualPrediction(
             X=pos_batched, sample_index=si, cell_atts=cell_atts, perturb_cell_id=allids,
             target_cell_perturbation=ctrl_code, target_has_guide=False, target_is_real_KO=False,
@@ -85,7 +85,7 @@ def eval_variant(v, extra):
     res = {}
     for lab, gene, gcode, pidx in patches:
         pred_g, pred_b = out[gene]
-        pred_lfc = eu.pseudobulk_lfc(pred_g[pidx], pred_b[pidx])         # predicted μ_action+f_pert
+        pred_lfc = eu.pseudobulk_lfc(pred_g[pidx], pred_b[pidx])         # predicted mu_action+f_pert
         obs_lfc  = eu.pseudobulk_lfc(Yobs[pidx], Yobs[ctrl_mask])        # observed KO vs unperturbed
         rho = spearmanr(pred_lfc, obs_lfc).correlation
         res[lab] = rho
@@ -100,7 +100,7 @@ for v, extra in VARIANTS.items():
     except Exception as e:
         import traceback; logging.error("[%s] FAILED %s", v, e); traceback.print_exc()
 
-# --- table ---
+# table
 labels = [p[0] for p in patches]
 print("\n===== perturbmap s0 patch footprint Spearman (predicted vs observed KO-vs-unperturbed, with-noise) =====")
 print("variant   | " + " | ".join(f"{l:>11s}" for l in labels) + " |   mean")

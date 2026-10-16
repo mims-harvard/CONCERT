@@ -55,7 +55,7 @@ def main() -> None:
     pert = raw.obs["perturbation"].values
     log(f"  Full slide: {raw.shape}")
 
-    # --- Retained context: unassigned + tested KOs, minus ALL experiment cells ---
+    # Retained context: unassigned + tested KOs, minus ALL experiment cells
     keep_labels = ["unassigned"] + TESTED_KOS
     label_mask = np.isin(pert, keep_labels)
     keep_idx = np.where(label_mask)[0]
@@ -63,7 +63,7 @@ def main() -> None:
     log(f"  Retained context cells: {len(keep_idx)} "
         f"(unassigned+{len(TESTED_KOS)}KO minus {len(exp_raw_idx)} experiment)")
 
-    # --- Align HVG columns ---
+    # Align HVG columns
     raw_var = list(raw.var_names)
     raw_pos = {g: i for i, g in enumerate(raw_var)}
     hvg_in_raw = [g for g in gene_names if g in raw_pos]
@@ -71,7 +71,7 @@ def main() -> None:
     gene_align = np.array([gene_names.index(g) for g in hvg_in_raw])
     log(f"  HVG matched in raw: {len(hvg_in_raw)}/{len(gene_names)}")
 
-    # --- Extract expression (raw counts) ---
+    # Extract expression (raw counts)
     log("  Slicing context expression...")
     sub = raw[keep_idx]
     X_sub = sub.X[:, raw_col_idx]

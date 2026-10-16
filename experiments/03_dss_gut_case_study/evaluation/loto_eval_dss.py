@@ -11,7 +11,7 @@ See docs/LOTO_D9_EVAL_DESIGN.md for the full design. Key points implemented here
     re-decoding them at t = target_day/denom via counterfactualPrediction(time_t=...). No
     day-9 expression ever touches a day-9 prediction.
   * Perturbation-state-STRATIFIED pseudobulk (control-only / perturbed-only) is the PRIMARY
-    metric -- it isolates the INTENSITY dynamics the time×pert term actually models. The
+    metric -- it isolates the INTENSITY dynamics the timexpert term actually models. The
     whole-tissue (composition-conflated) number is reported alongside for honesty.
   * States are decoded in SEPARATE counterfactualPrediction calls: rk_b (the f_pert/time
     gate) is batch-uniform from target_cell_perturbation, so perturbed and control source
@@ -53,7 +53,7 @@ def _dense(M) -> np.ndarray:
 
 
 def _cp_normalize(counts: np.ndarray, target: float = CP_TARGET) -> np.ndarray:
-    """Row-normalize a (cells × genes) count matrix to a fixed library size."""
+    """Row-normalize a (cells x genes) count matrix to a fixed library size."""
     counts = np.asarray(counts, dtype=np.float64)
     lib = counts.sum(axis=1, keepdims=True)
     lib = np.clip(lib, 1e-8, None)
@@ -139,7 +139,7 @@ def _predict_state_at_t(
     `target_pert_code` is the INTEGER perturbation code (counterfactualPrediction does
     int(target_cell_perturbation) internally): 1=perturbed, 0=__basal__/control.
 
-    Returns the (n_subset × genes) predicted mean-count matrix. States are decoded in their
+    Returns the (n_subset x genes) predicted mean-count matrix. States are decoded in their
     OWN call because rk_b (the f_pert/time gate) is batch-uniform from target_cell_perturbation.
     """
     import torch
@@ -204,7 +204,7 @@ def run_loto_eval(
     n_samples = int(getattr(cfg, "loto_n_samples", 10))
     bs = int(getattr(cfg, "loto_batch_size", 512))
 
-    # --- 1. CONCERT day-9 predictions (leakage-free), per state ---
+    # 1. CONCERT day-9 predictions (leakage-free), per state
     pert_src = np.where(state == pert_code)[0]
     ctrl_src = np.where(state != pert_code)[0]
     logging.info("[loto] source cells: %d perturbed, %d control", pert_src.size, ctrl_src.size)
@@ -222,12 +222,12 @@ def run_loto_eval(
     concert_pb_ctrl = _pseudobulk(pred_ctrl)
     concert_lfc = _lfc(concert_pb_pert, concert_pb_ctrl)
 
-    # --- 2. Ground-truth day-9 (held out) ---
+    # 2. Ground-truth day-9 (held out)
     y9_pert, y9_ctrl, n9p, n9c = _load_holdout_pseudobulks(cfg.loto_holdout_files, gene_names)
     real_lfc = _lfc(y9_pert, y9_ctrl)
     logging.info("[loto] real DSS9: %d perturbed, %d control cells", n9p, n9c)
 
-    # --- 3. Baselines from observed timepoints (D3, D21) ---
+    # 3. Baselines from observed timepoints (D3, D21)
     def _day_state_pb(day_val_norm: float, want_pert: bool) -> Optional[np.ndarray]:
         want = pert_code if want_pert else None
         m = np.isclose(src_day, day_val_norm, atol=1e-3)
@@ -261,7 +261,7 @@ def run_loto_eval(
     if pooled_p.shape[0] and pooled_c.shape[0]:
         baselines["global_pooled"] = _lfc(_pseudobulk(pooled_p), _pseudobulk(pooled_c))
 
-    # --- 4. Metrics: LFC-RMSE (primary) + per-gene expression ---
+    # 4. Metrics: LFC-RMSE (primary) + per-gene expression
     methods = {"CONCERT": concert_lfc, **baselines}
     lfc_metrics = {
         name: {"lfc_rmse": _rmse(v, real_lfc),
@@ -285,7 +285,7 @@ def run_loto_eval(
         ic = pb["d3"][1] + w * (pb["d21"][1] - pb["d3"][1])
         expr_metrics["linear_interp"] = _expr_stats(ip, ic)
 
-    # --- 5. Whole-tissue (composition-conflated) honesty metric ---
+    # 5. Whole-tissue (composition-conflated) honesty metric
     # Predict every source cell at its OWN state at t=9, pool all -> compare to real D9 pooled.
     concert_pool = np.concatenate([pred_pert, pred_ctrl], axis=0)
     concert_pool_pb = _pseudobulk(concert_pool)
@@ -303,7 +303,7 @@ def run_loto_eval(
         whole_tissue["linear_interp_rmse"] = _rmse(interp_pool, real_pool_pb)
         whole_tissue["linear_interp_pearson"] = _pearson(interp_pool, real_pool_pb)
 
-    # --- 6. Learned time-function curve (non-linearity evidence) ---
+    # 6. Learned time-function curve (non-linearity evidence)
     marker_idx = np.array([i for i, g in enumerate(gene_names) if g in set(INFLAMMATION_MARKERS)], dtype=int)
     markers_present = [gene_names[i] for i in marker_idx]
     ts = np.linspace(0.0, 1.0, 15)
@@ -324,7 +324,7 @@ def run_loto_eval(
         time_curve.append(float(pb_t[marker_idx].mean()) if marker_idx.size else float("nan"))
     time_curve = np.array(time_curve)
 
-    # --- 7. Persist ---
+    # 7. Persist
     win = None
     if "linear_interp" in lfc_metrics:
         win = bool(lfc_metrics["CONCERT"]["lfc_rmse"] < lfc_metrics["linear_interp"]["lfc_rmse"])
@@ -366,7 +366,7 @@ def run_loto_eval(
     _plot_summary(outdir, ts, time_curve, real_lfc, concert_lfc,
                   baselines.get("linear_interp"), lfc_metrics, target_t)
 
-    # --- console report ---
+    # console report
     logging.info("=" * 68)
     logging.info("LOTO-D9 RESULT (PRIMARY = stratified perturbed-vs-control LFC-RMSE):")
     for name, m in lfc_metrics.items():

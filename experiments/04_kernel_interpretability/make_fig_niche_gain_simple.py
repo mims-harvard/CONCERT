@@ -109,7 +109,7 @@ else:
     coords, perts, sids = np.concatenate(cc), np.concatenate(pp), np.concatenate(ss)
     np.savez_compressed(CACHE, coords=coords, perts=perts, sids=sids)
 
-# ------------------------------------------------------------------ figure -----
+# figure
 # Scatter on top across the left 2/3 (double height), legend in the right 1/3 beside it,
 # then 2 rows x 5 map columns below (row 1 spread out, row 2 clumped). 15 grid columns so
 # each map spans 3 and the scatter spans 10 = two thirds.

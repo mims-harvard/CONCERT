@@ -689,15 +689,13 @@ class SampleKernel(nn.Module):
         return (x*y).sum(dim=1)
 
 
-# ============================================================================
 # Mahalanobis Cauchy Kernel (full rotational anisotropy)
 # Embedding-conditioned kernel scale
-# ============================================================================
 
 class MahalanobisCauchyKernel(nn.Module):
     """Per-perturbation anisotropic Cauchy kernel via Cholesky metric tensor.
 
-    Replaces per-perturbation diagonal scale with a full 2×2
+    Replaces per-perturbation diagonal scale with a full 2x2
     positive-definite metric tensor L_i @ L_i^T per perturbation, where L_i
     is a lower-triangular Cholesky factor. This allows the kernel to rotate
     to align with tissue structure (e.g., gland boundaries, tumor-stroma
@@ -733,13 +731,13 @@ class MahalanobisCauchyKernel(nn.Module):
         self.phi     = torch.tensor(phi, dtype=dtype, device=device)
 
         # Cholesky factors: lower-triangular elements of L_i
-        # For 2×2: 3 elements per pert = [L00, L10, L11]
+        # For 2x2: 3 elements per pert = [L00, L10, L11]
         # L_i = [[L00_i, 0], [L10_i, L11_i]]
         # M_i = L_i @ L_i^T is guaranteed PD (diagonal elements forced positive)
         n_chol = d_pos * (d_pos + 1) // 2  # lower-triangular elements
         # Initialize near identity: diagonal ~ 1, off-diagonal ~ 0
         init = torch.zeros(n_perts, n_chol, dtype=dtype, device=device)
-        # diagonal log = 0 -> exp(0) = 1 -> L diagonal = 1 -> M ≈ I
+        # diagonal log = 0 -> exp(0) = 1 -> L diagonal = 1 -> M ~ I
         self.chol_params = nn.Parameter(init, requires_grad=True)
 
     def _build_metric(self, sample_weights: torch.Tensor) -> torch.Tensor:
@@ -882,9 +880,9 @@ class EmbeddingConditionedKernel(nn.Module):
             nn.ELU(),
             nn.Linear(hidden, d_pos),
         ).to(device)
-        # Initialize to produce scale ≈ 10.0 (same as default in config)
+        # Initialize to produce scale ~ 10.0 (same as default in config)
         with torch.no_grad():
-            self.scale_mlp[-1].bias.fill_(np.log(np.exp(10.0) - 1))  # softplus⁻¹(10)
+            self.scale_mlp[-1].bias.fill_(np.log(np.exp(10.0) - 1))  # softplus^-1(10)
 
     def _scale_from_emb(self, emb: torch.Tensor) -> torch.Tensor:
         """Map (N, emb_dim) -> (N, d_pos) positive scale."""

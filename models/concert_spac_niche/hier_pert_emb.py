@@ -10,16 +10,16 @@ Perturbation embeddings are factored into three additive levels:
 Where:
   * pathway_emb[g(i)] : shared pathway-level embedding (all genes in same KEGG
                          pathway share a base vector). Promotes sharing across
-                         related knockouts (e.g., all TGF-β pathway genes).
+                         related knockouts (e.g., all TGF-beta pathway genes).
   * gene_delta_i      : gene-specific residual (learned independently per KO).
-  * sample_delta_i^(s): sample×gene interaction (captures replicate-specific KO
+  * sample_delta_i^(s): samplexgene interaction (captures replicate-specific KO
                         effects). Set to zero for single-sample training (Phase 2).
 
 Without pathway annotations, pathway_emb degenerates to a gene-level embedding
 (equivalent to LORD's existing perturbation embedding). The key value-add is:
   (a) Explicit regularization structure: pathway_emb has a shared L2 penalty
       over genes in the same pathway.
-  (b) Sample axis: sample_delta captures batch × perturbation interactions for
+  (b) Sample axis: sample_delta captures batch x perturbation interactions for
       multi-sample joint training (Phase 2.2).
   (c) The two-level decomposition encourages shared representations across
       biologically related knockouts, improving generalization to unseen targets.
@@ -60,7 +60,7 @@ class HierarchicalPertEmbedding(nn.Module):
 
     Level 1: Pathway embedding   -- shared across genes in same pathway.
     Level 2: Gene-specific delta -- independent residual per KO gene.
-    Level 3: Sample-gene delta   -- replicate × gene interaction (for multi-sample).
+    Level 3: Sample-gene delta   -- replicate x gene interaction (for multi-sample).
 
     Parameters
     ----------
@@ -72,7 +72,7 @@ class HierarchicalPertEmbedding(nn.Module):
                   None means each gene is its own pathway (no sharing).
     n_pathways  : Optional[int] -- number of unique pathways. Required if pathway_map != None.
     dropout     : float -- dropout on output embedding
-    sigma_noise : float -- noise for regularization during training (à la LORD)
+    sigma_noise : float -- noise for regularization during training (a la LORD)
     """
 
     def __init__(
@@ -91,7 +91,7 @@ class HierarchicalPertEmbedding(nn.Module):
         self.n_samples = n_samples
         self.sigma_noise = sigma_noise
 
-        # --- Level 1: Pathway embedding ---
+        # Level 1: Pathway embedding
         if pathway_map is not None and n_pathways is not None:
             self.pathway_map = torch.tensor(pathway_map, dtype=torch.long)
             self.pathway_emb = nn.Embedding(n_pathways, emb_dim)
@@ -106,12 +106,12 @@ class HierarchicalPertEmbedding(nn.Module):
             self._has_pathways = False
             logging.info("[HierPertEmb] No pathway map -- gene-level pathway embedding (%d genes)", n_genes)
 
-        # --- Level 2: Gene-specific delta ---
+        # Level 2: Gene-specific delta
         # Initialized to zero; learns the residual not captured by pathway emb
         self.gene_delta = nn.Embedding(n_genes, emb_dim)
         nn.init.zeros_(self.gene_delta.weight)
 
-        # --- Level 3: Sample × Gene delta (multi-sample) ---
+        # Level 3: Sample x Gene delta (multi-sample)
         # Zero for single-sample; non-trivial for multi-sample Phase 2.2
         if n_samples > 1:
             self.sample_gene_delta = nn.Embedding(n_samples * n_genes, emb_dim)
@@ -137,13 +137,13 @@ class HierarchicalPertEmbedding(nn.Module):
         # Level 2: gene-specific delta
         emb = emb + self.gene_delta(pert_idx)                        # (B, D)
 
-        # Level 3: sample × gene interaction (multi-sample only)
+        # Level 3: sample x gene interaction (multi-sample only)
         if self.sample_gene_delta is not None and sample_idx is not None:
             # Flatten (sample_idx, pert_idx) -> single index
             flat_idx = sample_idx * self.n_genes + pert_idx          # (B,)
             emb = emb + self.sample_gene_delta(flat_idx)             # (B, D)
 
-        # Gaussian noise regularization during training (à la LORD)
+        # Gaussian noise regularization during training (a la LORD)
         if self.training and self.sigma_noise > 0.0:
             emb = emb + torch.randn_like(emb) * self.sigma_noise
 

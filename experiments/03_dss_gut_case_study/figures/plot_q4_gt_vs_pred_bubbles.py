@@ -79,7 +79,7 @@ obs_all = np.log1p(d["obs_marker_expr"])
 src_day, mouse_all = d["src_day"], d["mouse"]
 pred_all = {t: d[f"marker_pred_t{int(t)}"] for t in DAYS}
 
-# --- keep only markers with a real temporal trend (observed d9/d0 fold) ---
+# keep only markers with a real temporal trend (observed d9/d0 fold)
 obs_day = np.array([[obs_all[np.isclose(src_day, t, atol=1e-3), j].mean()
                      for j in range(len(markers_all))] for t in DAYS])
 pred_day = np.array([[pred_all[t][:, j].mean()
@@ -89,13 +89,13 @@ keep = [j for j in np.argsort(-fold) if fold[j] >= MIN_FOLD][:MAX_MARKERS]
 markers = [markers_all[j] for j in keep]
 G = len(markers)
 
-# --- the ONE shared readout calibration, applied per marker ---
+# the ONE shared readout calibration, applied per marker
 def cal(values, j):
     """Put predicted marker j on the observed scale. Never re-fit -- read the shared rule."""
     return ps.calibrate(values, marker=markers_all[j])
 
 
-# --- alternative colour basis: HEALTHY-TISSUE z, per marker ---
+# alternative colour basis: HEALTHY-TISSUE z, per marker
 # Colouring by absolute log1p expression makes the colour report WHICH GENE is highly
 # expressed rather than how it moves: Il1b reaches 0.115 while Mmp13 tops out at 0.026, so
 # the low-expressed rows stay pale even when they rise several-fold. Referencing each

@@ -70,7 +70,7 @@ f.load_state_dict({k[len("fpert_field."):]: v for k, v in sd.items()
                    if k.startswith("fpert_field.")}, strict=False)
 f.eval()
 
-# ---- per-pert scalars ---------------------------------------------------------
+# per-pert scalars
 fw = sd["f_pert.weight"]                       # (G, E)
 core = (emb_table @ fw.t()).detach()           # (K, G) spatially-constant gene program
 lsW, lsB = sd["fpert_field.ls_head.weight"], sd["fpert_field.ls_head.bias"]
@@ -85,7 +85,7 @@ for i, n in enumerate(NAMES):
                           "n_genes_gt0.5": int((core[i].abs() > 0.5).sum())}
     summary["embedding"][n] = {"l2_norm": float(emb_table[i].norm())}
 
-# ============================ FIG 1: embeddings ================================
+# FIG 1: embeddings
 fig, ax = plt.subplots(1, 2, figsize=(9, 4))
 im = ax[0].imshow(cos_emb, vmin=-1, vmax=1, cmap="RdBu_r")
 ax[0].set_xticks(range(K)); ax[0].set_yticks(range(K))
@@ -102,7 +102,7 @@ ax[1].set_ylabel("embedding L2 norm"); ax[1].set_title("Embedding magnitude")
 ax[1].set_xticklabels(NAMES, rotation=30, ha="right")
 fig.tight_layout(); fig.savefig(f"{args.fig_dir}/fig1_embeddings.png", dpi=150); plt.close(fig)
 
-# ============================ FIG 2: lengthscale ==============================
+# FIG 2: lengthscale
 fig, ax = plt.subplots(figsize=(4.5, 4))
 bars = ax.bar(NAMES, [float(ls[i]) for i in range(K)], color=[COLORS[n] for n in NAMES])
 ax.axhspan(3, 18, color="green", alpha=0.08, label="ls_prior band [3,18]")
@@ -114,7 +114,7 @@ for b, i in zip(bars, range(K)):
 ax.legend(); ax.set_xticklabels(NAMES, rotation=30, ha="right")
 fig.tight_layout(); fig.savefig(f"{args.fig_dir}/fig2_lengthscale.png", dpi=150); plt.close(fig)
 
-# ============================ FIG 3: core gene program ========================
+# FIG 3: core gene program
 core_np = core.numpy()
 var_across = core_np.var(axis=0)
 top = np.argsort(var_across)[::-1][:40]
@@ -149,7 +149,7 @@ for i, v in enumerate(ng):
 axc.set_xticklabels(NAMES, rotation=30, ha="right")
 fig.tight_layout(); fig.savefig(f"{args.fig_dir}/fig3_core_program.png", dpi=150); plt.close(fig)
 
-# ============================ FIG 4: field on slide space =====================
+# FIG 4: field on slide space
 sids = sorted(np.unique(sample_id).tolist())
 fig, axes = plt.subplots(K, len(sids), figsize=(3.0 * len(sids), 2.9 * K), squeeze=False)
 field_stats = {}

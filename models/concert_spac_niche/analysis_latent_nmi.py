@@ -3,7 +3,7 @@
 
 Extract every latent representation the v6 model exposes for all cells, cluster
 each (KMeans, k = #spatial bins = 36), and measure how strongly each clustering
-recovers the cell's physical 6x6 grid bin (NMI / ARI). High NMI ⇒ that latent
+recovers the cell's physical 6x6 grid bin (NMI / ARI). High NMI => that latent
 space is organized by physical location (spatial autocorrelation).
 
 Latent spaces evaluated:
@@ -143,13 +143,13 @@ def main():
     model.load_model(args.model_file)
     model.eval()
 
-    # ---- z_full (10-D posterior mean): GP(2) + Normal(8) ----
+    # z_full (10-D posterior mean): GP(2) + Normal(8)
     log.info("Extracting 10-D latent z for all cells...")
     Z = model.batching_latent_samples(pos_batched, torch.arange(N), cell_atts,
                                        batch_size=BATCH_INF, Y=Yexpr)
     z_gp, z_normal = Z[:, :GP_DIM], Z[:, GP_DIM:]
 
-    # ---- basal (256-D amortized) ----
+    # basal (256-D amortized)
     log.info("Extracting 256-D basal latent (expression encoder)...")
     basal = np.empty((N, ENC_DIM), dtype=np.float32)
     with torch.no_grad():
@@ -158,14 +158,14 @@ def main():
             xb = torch.as_tensor(Yexpr[s:e], dtype=torch.float32, device=device)
             basal[s:e] = model.lord_encoder.basal_encoder(xb).cpu().numpy()
 
-    # ---- per-cell perturbation embedding (256-D LORD lookup) ----
+    # per-cell perturbation embedding (256-D LORD lookup)
     log.info("Extracting 256-D perturbation embedding per cell...")
     with torch.no_grad():
         codes = torch.arange(n_batch, dtype=torch.long, device=device)
         pert_table = model.lord_encoder.s_encoder["perturbation"](codes).cpu().numpy()
     pert_emb = pert_table[perturb_idx]
 
-    # ---- cluster each space and score vs spatial bins ----
+    # cluster each space and score vs spatial bins
     log.info("=== KMeans (k=%d) + NMI vs spatial bins ===", k)
     spaces = {"z_full": Z, "z_gp": z_gp, "z_normal": z_normal,
               "basal": basal, "pert_emb": pert_emb}
@@ -195,7 +195,7 @@ def main():
     results.append(floor)
     log.info("[random   ] NMI=%.4f (floor)", floor["nmi"])
 
-    # ---- save ----
+    # save
     import csv
     with (outdir / "latent_nmi.csv").open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["space", "dim", "nmi", "ami", "ari", "n_clusters_used"])
@@ -205,7 +205,7 @@ def main():
     np.savez_compressed(outdir / "cluster_labels.npz",
                         bin_id=bin_id, perturb_idx=perturb_idx, **labels)
 
-    # ---- bar plot ----
+    # bar plot
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
