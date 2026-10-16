@@ -2,6 +2,10 @@
 # Every setting that differs from the RunConfig defaults in run_concert_spac.py.
 # Command-line flags override these values; data, output and holdout paths go on the command line.
 
+sample: dss_dss
+project_index: dss
+model_file: model.pt
+
 basal_field: rff
 batch_size: 1024
 beta_warmup_epochs: 2

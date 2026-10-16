@@ -129,42 +129,62 @@ an A100.
 
 ### Example 1 - train on a spatial perturbation dataset
 
-Each dataset has one configuration file with every model setting of the reported runs:
-`models/concert_benchmark/configs/{spacseq,perturbmap}.yaml` and
-`models/concert_temporal/configs/dss.yaml`. A run names the data and the output directory:
+Each dataset has one configuration file with every model setting of the reported runs. A run
+names the configuration, the data and the output directory:
+
+| Dataset | Configuration file | Training script | Trained checkpoint |
+|---|---|---|---|
+| SPAC-seq | `models/concert_benchmark/configs/spacseq.yaml` | `experiments/01_spac_seq_benchmark/train/train_spac_seq.sh` | `checkpoints/spacseq_within_niche`, `checkpoints/spacseq_cross_slide` |
+| DSS colitis | `models/concert_temporal/configs/dss.yaml` | `experiments/03_dss_gut_case_study/train/train_dss.sh` | `checkpoints/dss_colitis` |
+| Perturb-map | `models/concert_benchmark/configs/perturbmap.yaml` | `experiments/02_perturb_seq_benchmark/train/train_perturb_seq.sh` | `checkpoints/perturbmap_within_niche`, `checkpoints/perturbmap_cross_slide` |
+
+**SPAC-seq** (five sections, within-niche setting):
 
 ```bash
 cd models/concert_benchmark
-python run_concert_spac.py --config configs/perturbmap.yaml --stage train \
-  --data_file $CONCERT_DATA_DIR/perturbmap/raw/perturbmap_s0_spacfmt.h5ad \
-  --outdir $CONCERT_WORKDIR/perturbmap_s0
+python run_concert_spac.py --config configs/spacseq.yaml --stage train \
+  --multi_sample_files $(ls $CONCERT_DATA_DIR/spacseq/raw/raw_output_1-*.h5ad | paste -sd,) \
+  --holdout_file $CONCERT_DATA_DIR/benchmark_assets/holdout_coords/holdout_spac_seen.json \
+  --outdir $CONCERT_WORKDIR/spacseq_within_niche
 ```
+
+**DSS colitis** (all sections of the time course):
+
+```bash
+cd models/concert_temporal
+python run_concert_spac.py --config configs/dss.yaml --stage train \
+  --multi_sample_files $(ls $CONCERT_DATA_DIR/dss_colitis/sections/*.h5ad | paste -sd,) \
+  --arch_desc_dir $CONCERT_DATA_DIR/dss_colitis/architecture \
+  --outdir $CONCERT_WORKDIR/dss_colitis
+```
+
+**Perturb-map** uses the same command with `configs/perturbmap.yaml`.
 
 Training writes `model.pt` **and** `pert_map.json` into `--outdir`; the perturbation vocabulary
 is read from `pert_map.json` at evaluation, so the integer code of every perturbation matches the
 one the weights were trained with. Any flag on the command line overrides the file.
 
-The reported runs used `experiments/*/train/*.sh`, which call the same configuration files on all
-sections of a dataset:
+The training scripts in the table are the commands of the reported runs:
 
 ```bash
 sbatch experiments/01_spac_seq_benchmark/train/train_spac_seq.sh seen
-sbatch experiments/02_perturb_seq_benchmark/train/train_perturb_seq.sh seen
 sbatch experiments/03_dss_gut_case_study/train/train_dss.sh
+sbatch experiments/02_perturb_seq_benchmark/train/train_perturb_seq.sh seen
 ```
 
 ### Example 2 - counterfactual prediction on chosen spots
 
-Give a file of spot indices, the tissue type to place them in and the perturbation to apply.
-Spots can be selected interactively with the Shiny app in
-[`select_cells/`](./select_cells/).
+Give a file of spot indices and the perturbation to apply. Spots can be selected interactively
+with the Shiny app in [`select_cells/`](./select_cells/). The example knocks out *Stat1* in the
+chosen spots of the trained SPAC-seq model; `__KEEP__` leaves each spot in its own tissue.
 
 ```bash
+cp -r $CONCERT_CHECKPOINT_ROOT/spacseq_within_niche $CONCERT_WORKDIR/   # prediction writes next to model.pt
 cd models/concert_benchmark
-python run_concert_spac.py --config configs/perturbmap.yaml --stage eval \
-  --data_file $CONCERT_DATA_DIR/perturbmap/raw/perturbmap_s0_spacfmt.h5ad \
-  --outdir $CONCERT_WORKDIR/perturbmap_s0 \
-  --pert_cells spots.txt --target_cell_tissue tumor --target_cell_perturbation Jak2
+python run_concert_spac.py --config configs/spacseq.yaml --stage eval \
+  --multi_sample_files $(ls $CONCERT_DATA_DIR/spacseq/raw/raw_output_1-*.h5ad | paste -sd,) \
+  --outdir $CONCERT_WORKDIR/spacseq_within_niche \
+  --pert_cells spots.txt --target_cell_tissue __KEEP__ --target_cell_perturbation Stat1
 ```
 
 Use the configuration file the model was trained with: it carries the lengthscale band of the
