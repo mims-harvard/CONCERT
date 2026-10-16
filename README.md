@@ -63,8 +63,8 @@ Ignoring cells' tissue context when predicting perturbations
 | [`models/concert_spac_niche/`](./models/concert_spac_niche/) | Model used for the stroke case study |
 | [`benchmark_evaluation/`](./benchmark_evaluation/) | Scoring code shared by the two benchmark experiments |
 | [`experiments/`](./experiments/) | One directory per experiment: data preparation, training, evaluation, figures |
-| [`scripts/`](./scripts/) | One command-line script per paper result, run from a trained checkpoint |
-| [`notebooks/`](./notebooks/) | The same four results as step-by-step tutorials |
+| [`reproduction/`](./reproduction/) | Reproducing the paper: one script per result, with its own README |
+| [`notebooks/`](./notebooks/) | The same four results as step-by-step tutorials, with figures |
 | [`datasets/`](./datasets/) | Where every dataset comes from, and how to point the code at it |
 | [`config/paths.sh`](./config/paths.sh) | Data, output and environment paths - the one file the SLURM scripts read |
 
@@ -124,7 +124,7 @@ an A100.
    on the first missing one:
 
    ```bash
-   python scripts/01_spac_seq_benchmark.py --steps aggregate
+   python reproduction/01_spac_seq_benchmark.py --steps aggregate
    ```
 
 ### Example 1 - train on a spatial perturbation dataset
@@ -201,74 +201,41 @@ so a decode to perturbation `g` and a decode to the basal slot differ by exactly
 perturbation terms - the basal reconstruction cancels. Every reported score is computed on that
 difference of two decodes, not on one decode alone.
 
-### Example 3 - reproduce a paper result from a trained checkpoint
+### Example 3 - imputation and counterfactual prediction in a missing patch
 
-The repository ships a single benchmark protocol, the one reported in the paper. `scripts/` and
-`notebooks/` are the entry points for reproducing each result; `experiments/` is the full record of
-the pipeline that produced them (data preparation, training, scoring and aggregation).
-
-Four scripts, one per result. They print the numbers and write the tables and figures; the
-steps that predict are opt-in, so a first pass reads the shipped results and still reproduces
-every reported number.
-
-```bash
-python scripts/01_spac_seq_benchmark.py --steps aggregate compare   # SPAC-seq benchmark
-python scripts/02_perturb_map_benchmark.py --steps aggregate compare # Perturb-map benchmark
-python scripts/03_dss_colitis_marker_trend.py                        # colitis time course
-python scripts/04_stroke_2d_3d_prediction.py                         # stroke, 2D and 3D
-```
-
-Add the prediction steps on a GPU node:
+CONCERT fills in a patch of tissue that is missing from a slide, and predicts what the missing
+cells would look like under a perturbation. Train on the slide without the patch, then run
+`--stage impute_patch` with a mask file naming the missing cells. Each missing cell is predicted
+at its own coordinates from the surrounding tissue: cells of the unperturbed group are imputed
+as they are, and cells of a knockout group are imputed together with the counterfactual effect
+of that knockout at their location.
 
 ```bash
-python scripts/01_spac_seq_benchmark.py --steps weights predict slide --slide 1-1
-python scripts/04_stroke_2d_3d_prediction.py --run-decode --arms 2d 3d
+cd models/concert_benchmark
+python run_concert_spac.py --config configs/spacseq.yaml --stage train \
+  --data_file slide_missing_patch.h5ad --outdir $CONCERT_WORKDIR/impute_demo
+python run_concert_spac.py --config configs/spacseq.yaml --stage impute_patch \
+  --data_file slide_missing_patch.h5ad --outdir $CONCERT_WORKDIR/impute_demo \
+  --mask_index_file patch_mask.npz --raw_slide_file slide_full.h5ad
 ```
 
-See [`scripts/README.md`](./scripts/README.md) for every step, its cost and its output.
-
-### 📓 Tutorials
-
-The same four results, explained step by step, are in [`notebooks/`](./notebooks/) - start
-there if you are reading rather than running:
-
-| Notebook | What it reproduces |
-|---|---|
-| [`01_spac_seq_benchmark.ipynb`](./notebooks/01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark, both settings, and the comparison against the published methods |
-| [`02_perturb_map_benchmark.ipynb`](./notebooks/02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay |
-| [`03_dss_colitis_per_mouse_marker_trend.ipynb`](./notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb) | A longitudinal inflammation trajectory for animals each measured once |
-| [`04_stroke_2d_and_3d_prediction.ipynb`](./notebooks/04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, 2D and 3D, against the measured lesion |
-
-Read 01 first: the scoring protocol, the two settings and the two metrics are explained there
-and only referred to afterwards.
-
-### Reproducing an experiment end to end
-
-Each directory under `experiments/` is self-contained - its own data preparation, training,
-evaluation and figures - and carries a `README.md` listing the inputs it expects, the order to
-run things in, and what it writes.
-
-| Directory | Question |
-|---|---|
-| [`01_spac_seq_benchmark`](./experiments/01_spac_seq_benchmark/) | Can the response of a perturbation held out from a slide be predicted from location and unperturbed expression? |
-| [`02_perturb_seq_benchmark`](./experiments/02_perturb_seq_benchmark/) | The same question on spatial Perturb-map, a different assay and perturbation set |
-| [`03_dss_gut_case_study`](./experiments/03_dss_gut_case_study/) | Does one model over a colitis time course reproduce the tissue at a timepoint it was not trained on? |
-| [`04_kernel_interpretability`](./experiments/04_kernel_interpretability/) | Do the spatial parameters the model learns track the observed arrangement of the perturbed cells? |
-| [`05_perturb_seq_case_study`](./experiments/05_perturb_seq_case_study/) | Does the same knockout, placed in different parts of a section, produce a different predicted response? |
-| [`06_sensitivity_analysis`](./experiments/06_sensitivity_analysis/) | Do the reported numbers survive changes to the hyper-parameters, once initialisation noise is measured? |
-| [`07_stroke_case_study`](./experiments/07_stroke_case_study/) | Can a lesion of a chosen size and position be imposed on a healthy brain and its response predicted, in 2D and in 3D? |
-| [`08_deconvolution_imputation`](./experiments/08_deconvolution_imputation/) | Can CONCERT unmix spots that pool several perturbation states, and fill in a patch of tissue removed from a slide? |
-
-The run scripts are SLURM batch scripts whose `#SBATCH` headers carry generic partition names;
-set the partition and account your cluster uses before submitting. To run without a scheduler,
-execute a script directly with `bash` - nothing outside the headers depends on SLURM except the
-SPAC-seq evaluation, which reads `SLURM_ARRAY_TASK_ID` to pick a slide and can be given that
-variable by hand.
+`patch_mask.npz` holds three arrays over the cells of the full slide: `obs_name` (cell id),
+`group` (perturbation label) and `role` (1 for a missing cell). The run writes
+`impute_results.npz` with the predicted and the measured expression of every missing cell.
+[`experiments/08_deconvolution_imputation`](./experiments/08_deconvolution_imputation/) builds
+the mask and the masked slide for the SPAC-seq patch experiment of the paper and compares
+CONCERT with Tangram, SpatialScope and SpaIM.
 
 ### Naming
 
 The code paths, output directories and CSV columns use `seen` and `unseen`. In the manuscript
 those two settings are **within-niche prediction** and **cross-slide prediction**.
+
+## 🔁 Reproducing the paper
+
+Everything needed to reproduce the reported results is in [`reproduction/`](./reproduction/),
+with its own [README](./reproduction/README.md): one script per result, the step-by-step
+notebooks with their figures, and the end-to-end experiment pipelines.
 
 ## 🗃️ Datasets
 

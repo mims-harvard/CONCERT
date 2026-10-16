@@ -28,9 +28,9 @@ Steps
 `decode` is off unless asked for: the shipped decodes are read instead.
 
 Examples
-  python scripts/04_stroke_2d_3d_prediction.py
-  python scripts/04_stroke_2d_3d_prediction.py --gene Spp1 --sections 0 1
-  python scripts/04_stroke_2d_3d_prediction.py --run-decode --arms 2d
+  python reproduction/04_stroke_2d_3d_prediction.py
+  python reproduction/04_stroke_2d_3d_prediction.py --gene Spp1 --sections 0 1
+  python reproduction/04_stroke_2d_3d_prediction.py --run-decode --arms 2d
 """
 from __future__ import annotations
 

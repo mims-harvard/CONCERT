@@ -13,7 +13,7 @@ z levels of the section stack.
            --target_cell_tissue CTX --target_cell_perturbation ICA ...
 
 `--stage eval` loads `model.pt` from `--outdir`, so it writes into the checkpoint directory
-unless you give it a symlink shadow of one; `scripts/04_stroke_2d_3d_prediction.py` builds that
+unless you give it a symlink shadow of one; `reproduction/04_stroke_2d_3d_prediction.py` builds that
 shadow for you and carries the full flag list the reported decodes used.
 
 The 3D arm differs from the 2D arm only in `--fpert_n_z_levels` (4 rather than 1) and the z

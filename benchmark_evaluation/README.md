@@ -8,7 +8,7 @@ files here are its libraries; they are run through the entry points below.
 
 | Goal | Entry point |
 |---|---|
-| Reproduce a reported number, step by step | `scripts/01_spac_seq_benchmark.py`, `scripts/02_perturb_map_benchmark.py`, or notebooks 01 and 02 |
+| Reproduce a reported number, step by step | `reproduction/01_spac_seq_benchmark.py`, `reproduction/02_perturb_map_benchmark.py`, or notebooks 01 and 02 |
 | Score a checkpoint on the SPAC-seq benchmark | `experiments/01_spac_seq_benchmark/evaluation/evaluate.sh` |
 | Rebuild the SPAC-seq tables, tests and figures | `experiments/01_spac_seq_benchmark/evaluation/aggregate.sh` |
 | Score a checkpoint on the Perturb-map benchmark | `experiments/02_perturb_seq_benchmark/evaluation/evaluate.sh` |

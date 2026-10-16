@@ -20,7 +20,7 @@ gives the study the sections come from, where the raw data lives, and a processe
 
 ## The two download folders
 
-Every input the notebooks, the `scripts/` and the experiment run scripts read sits in two
+Every input the notebooks, the `reproduction/` scripts and the experiment run scripts read sits in two
 folders, `data/` and `checkpoints/` (download: link to be added). Place both in the repository
 root; reruns write to `runs/` there. Each location can be moved with an environment variable:
 `CONCERT_DATA_DIR`, `CONCERT_CHECKPOINT_ROOT` and `CONCERT_WORKDIR`.
@@ -28,7 +28,7 @@ root; reruns write to `runs/` there. Each location can be moved with an environm
 `data/README.md` lists every file, its size and the notebook or script that reads it. The layout
 is defined once, in `benchmark_evaluation/release_paths.py`; the scripts, the notebooks and
 `config/paths.sh` (for the SLURM run scripts under `experiments/`) all derive their paths from it.
-`python scripts/01_spac_seq_benchmark.py --steps weights` prints an existence table for every
+`python reproduction/01_spac_seq_benchmark.py --steps weights` prints an existence table for every
 input it needs and stops on the first missing one, which is the quickest way to check a new
 machine is wired up.
 

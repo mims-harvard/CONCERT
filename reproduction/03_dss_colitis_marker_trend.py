@@ -27,9 +27,9 @@ Steps
 figures still come out.
 
 Examples
-  python scripts/03_dss_colitis_marker_trend.py
-  python scripts/03_dss_colitis_marker_trend.py --run-decode --mice 082421_D0_m6 092421_D3_m1
-  python scripts/03_dss_colitis_marker_trend.py --run-decode --mice all --recompute-observed
+  python reproduction/03_dss_colitis_marker_trend.py
+  python reproduction/03_dss_colitis_marker_trend.py --run-decode --mice 082421_D0_m6 092421_D3_m1
+  python reproduction/03_dss_colitis_marker_trend.py --run-decode --mice all --recompute-observed
 """
 from __future__ import annotations
 

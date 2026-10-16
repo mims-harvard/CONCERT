@@ -36,9 +36,9 @@ Steps
   compare      CONCERT next to the published methods and the reference strategies, paired
 
 Examples
-  python scripts/01_spac_seq_benchmark.py --steps weights aggregate compare
-  python scripts/01_spac_seq_benchmark.py --steps slide --slide 1-1
-  python scripts/01_spac_seq_benchmark.py --all --result-root fresh
+  python reproduction/01_spac_seq_benchmark.py --steps weights aggregate compare
+  python reproduction/01_spac_seq_benchmark.py --steps slide --slide 1-1
+  python reproduction/01_spac_seq_benchmark.py --all --result-root fresh
 """
 from __future__ import annotations
 
@@ -384,7 +384,7 @@ def step_compare(env, out):
     records that method and CONCERT both cover.
 
     (The Perturb-map benchmark is the other way round -- there the methods overlap enough that
-    an all-method intersection is the rule. See scripts/02_perturb_map_benchmark.py.)
+    an all-method intersection is the rule. See reproduction/02_perturb_map_benchmark.py.)
     """
     import matplotlib
     matplotlib.use("Agg")

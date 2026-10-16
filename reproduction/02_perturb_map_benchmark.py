@@ -2,7 +2,7 @@
 """Spatial Perturb-map held-out perturbation benchmark, from a trained checkpoint.
 
 The script form of `notebooks/02_perturb_map_benchmark.ipynb`. The question and the two
-metrics are defined in `scripts/01_spac_seq_benchmark.py`. What differs here is the assay -- four sections of a lung tumour model carrying a small, balanced
+metrics are defined in `reproduction/01_spac_seq_benchmark.py`. What differs here is the assay -- four sections of a lung tumour model carrying a small, balanced
 knockout panel, with unambiguous guide assignment and explicit control spots -- and, in
 consequence, three settings of the protocol:
 
@@ -32,8 +32,8 @@ Steps
                on the all-method intersection
 
 Examples
-  python scripts/02_perturb_map_benchmark.py --steps weights aggregate compare
-  python scripts/02_perturb_map_benchmark.py --steps section --section 0
+  python reproduction/02_perturb_map_benchmark.py --steps weights aggregate compare
+  python reproduction/02_perturb_map_benchmark.py --steps section --section 0
 """
 from __future__ import annotations
 

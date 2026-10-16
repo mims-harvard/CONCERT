@@ -69,7 +69,7 @@ def check(items, strict: bool = True) -> bool:
     if not ok and strict:
         raise SystemExit(
             "\nSome inputs are missing. Set the environment variables listed at the top of "
-            "scripts/concert_paths.py, or see datasets/README.md for where the data comes from."
+            "reproduction/concert_paths.py, or see datasets/README.md for where the data comes from."
         )
     return ok
 

@@ -13,7 +13,7 @@ retrains anything: every notebook loads a `model.pt` and runs inference.
 Read 01 first if you are reading more than one: the scoring protocol, the two benchmark settings
 and the two metrics are explained there and only referred to afterwards.
 
-The same four results are also available as command-line scripts in [`../scripts/`](../scripts/)
+The same four results are also available as command-line scripts in [`../reproduction/`](../reproduction/)
 - same steps, same order, same numbers - for when you want a result in a batch job rather than
 in a browser.
 

@@ -1,4 +1,15 @@
-# Reproduction scripts
+# Reproducing the paper
+
+The repository ships a single benchmark protocol, the one reported in the paper. This folder
+holds one command-line script per paper result; [`../notebooks/`](../notebooks/) holds the same
+four results as step-by-step tutorials with their figures; [`../experiments/`](../experiments/)
+is the full record of the pipeline behind every result (data preparation, training, scoring,
+aggregation and figures).
+
+Before running anything, place the downloaded `data/` and `checkpoints/` folders in the
+repository root (see [`../datasets/README.md`](../datasets/README.md)).
+
+## Scripts
 
 One script per paper result, reproduced from a **trained checkpoint**. Nothing here retrains:
 every script loads `model.pt`, runs inference, prints the numbers and writes the tables and
@@ -19,7 +30,7 @@ settings and the two metrics are explained there and only referred to afterwards
 
 ```bash
 conda activate concert_env
-cd scripts
+cd reproduction
 
 # every script prints what it needs and stops on the first missing input
 python 01_spac_seq_benchmark.py --help
@@ -63,7 +74,7 @@ minutes in was scheduled on one. Ask for an H100 or A100.
 ```bash
 # inside a one-GPU allocation from your scheduler (about 200 GB of host memory for script 01)
 conda activate concert_env
-python scripts/01_spac_seq_benchmark.py --all
+python reproduction/01_spac_seq_benchmark.py --all
 ```
 
 ## Paths
@@ -81,8 +92,7 @@ symlink shadow of the checkpoint directory under the work directory instead.
 
 The code paths, output directories and CSV columns use `seen` and `unseen`. In the manuscript
 those two settings are **within-niche prediction** and **cross-slide prediction**. The scripts
-print the manuscript names and keep the directory names on disk; do not carry `seen`/`unseen`
-into manuscript text.
+print the manuscript names and keep the directory names on disk.
 
 ## Two different comparison rules
 
@@ -95,3 +105,39 @@ not cosmetic:
   CellAgentChat 11). The reported comparison is **paired, one competitor at a time**, on the
   records that competitor and CONCERT share. The `n_pairs` column of the shipped statistics
   table is that count, and `--steps compare` checks itself against it.
+
+## Tutorials
+
+The same four results, explained step by step, with their figures:
+
+| Notebook | What it reproduces |
+|---|---|
+| [`01_spac_seq_benchmark.ipynb`](../notebooks/01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark, both settings, and the comparison against the published methods |
+| [`02_perturb_map_benchmark.ipynb`](../notebooks/02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay |
+| [`03_dss_colitis_per_mouse_marker_trend.ipynb`](../notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb) | A longitudinal inflammation trajectory for animals each measured once |
+| [`04_stroke_2d_and_3d_prediction.ipynb`](../notebooks/04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, 2D and 3D, against the measured lesion |
+
+Read 01 first: the scoring protocol, the two settings and the two metrics are explained there
+and only referred to afterwards.
+
+## Experiments, end to end
+
+Each directory under `experiments/` is self-contained, with its own data preparation, training,
+evaluation and figures, and carries a `README.md` listing the inputs it expects, the order to
+run things in, and what it writes.
+
+| Directory | Question |
+|---|---|
+| [`01_spac_seq_benchmark`](../experiments/01_spac_seq_benchmark/) | Can the response of a perturbation held out from a slide be predicted from location and unperturbed expression? |
+| [`02_perturb_seq_benchmark`](../experiments/02_perturb_seq_benchmark/) | The same question on spatial Perturb-map, a different assay and perturbation set |
+| [`03_dss_gut_case_study`](../experiments/03_dss_gut_case_study/) | Does one model over a colitis time course reproduce the tissue at a timepoint it was not trained on? |
+| [`04_kernel_interpretability`](../experiments/04_kernel_interpretability/) | Do the spatial parameters the model learns track the observed arrangement of the perturbed cells? |
+| [`05_perturb_seq_case_study`](../experiments/05_perturb_seq_case_study/) | Does the same knockout, placed in different parts of a section, produce a different predicted response? |
+| [`06_sensitivity_analysis`](../experiments/06_sensitivity_analysis/) | Do the reported numbers survive changes to the hyper-parameters, once initialisation noise is measured? |
+| [`07_stroke_case_study`](../experiments/07_stroke_case_study/) | Can a lesion of a chosen size and position be imposed on a healthy brain and its response predicted, in 2D and in 3D? |
+| [`08_deconvolution_imputation`](../experiments/08_deconvolution_imputation/) | Can CONCERT unmix spots that pool several perturbation states, and fill in a patch of tissue removed from a slide? |
+
+The run scripts are SLURM batch scripts whose `#SBATCH` headers carry a generic partition name;
+set the partition and account your cluster uses before submitting. To run without a scheduler,
+execute a script directly with `bash`. Only the SPAC-seq evaluation reads a scheduler variable,
+`SLURM_ARRAY_TASK_ID`, to pick a slide, and it can be given that variable by hand.
