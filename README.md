@@ -244,11 +244,12 @@ code reads, in [`datasets/README.md`](./datasets/README.md).
 
 | Dataset | Raw data | Processed data |
 |---|---|---|
-| [SPAC-seq CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) | *pending release* | *pending release* |
+| [SPAC-seq CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) | [SPAC-seq portal](https://spac.pku-genomics.org) | [preprocessing scripts](./experiments/01_spac_seq_benchmark/data_preparation/) |
 | [Perturb-Map](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7) | [GEO GSE193460](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460) | [Figshare](https://figshare.com/articles/dataset/Datasets_-_Perturb-Map/29198468) |
-| [Colitis MERFISH time course](https://doi.org/10.1016/j.cell.2024.03.013) | *pending release* | *pending release* |
+| [Colitis MERFISH time course](https://doi.org/10.1016/j.cell.2024.03.013) | [Dryad](https://datadryad.org/dataset/doi:10.5061/dryad.rjdfn2zh3) | [preprocessing script](./experiments/03_dss_gut_case_study/data_preparation/convert_sections.py) |
 | [Colon inflammation](https://www.nature.com/articles/s41586-024-08216-z) | [Broad SCP2771](https://singlecell.broadinstitute.org/single_cell?type=study&page=1&terms=SCP2771) | [Figshare](https://figshare.com/articles/dataset/Mouse_gut_inflammation_dataset/29882873) |
 | [Brain stroke](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
+| [Perturb-FISH](https://doi.org/10.1016/j.cell.2025.02.012) | [Original data](https://doi.org/10.35077/ace-gem-get) | [preprocessing script](./experiments/04_kernel_interpretability/perturbfish_prepare_data.py) |
 
 The trained checkpoints are one downloadable folder, `checkpoints/`, with one subdirectory per
 model; [`datasets/README.md`](./datasets/README.md#trained-checkpoints) lists them and gives the

@@ -7,16 +7,12 @@ gives the study the sections come from, where the raw data lives, and a processe
 
 | Dataset | Used for | Raw data | Processed data |
 |---|---|---|---|
-| [**SPAC-seq** CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) (Zhang et al., *Cell* 2026) | Benchmark, `experiments/01_spac_seq_benchmark` | *pending - see note below* | *pending - see note below* |
+| [**SPAC-seq** CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) (Zhang et al., *Cell* 2026) | Benchmark, `experiments/01_spac_seq_benchmark` | [SPAC-seq portal](https://spac.pku-genomics.org) | [preprocessing scripts](../experiments/01_spac_seq_benchmark/data_preparation/) |
 | [**Perturb-map** lung tumour](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7) (Dhainaut et al., *Cell* 2022) | Benchmark, `experiments/02_perturb_seq_benchmark` | [GEO GSE193460](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460) | [Figshare](https://figshare.com/articles/dataset/Datasets_-_Perturb-Map/29198468) |
-| [**Colitis MERFISH** time course](https://doi.org/10.1016/j.cell.2024.03.013) (Cadinu et al., *Cell* 2024) | Time-course case study, `experiments/03_dss_gut_case_study` | *pending - see note below* | *pending - see note below* |
+| [**Colitis MERFISH** time course](https://doi.org/10.1016/j.cell.2024.03.013) (Cadinu et al., *Cell* 2024) | Time-course case study, `experiments/03_dss_gut_case_study` | [Dryad](https://datadryad.org/dataset/doi:10.5061/dryad.rjdfn2zh3) | [preprocessing script](../experiments/03_dss_gut_case_study/data_preparation/convert_sections.py) |
 | [**Mouse gut DSS** Visium](https://www.nature.com/articles/s41586-024-08216-z) (Mayassi et al., *Nature* 2024) | Colon inflammation | [Broad SCP2771](https://singlecell.broadinstitute.org/single_cell?type=study&page=1&terms=SCP2771) | [Figshare](https://figshare.com/articles/dataset/Mouse_gut_inflammation_dataset/29882873) |
 | [**Mouse brain stroke**](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) (Han et al., *Sci. Transl. Med.* 2024) | Stroke case study, `experiments/07_stroke_case_study` | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
-
-> **Pending links.** The accession and Figshare links for the SPAC-seq screen and for the
-> colitis MERFISH time course are not yet public and are marked as placeholders in the
-> manuscript's data-availability statement as well. They will be filled in here when the
-> deposits are released; until then, contact the authors.
+| [**Perturb-FISH** tumour section](https://doi.org/10.1016/j.cell.2025.02.012) (Binan et al., *Cell* 2025) | Kernel interpretability, `experiments/04_kernel_interpretability` | [Original data](https://doi.org/10.35077/ace-gem-get) | [preprocessing script](../experiments/04_kernel_interpretability/perturbfish_prepare_data.py) |
 
 ## The two download folders
 
