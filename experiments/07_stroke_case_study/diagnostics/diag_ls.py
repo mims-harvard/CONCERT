@@ -1,6 +1,10 @@
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import torch, json, numpy as np, anndata as ad
 from pathlib import Path
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
+NS = Path(f"{_rp.WORKDIR}")
 OUT = NS / "outputs"
 import os
 LS_MIN_D = {"stroke_3d_crC": 0.02}

@@ -4,12 +4,16 @@
 Also checks whether the 8 PASTE2-aligned slides share one coordinate frame, which would let
 emitters on the PT (real-lesion) slides spill onto the Sham3 slide through the same r_max=5 graph.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import numpy as np, anndata as ad, h5py
 
-WITH = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara")
-WOUT = Path("/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/stroke_2dpara_nopara")
+WITH = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara")
+WOUT = Path(f"{_rp.WORKDIR}/scratch/CONCERT_rimtest/stroke_2dpara_nopara")
 man = json.loads((WITH / "pert_sets" / "manifest.json").read_text())
 off, n_slide = man["offset"], man["n_slide"]
 rows = slice(off, off + n_slide)

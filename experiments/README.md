@@ -23,14 +23,14 @@ so from inside an experiment directory:
     sbatch train/train_spac_seq.sh seen
     sbatch --array=1-5 evaluation/eval_spac_seq_benchmark.sh seen
 
-Scripts write under `OUTPUT_ROOT` from `config/paths.sh` and never write back into this
+Scripts read from the `data/` and `checkpoints/` folders and write under `CONCERT_WORKDIR` from `config/paths.sh` and never write back into this
 repository. Run data preparation before training: the training scripts fail immediately with a
 clear message if a required input is missing, rather than training on a partial set.
 
 Experiments 01 and 02 are independent of each other and can run in either order. Experiment 04
 needs a trained checkpoint from experiment 01 and experiment 05 one from experiment 02.
 Experiments 03 and 07 are self-contained. Experiment 08 reads a Perturb-map within-niche
-checkpoint (`outputs/ms_pmap_niche_seen`) for Supplementary Fig. 10 and single-slide SPAC-seq
+checkpoint (the alternative niche checkpoint, whose results ship as `data/benchmark_assets/results/perturbmap_concert/within_niche_alternative`) for Supplementary Fig. 10 and single-slide SPAC-seq
 models of slides 2-1 and 2-2 for Figs. 9 and 11.
 
 ## Reproducing a result without rerunning the pipeline

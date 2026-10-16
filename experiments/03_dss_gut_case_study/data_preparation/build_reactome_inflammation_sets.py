@@ -6,11 +6,15 @@ umbrella terms -- Cytokine signaling 216, Innate immune 102, Signaling by interl
 which overlap everything and wash out the heatmap). Each kept set has >=8 panel genes.
 Writes reactome_inflammation_gene_sets.json {short_label: [panel genes]}.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 
-GMT = "/n/holylabs/mzitnik_lab/Users/xianglin226/PerTogether/c2.cp.reactome.v2025.1.Hs.symbols.gmt"
-PANEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+GMT = f"{_rp.DATA}/dss_colitis/c2.cp.reactome.v2025.1.Hs.symbols.gmt"
+PANEL = Path(f"{_rp.WORKDIR}/outputs/"
              "dss_timekernel_markersign_timefield_fixedt/hvg_gene_names.txt")
 OUT = Path(__file__).resolve().parent / "reactome_inflammation_gene_sets.json"
 

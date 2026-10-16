@@ -1,11 +1,17 @@
 """Multi-slide SPAC-seq data prep and cross-slide counterfactual evaluation helpers."""
 
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import logging
 from collections import Counter
 from pathlib import Path
+
+import release_paths as rp  # noqa: E402
 
 import anndata as ad
 import h5py
@@ -73,10 +79,7 @@ def method_results_subdir(method: str, random_patch: bool = False) -> str:
 
 log = logging.getLogger(__name__)
 
-DATA_DIR = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/"
-    "spaVAE/datasets/newdata/spac_seq"
-)
+DATA_DIR = rp.SPACSEQ_RAW
 DEFAULT_SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 HVG_MAX_RANK = 10_000
 MIN_CELLS_PER_PERT = 25
@@ -641,7 +644,7 @@ def save_cross_slide_results(out_dir: Path, slide_id: str, eval_genes, scores, a
 
 
 def a1_source_indices(prepared_dir, slide_id, pert_array, max_src_cells, src_mode="subsample", seed=42):
-    """Analysis 1 source cells: patch holdout unassigned (v2), JSON holdout, or subsample."""
+    """Analysis 1 source cells: patch holdout unassigned, JSON holdout, or subsample."""
     if src_mode == "patch":
         return a1_patch_source_indices(prepared_dir, slide_id, max_src_cells, seed=seed)
     if src_mode == "holdout":
@@ -1124,7 +1127,7 @@ def prepared_raw_counts_dir(prepared_dir: Path, slide_id: str) -> Path:
     return prepared_dir / "raw_counts" / f"slide_{slide_id}"
 
 
-CONCERT_PYTHON = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env/bin/python"
+CONCERT_PYTHON = f"{_rp.WORKDIR}/concert_env/bin/python"
 
 
 def ensure_prepared_raw_counts(prepared_dir: Path, slide_id: str) -> Path:
@@ -1139,7 +1142,7 @@ def ensure_prepared_raw_counts(prepared_dir: Path, slide_id: str) -> Path:
     prepared_h5ad = prepared_dir / f"slide_{slide_id}.h5ad"
     raw_h5ad = slide_path(slide_id)
     build_script = (
-        "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/biolord/biolord/exp_spacseq/"
+        f"{_rp.WORKDIR}/biolord/biolord/exp_spacseq/"
         "build_filtered_raw_counts.py"
     )
     log.info("Building raw counts for slide %s -> %s", slide_id, outdir)

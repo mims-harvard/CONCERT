@@ -6,6 +6,10 @@ patch compare the model's predicted (KO target vs unperturbed target = mu_action
 against the observed KO-vs-unperturbed pseudobulk LFC, by Spearman over HVG genes.
 Runs all 4 field variants (constant/rff/svgp/hybrid) and prints a table.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import numpy as np, torch, logging, sys
 from scipy.stats import spearmanr
 from sklearn.cluster import KMeans
@@ -13,8 +17,8 @@ from make_umap import load_data, build_model
 import eval_utils as eu
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
-DATA = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s0_spacfmt.h5ad"
-BASE = "/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT/outputs"
+DATA = f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad"
+BASE = f"{_rp.WORKDIR}/scratch/CONCERT/outputs"
 VARIANTS = {
     "constant": dict(fpert_field="constant"),
     "rff":      dict(fpert_field="rff", fpert_rff_features=128, fpert_rff_bandwidth=0.15, fpert_coord_scale=20.0),

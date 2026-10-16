@@ -7,6 +7,10 @@ frame, a spot's neighbours would stay within its own section at every k; a share
 usable if cross-section neighbours appear as k grows.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys
 from pathlib import Path
 import anndata as ad, numpy as np
@@ -18,8 +22,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]
 import paper_style as ps
 ps.use()
 
-SL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d/slides")
-OUT = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/manuscript/MAIN/FIG/supp")
+SL = Path(f"{_rp.WORKDIR}/stroke3d/slides")
+OUT = Path(f"{_rp.WORKDIR}/paper/manuscript/MAIN/FIG/supp")
 KS = [5, 10, 15, 20, 25, 30, 40, 50, 75, 100]
 Z_GAIN = 0.25
 LABEL_FS, TICK_FS = 19, 15

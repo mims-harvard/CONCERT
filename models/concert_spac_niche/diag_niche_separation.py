@@ -11,19 +11,23 @@ Checks:
   - swept over k
   - per-slide + pooled
   - Ifngr2/Jak2 as HOMOGENEITY CONTROLS (should be ~single-sign -> nothing to separate)
-Uses the v4 pmap checkpoint + the shared eval loader. CPU-only.
+Uses the Perturb-map niche checkpoint + the shared eval loader. CPU-only.
 
 Run:
   CUDA_VISIBLE_DEVICES="" PYTHONPATH=<CC> \
-    concert_env/bin/python diag_niche_separation.py --model_file <ms_pmap_v4_seen/model.pt> --outdir diag_out
+    concert_env/bin/python diag_niche_separation.py --model_file <perturbmap_within_niche/model.pt> --outdir diag_out
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys, json, argparse
 from pathlib import Path
 import numpy as np
 import torch
 
-EVAL = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval"
-CC   = "/n/holylabs/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/src/CONCERT-spac-rffbasal"
+EVAL = f"{_rp.WORKDIR}/scoring"
+CC   = f"{_rp.WORKDIR}/paper/src/CONCERT-spac-rffbasal"
 sys.path.insert(0, CC); sys.path.insert(0, EVAL)
 import run_concert_pm_eval as R   # build_pm_ctx, _patch_obs_on_model_rows, SLIDES, parse_args
 
@@ -36,7 +40,7 @@ except Exception:
 
 
 def make_args(model_file, outdir):
-    """v4 pmap arch defaults (match sub_train_pmap_v4_fix.sh) + ls band + inducing 64."""
+    """Perturb-map arch defaults (match train_perturb_seq.sh) + ls band + inducing 64."""
     argv = ["--model_file", str(model_file), "--outdir", str(outdir),
             "--ls_prior_min", "3", "--ls_prior_max", "18", "--fpert_svgp_inducing", "64"]
     old = sys.argv

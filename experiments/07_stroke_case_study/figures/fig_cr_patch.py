@@ -15,6 +15,10 @@ Rim markers are plotted but the honest readout is the core panel: no lengthscale
 a rim-high program in 3D (see diag_cr_profile_*). That is stated in the caption, not on the axes.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json, sys
 from pathlib import Path
 import anndata as ad, h5py, numpy as np, pandas as pd
@@ -27,8 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]
                        / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+NS = Path(f"{_rp.WORKDIR}")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 CORE_C, RIM_C, OTHER_C = "#b2182b", "#ef8a62", "#dcdcdc"
 LABEL_FS, TICK_FS, CBAR_FS = 17, 14, 13
 NB = 6

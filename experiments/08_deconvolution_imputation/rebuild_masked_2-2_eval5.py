@@ -5,6 +5,10 @@ Keeps: unassigned/control + {Ccn1, Iqgap1, Phgr1, Cttn, H2-Ea}.
 Drops: role==1 patch cells, other map KOs, multiple, rare non-map KOs.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 from pathlib import Path
@@ -20,15 +24,15 @@ CTRL = {
 }
 
 RAW = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_2-2.h5ad"
+    f"{_rp.DATA}/spacseq/raw/raw_output_2-2.h5ad"
 )
 MASK = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/spot_plots/"
+    f"{_rp.WORKDIR}/scoring/spot_plots/"
     "patch_removal_2-2_top5_cellindex.npz"
 )
 OUT = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/data_mask/"
-    "raw_output_2-2_masked_v2_eval5.h5ad"
+    f"{_rp.WORKDIR}/scoring/data_mask/"
+    "raw_output_2-2_masked_eval5.h5ad"
 )
 
 

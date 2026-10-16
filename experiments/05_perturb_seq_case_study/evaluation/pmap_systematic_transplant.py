@@ -11,6 +11,10 @@ Predicted response of a patch = mean over its cells of log(perturbed) - log(unpe
 both from the model, so the basal state cancels and what remains is the perturbation effect.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import sys
@@ -31,7 +35,7 @@ import pmap_case_study as CS       # noqa: E402
 
 OUT = Path(os.environ.get(
     "PMAP_SYSTEMATIC_OUT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/figures/pmap_systematic"))
+    f"{_rp.WORKDIR}/scoring/figures/pmap_systematic"))
 PERTS = ["Tgfbr2", "Ifngr2", "Jak2"]
 K_NICHES = 40
 PATCH_SIZE = 20

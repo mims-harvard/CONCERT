@@ -7,10 +7,10 @@ order, same numbers - for when you want a result in a batch job rather than a br
 
 | Script | Notebook | Reproduces | Checkpoints |
 |---|---|---|---|
-| [`01_spac_seq_benchmark.py`](01_spac_seq_benchmark.py) | [`01`](../notebooks/01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark, both settings, and the comparison against the published methods | `ms_spac1_niche_{seen,unseen}_lsfix` |
-| [`02_perturb_map_benchmark.py`](02_perturb_map_benchmark.py) | [`02`](../notebooks/02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay | `ms_pmap_niche_{seen,unseen}_bandI` |
-| [`03_dss_colitis_marker_trend.py`](03_dss_colitis_marker_trend.py) | [`03`](../notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb) | The inflammation marker trajectory of each animal over the colitis time course | `dss_timekernel_markersign_timefield_fixedt` |
-| [`04_stroke_2d_3d_prediction.py`](04_stroke_2d_3d_prediction.py) | [`04`](../notebooks/04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, 2D and 3D, against the measured lesion | `stroke_2d_cr`, `stroke_3d_cr` |
+| [`01_spac_seq_benchmark.py`](01_spac_seq_benchmark.py) | [`01`](../notebooks/01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark, both settings, and the comparison against the published methods | `spacseq_within_niche`, `spacseq_cross_slide` |
+| [`02_perturb_map_benchmark.py`](02_perturb_map_benchmark.py) | [`02`](../notebooks/02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay | `perturbmap_within_niche`, `perturbmap_cross_slide` |
+| [`03_dss_colitis_marker_trend.py`](03_dss_colitis_marker_trend.py) | [`03`](../notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb) | The inflammation marker trajectory of each animal over the colitis time course | `dss_colitis` |
+| [`04_stroke_2d_3d_prediction.py`](04_stroke_2d_3d_prediction.py) | [`04`](../notebooks/04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, 2D and 3D, against the measured lesion | `stroke_2d_core_rim`, `stroke_3d_core_rim` |
 
 Read 01 first if you are reading more than one: the scoring protocol, the two benchmark
 settings and the two metrics are explained there and only referred to afterwards.
@@ -18,7 +18,7 @@ settings and the two metrics are explained there and only referred to afterwards
 ## Running them
 
 ```bash
-source activate concert_env
+conda activate concert_env
 cd scripts
 
 # every script prints what it needs and stops on the first missing input
@@ -61,15 +61,16 @@ CUDA 11.8 and **cannot use Blackwell GPUs** - a run that dies with an `nvrtc -ar
 minutes in was scheduled on one. Ask for an H100 or A100.
 
 ```bash
-salloc -p gpu --gres=gpu:1 --mem=200G -c 8 -t 0-08:00
-source activate concert_env
+# inside a one-GPU allocation from your scheduler (about 200 GB of host memory for script 01)
+conda activate concert_env
 python scripts/01_spac_seq_benchmark.py --all
 ```
 
 ## Paths
 
-All four scripts resolve their roots through [`concert_paths.py`](concert_paths.py), which
-reads five environment variables and falls back to the paths the results were produced on. See
+All four scripts resolve their roots through [`concert_paths.py`](concert_paths.py), which reads
+two environment variables, `CONCERT_DATA_DIR` (the downloadable `data/` folder) and
+`CONCERT_CHECKPOINT_ROOT` (the `checkpoints/` folder), plus the optional `CONCERT_WORKDIR`. See
 [`../datasets/README.md`](../datasets/README.md).
 
 Nothing is written inside the repository, and nothing is written to the checkpoint directories:

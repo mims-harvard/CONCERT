@@ -7,10 +7,14 @@ Loads ONLY the checkpoint state_dict (no model build, no data). Checks:
 A TRAINED f_pert (old 2-KO ref): basal ||5.8||/2 genes vs Tgfbr2 ||57||/1166 genes.
 A FROZEN f_pert (27468445): all perts ||~7||, ~1500 genes, pairwise cos ~0 (random proj).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys, torch, numpy as np
 
 CKPT = sys.argv[1] if len(sys.argv) > 1 else \
-    '/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT/outputs/ms_pmap_gp_pp_bayesTrue/model.pt'
+    f'{_rp.WORKDIR}/scratch/CONCERT/outputs/ms_pmap_gp_pp_bayesTrue/model.pt'
 sd = torch.load(CKPT, map_location='cpu')
 if isinstance(sd, dict) and 'model_state_dict' in sd:
     sd = sd['model_state_dict']

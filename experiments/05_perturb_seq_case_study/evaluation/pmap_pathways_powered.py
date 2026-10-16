@@ -12,6 +12,10 @@ run on that ranking. This also tests the biological question the case study actu
 which programmes follow the microenvironment -- rather than comparing two hand-picked spots.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import os
@@ -26,9 +30,9 @@ from scipy.stats import rankdata
 # Reads what pmap_systematic_transplant.py wrote and writes its results alongside it.
 SYS = Path(os.environ.get(
     "PMAP_SYSTEMATIC_OUT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/figures/pmap_systematic"))
+    f"{_rp.WORKDIR}/scoring/figures/pmap_systematic"))
 RAW = Path(os.environ.get(
-    "PMAP_RAW", "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/GSM5808054_data.h5"))
+    "PMAP_RAW", f"{_rp.DATA}/source_datasets/GSM5808054_data.h5"))
 OUT = SYS
 PERTS = ["Tgfbr2", "Ifngr2", "Jak2"]
 NEIGHBOURHOOD = 25

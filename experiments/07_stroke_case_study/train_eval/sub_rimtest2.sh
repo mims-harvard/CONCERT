@@ -2,26 +2,27 @@
 #SBATCH -J rimtest2
 #SBATCH --mem=64G
 #SBATCH --time 0-01:00
-#SBATCH -p kempner
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/rimtest2_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/rimtest2_%j.err
+#SBATCH -o rimtest2_%j.out
+#SBATCH -e rimtest2_%j.err
 # Phase-3 test of the rim root cause: rerun three of the 2dpara counterfactuals with
 # --use_paracrine False and NO graph, everything else byte-identical to the producing run
 # (job 42285684). If the halo around the lesion disappears, the rim is paracrine spillover.
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
-OUT=/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/stroke_2dpara_nopara
+OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/stroke_2dpara_nopara
 SETS=${OUT}/pert_sets
 cd ${NS}/CONCERT-spac-niche
 

@@ -1,6 +1,10 @@
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import torch, json
 from pathlib import Path
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs")
+NS = Path(f"{_rp.WORKDIR}/outputs")
 for arm in ["stroke_2d", "stroke_3d"]:
     sd = torch.load(NS / arm / "model.pt", map_location="cpu")
     sd = sd.get("state_dict", sd.get("model_state_dict", sd))

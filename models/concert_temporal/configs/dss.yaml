@@ -1,0 +1,39 @@
+# Colitis MERFISH time course (experiment 03): the settings of the reported run.
+# Every setting that differs from the RunConfig defaults in run_concert_spac.py.
+# Command-line flags override these values; data, output and holdout paths go on the command line.
+
+basal_field: rff
+batch_size: 1024
+beta_warmup_epochs: 2
+disentangle_radius: 4.0
+dropoutE: 0.1
+dynamicVAE: false
+earlystop_min_delta: 0.05
+field_time_fixed_t: 0.0
+fpert_coord_scale: 20.0
+fpert_field: gp_pp
+fpert_svgp_inducing: 16
+free_bits: 0.5
+gp_free_bits: 1.0
+hvg_max_rank: 2000
+ls_prior_lambda: 1.0
+ls_prior_max: 18.0
+marker_sign_positive: true
+maxiter: 1000
+min_cells_per_pert: 25
+moran_lambda: 1.0
+noise: 0.1
+patience: 50
+seed: 42
+spatial_basal_only: true
+time_in_field_mlp: true
+use_action_correction: false
+use_basal_encoder_only: true
+use_expr_encoder: true
+use_f_pert: true
+use_inflammation_field: true
+use_niche_film: true
+use_shared_basal: true
+use_time_conditioning: true
+use_time_intensity: false
+use_timekernel: true

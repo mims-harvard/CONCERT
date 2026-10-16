@@ -16,14 +16,18 @@ H4 COORDINATE MISMATCH. 2dpara trains/evals with tile_by_stack=False, so coords 
    fed to the RBF against the span of Z.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, sys
 from pathlib import Path
 import anndata as ad, h5py, numpy as np, pandas as pd, torch
 from scipy.spatial import cKDTree
 from scipy.stats import pearsonr, spearmanr
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+NS = Path(f"{_rp.WORKDIR}")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 COORD_SCALE, LOC_RANGE = 20.0, 20.0
 
 

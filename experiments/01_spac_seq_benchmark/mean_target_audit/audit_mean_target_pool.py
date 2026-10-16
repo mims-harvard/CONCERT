@@ -2,11 +2,12 @@
 import json, sys
 from pathlib import Path
 import numpy as np, pandas as pd, anndata as ad
-ROOT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval")
-PREP = ROOT / "multi_1-5/prepared"; B4 = PREP / "benchmark_v4"
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+PREP = rp.SPACSEQ_PREPARED; BENCH = rp.SPACSEQ_BENCHMARK
 SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
-ms = json.loads((B4 / "train_manifest_seen.json").read_text())
-mu = json.loads((B4 / "train_manifest_unseen_union.json").read_text())
+ms = json.loads((BENCH / "train_manifest_seen.json").read_text())
+mu = json.loads((BENCH / "train_manifest_unseen_union.json").read_text())
 for name, m in (("seen", ms), ("unseen", mu)):
     s = m["per_slide"]["1-1"]
     print(name, "n_train_total", m.get("n_train_total"), "per-slide keys", {k: (len(v) if isinstance(v, list) else v) for k, v in s.items()})
@@ -24,8 +25,8 @@ def train_set(m, sl):
 tr_s = {sl: train_set(ms, sl) for sl in SLIDES}
 tr_u = {sl: train_set(mu, sl) for sl in SLIDES}
 
-# UNSEEN: pool = KO cells on donor slides (rescore_naive_baselines_unseen_v4_genefix.donor_target_means)
-panel = json.loads((B4 / "eval_panel.json").read_text())
+# UNSEEN: pool = KO cells on donor slides (reference_strategies_unseen.donor_target_means)
+panel = json.loads((BENCH / "eval_panel.json").read_text())
 rows = []
 for u in panel["eval_units"]:
     g, T = u["gene"], u["target_slide"]
@@ -41,7 +42,7 @@ print("\nUNSEEN pool size:", du.n_meantarget_pool.describe().round(1).to_dict())
 print("UNSEEN CONCERT-train KO cells from same pool:", du.n_pool_in_concert_train.describe().round(1).to_dict())
 
 # SEEN: pool = KO cells on ALL 5 slides minus this unit's (gene, slide, niche) cells
-rec = pd.read_csv(ROOT / "v4_aggregate_sampled/spac_seen_lfc_dist_per_record.csv")
+rec = pd.read_csv(rp.SPACSEQ_RESULTS / "spac_seen_lfc_dist_per_record.csv")
 rec = rec[rec.method_label == "CONCERT"][["gene", "slide", "niche_key"]].drop_duplicates()
 rows = []
 for r in rec.itertuples(index=False):

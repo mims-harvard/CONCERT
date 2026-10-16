@@ -8,7 +8,7 @@ predict unassigned -> KO per niche and compare pseudobulk vs observed KO cells.
   UNSEEN: source = held-out unassigned cells the model never saw (generalization).
 
 Both setups score against the SAME observed KO cells (KO cells are never held
-out -- only unassigned are). The v6 model amortizes the basal latent from each
+out -- only unassigned are). The model amortizes the basal latent from each
 cell's own expression (use_expr_encoder), so it can encode held-out cells; the
 GP mask_cutoff is sliced positionally, so any source set with <= N_train cells
 is valid. The two setups therefore differ ONLY in the source unassigned set.
@@ -22,6 +22,10 @@ For each gene with >=min_cells_per_pert KO cells, for each niche with
 Writes per_niche.csv / per_gene.csv / summary.json per setup to --outdir.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json, logging, sys
 from pathlib import Path
 from collections import Counter
@@ -38,7 +42,7 @@ logging.basicConfig(level=logging.INFO,
                     datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-DATA_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
+DATA_FILE = f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad"
 
 
 def parse_args():

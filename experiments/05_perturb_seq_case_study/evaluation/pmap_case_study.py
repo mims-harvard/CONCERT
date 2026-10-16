@@ -19,6 +19,10 @@ the niche descriptor is built from observed expression, so that propagation is a
 be measured, not assumed.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import sys
@@ -38,18 +42,18 @@ import run_concert_pm_niche as R  # noqa: E402
 # patches. CKPT is the trained checkpoint from experiment 02, OUT is where results are
 # written; both can be overridden without editing this file.
 RAW = Path(os.environ.get(
-    "PMAP_RAW", "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/GSM5808054_data.h5"))
+    "PMAP_RAW", f"{_rp.DATA}/source_datasets/GSM5808054_data.h5"))
 SEL = Path(os.environ.get(
-    "PMAP_SELECTIONS", "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/pert_cells"))
+    "PMAP_SELECTIONS", f"{_rp.WORKDIR}/spaVAE/pert_cells"))
 SEL2 = Path(os.environ.get(
     "PMAP_SELECTIONS2",
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/select_cells"))
+    f"{_rp.WORKDIR}/paper/select_cells"))
 CKPT = Path(os.environ.get(
     "PMAP_CKPT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/ms_pmap_niche_seen_bandI"))
+    f"{_rp.CHECKPOINTS}/perturbmap_within_niche"))
 OUT = Path(os.environ.get(
     "PMAP_CASE_OUT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/figures/pmap_case_study"))
+    f"{_rp.WORKDIR}/scoring/figures/pmap_case_study"))
 
 SELECTIONS = {
     "dest_core":   SEL2 / "pert_cells_GSM5808054_patchclose_tumor_Jak2.txt",

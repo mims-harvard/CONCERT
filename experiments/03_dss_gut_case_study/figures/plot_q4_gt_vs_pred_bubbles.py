@@ -34,6 +34,10 @@ Figures
 
 Input:  percell_dump_sizefactor.npz (fixedt all-mice heldout_eval)
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -44,9 +48,9 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 import paper_style as ps
 ps.use()
 
-DUMP = ("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+DUMP = (f"{_rp.WORKDIR}/outputs/"
         "dss_timekernel_markersign_timefield_fixedt/heldout_eval/percell_dump_sizefactor.npz")
-HERE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study"
+HERE = f"{_rp.WORKDIR}/paper/Outputs/case_study"
 DAYS = [0.0, 3.0, 9.0, 21.0]
 # same featured mice as the slide figures (best structural completeness, one per day)
 MICE = ["082421_D0_m6", "092421_D3_m1", "100221_D9_m5", "082421_D21_m1"]

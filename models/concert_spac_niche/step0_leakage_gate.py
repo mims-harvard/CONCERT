@@ -10,6 +10,10 @@ per-niche KO-vs-NTC LFC. If they correlate, `z` leaks the perturbation -> Change
 Reuses make_umap.load_data + build_model (cell-index alignment gotcha: idx is GLOBAL,
 mask_cutoff is sliced by row -- replicated exactly from decompose_levels.py).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, logging, json, os
 import numpy as np
 import torch
@@ -20,7 +24,7 @@ from make_umap import load_data, build_model as build_umap_model
 logging.basicConfig(level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
-DATA_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
+DATA_FILE = f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad"
 
 
 def parse_args():
@@ -36,7 +40,7 @@ def parse_args():
     p.add_argument("--min_cells_per_pert", type=int, default=25)
     p.add_argument("--batch_size", type=int, default=2048)
     p.add_argument("--seed", type=int, default=42)
-    # model arch flags (MUST match v7fa training/eval)
+    # model arch flags (MUST match the checkpoint training/eval)
     p.add_argument("--use_expr_encoder", type=lambda x: x.lower() == "true", default=True)
     p.add_argument("--expr_hidden_dims", nargs="+", type=int, default=[512, 256])
     p.add_argument("--use_basal_encoder_only", type=lambda x: x.lower() == "true", default=True)

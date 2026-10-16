@@ -19,6 +19,10 @@ Both curves are mean log1p DSS-marker expression (17 core markers, count space):
 Ratios (pred/obs) reproduce the committed honest calibration (~1.9/1.8/3.5/2.9x).
 Pure numpy/matplotlib, head-node safe.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv, json
 import numpy as np
 import matplotlib
@@ -27,8 +31,8 @@ import matplotlib.pyplot as plt
 import paper_style
 paper_style.use()
 
-CS = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/dss_timekernel_markersign_timefield_fixedt/case_study"
-HERE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study"
+CS = f"{_rp.DATA}/dss_colitis/case_study"
+HERE = f"{_rp.WORKDIR}/paper/Outputs/case_study"
 OUT = f"{HERE}/fig_calibration_variance.png"
 DAYS = [0, 3, 9, 21]
 OBS_C, PRED_C = paper_style.INK, paper_style.DAY_COLORS[9.0]

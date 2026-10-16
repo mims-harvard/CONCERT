@@ -1,13 +1,18 @@
 #!/bin/bash
-# Enforce the lab partition policy: at most 12 jobs on kempner and 12 on kempner_h100; everything
-# else goes to kempner_requeue. Cancels the surplus PENDING arms and resubmits them to requeue with
+# Enforce the lab partition policy: at most 12 jobs on ${PART_A100} and 12 on ${PART_H100}; everything
+# else goes to ${PART_REQUEUE}. Cancels the surplus PENDING arms and resubmits them to requeue with
 # RESUME=True + --requeue, so a preempted arm continues from its checkpoint instead of restarting
 # (run_concert_spac.py:1439 guards resume on the checkpoint existing, so a fresh arm is unaffected).
+# Partition names of your cluster: an H100 partition, an A100 partition and a preemptible one.
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
+PART_H100="${PART_H100:?set PART_H100}"; PART_A100="${PART_A100:?set PART_A100}"; PART_REQUEUE="${PART_REQUEUE:?set PART_REQUEUE}"
 set -euo pipefail
-cd /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 LIST="${1:?need a file of '<jobid> <jobname>' lines}"
 count_part () { squeue -u "$USER" -h -p "$1" -o "%i" | wc -l; }
-n_h100=$(count_part kempner_h100); n_a100=$(count_part kempner)
+n_h100=$(count_part ${PART_H100}); n_a100=$(count_part ${PART_A100})
 
 env_for () {                       # tag -> knob overrides, mirroring launch_sens_spac.sh
   case "$1" in
@@ -40,9 +45,9 @@ while read -r jid name; do
   if [ "$knobs" = "UNKNOWN" ]; then echo "!! unknown tag $tag ($jid) - left alone"; continue; fi
   [ "$jid" != "0" ] && scancel "$jid" || true
   # fill the capped partitions to 12 each first, then overflow to the uncapped requeue partition
-  if   [ "$n_h100" -lt 12 ]; then part=kempner_h100; n_h100=$((n_h100+1))
-  elif [ "$n_a100" -lt 12 ]; then part=kempner;      n_a100=$((n_a100+1))
-  else part=kempner_requeue
+  if   [ "$n_h100" -lt 12 ]; then part=${PART_H100}; n_h100=$((n_h100+1))
+  elif [ "$n_a100" -lt 12 ]; then part=${PART_A100};      n_a100=$((n_a100+1))
+  else part=${PART_REQUEUE}
   fi
   new=$(env TAG="$tag" RESUME=True $knobs SEED="$seed" \
         sbatch --parsable --requeue -p "$part" -J "spsens_${tag}" sub_sens_spac_arm.sh)

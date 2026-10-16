@@ -2,33 +2,34 @@
 #SBATCH -J gate_sweep
 #SBATCH --mem=64G
 #SBATCH --time 0-01:00
-#SBATCH -p kempner
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/gate_%x_%A_%a.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/gate_%x_%A_%a.err
+#SBATCH -o gate_%x_%A_%a.out
+#SBATCH -e gate_%x_%A_%a.err
 # TRANSPLANT + POSITION gate, with an eval-time gamma ablation.
 #   sets  : PT1 footprint transplanted to Sham3, plus 4 anatomical regions of Sham3
 #   gcap  : 3.0 = as trained;  0.0 = clamps niche-FiLM g_scale to 0 so gamma == 1 exactly,
 #           i.e. the SAME weights with the sign-flipping niche modulation switched off.
 # If the sign flips vanish at gcap=0, the niche-FiLM scalar is the cause.
 # Usage: sbatch sub_gate_sweep.sh <2d|3d>
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 ARM="${1:?need arm 2d|3d}"; case "$ARM" in 3d) NZ=4 ;; *) NZ=1 ;; esac
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 SETS=${NS}/outputs/stroke_2dpara/pert_sets
 cd ${NS}/CONCERT-spac-niche
 for GCAP in 3.0 0.0; do
   TAGG=$(echo $GCAP | tr -d .)
-  OUT=/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/gate_${ARM}_g${TAGG}
+  OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/gate_${ARM}_g${TAGG}
   mkdir -p $OUT
   for f in model.pt hvg_gene_names.txt pert_map.json; do ln -sf ${NS}/outputs/stroke_${ARM}/$f $OUT/$f; done
   COMMON="--config config.yaml --stage eval --multi_sample_files ${FILES} --outdir ${OUT}

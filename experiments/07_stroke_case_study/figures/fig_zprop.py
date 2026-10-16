@@ -124,10 +124,10 @@ plt.close(fig)
 # bars: response per section, unperturbed spots only
 figb, axb = plt.subplots(figsize=(1.25 * nsec + 2.6, 3.9))
 x = np.arange(nsec); w = 0.38
-v2 = [stats["per_section"][f"section_{s+1}"]["model_2d"] for s in range(nsec)]
-v3 = [stats["per_section"][f"section_{s+1}"]["model_3d"] for s in range(nsec)]
-axb.bar(x - w / 2, v2, w, color="#bdbdbd", label="2D kernel")
-axb.bar(x + w / 2, v3, w, color=paper_style.ACCENT, label="3D kernel")
+v_2d = [stats["per_section"][f"section_{s+1}"]["model_2d"] for s in range(nsec)]
+v_3d = [stats["per_section"][f"section_{s+1}"]["model_3d"] for s in range(nsec)]
+axb.bar(x - w / 2, v_2d, w, color="#bdbdbd", label="2D kernel")
+axb.bar(x + w / 2, v_3d, w, color=paper_style.ACCENT, label="3D kernel")
 axb.set_xticks(x); axb.set_xticklabels([f"{s+1}" for s in range(nsec)], fontsize=TICK_FS)
 axb.set_xlabel("Section (lesion on section 1 only)", fontsize=LABEL_FS - 3)
 axb.set_ylabel("Injury response,\nunperturbed spots", fontsize=LABEL_FS - 4)

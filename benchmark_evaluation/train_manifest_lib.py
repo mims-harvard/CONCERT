@@ -1,4 +1,4 @@
-"""Shared training cell manifests for fair multi-method benchmarks (v2).
+"""Shared training cell manifests for fair multi-method benchmarks.
 
 Rules (SPAC-seq):
   * Exclude holdout **unassigned spatial patches** (patch_holdout role==1) from training.
@@ -17,6 +17,8 @@ import json
 import logging
 from pathlib import Path
 
+import release_paths as rp  # noqa: E402
+
 import anndata as ad
 import numpy as np
 
@@ -25,12 +27,8 @@ from spacseq_multi_common import DEFAULT_SLIDES, load_holdout_mask, load_patch_r
 
 log = logging.getLogger(__name__)
 
-SPAC_PREPARED = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/multi_1-5/prepared"
-)
-PM_PREPARED = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map/prepared_panel1053ko"
-)
+SPAC_PREPARED = rp.SPACSEQ_PREPARED
+PM_PREPARED = rp.PERTURBMAP_PREPARED
 
 
 def _spacseq_holdout_patch_idx(prepared_dir: Path, slide_id: str) -> np.ndarray:
@@ -60,7 +58,7 @@ def build_manifest(
     max_train_cells: int = 0,
     seed: int = 42,
 ) -> dict:
-    """Build a v2 train manifest. ``max_train_cells=0`` keeps all post-holdout cells."""
+    """Build a train manifest. ``max_train_cells=0`` keeps all post-holdout cells."""
     per_slide: dict[str, dict] = {}
     entries: list[tuple[str, int, str]] = []  # (slide, idx, obs_name)
 
@@ -113,7 +111,6 @@ def build_manifest(
         per_slide[sid]["n_train"] = len(train_idx)
 
     manifest = {
-        "version": "v2",
         "dataset": dataset,
         "control_mode": "ntc" if dataset == "spacseq" else "kp_control",
         "holdout_rule": (
@@ -165,7 +162,7 @@ def concat_pooled(adatas: list[ad.AnnData]) -> ad.AnnData:
 
 
 def resolve_training_adatas(prepared_dir, slides, args):
-    """Load training AnnData list from v2 manifest or legacy holdout exclusion."""
+    """Load training AnnData list from a train manifest or the holdout exclusion files."""
     from spacseq_multi_common import load_prepared_slide
 
     manifest_path = getattr(args, "train_manifest", None)

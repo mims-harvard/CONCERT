@@ -4,9 +4,13 @@
 If they are, a coordinate-only basal field can predict "injured" without ever seeing the
 perturbation label -- which is what leaves f_pert with nothing to learn.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 from pathlib import Path
 import numpy as np, h5py
-SL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d/slides")
+SL = Path(f"{_rp.WORKDIR}/stroke3d/slides")
 def cat(f, c):
     o = f["obs"][c]
     k = np.array([x.decode() if isinstance(x, bytes) else str(x) for x in o["categories"][:]])

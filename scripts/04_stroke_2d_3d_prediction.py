@@ -45,14 +45,12 @@ import concert_paths as cp
 MODEL_SRC = cp.MODELS / "concert_spac_niche"      # the copy that produced these results
 EXP = cp.EXPERIMENTS / "07_stroke_case_study"
 
-SLIDES = cp.CASE_STUDY_ROOT / "stroke3d" / "slides_cr"     # compartment-labelled slides
-ARM_DIR = {"2d": cp.OUTPUT_ROOT / "stroke_2d_cr", "3d": cp.OUTPUT_ROOT / "stroke_3d_cr"}
+SLIDES = cp.rp.STROKE / "slides"                       # compartment-labelled slides
+ARM_DIR = {"2d": cp.CHECKPOINT_ROOT / "stroke_2d_core_rim", "3d": cp.CHECKPOINT_ROOT / "stroke_3d_core_rim"}
+DECODES = {"2d": cp.rp.STROKE / "decodes_2d", "3d": cp.rp.STROKE / "decodes_3d"}   # shipped decodes
 
 # region labels of the measured stroke animal (ICA / PIA), from the registration delivery
-REGION_H5 = Path(cp._p(
-    "CONCERT_STROKE_REGION_H5",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark/"
-    "benchmark_artifacts/data/Mouse_brain_stroke_all_data.h5"))
+REGION_H5 = cp.rp.STROKE / "Mouse_brain_stroke_all_data.h5"
 
 STACKS = ["PT", "Sham"]        # PT = photothrombosis (real lesion), Sham = healthy control
 PASSES = [("oncore", "ICA", "shape_core.txt"),
@@ -132,7 +130,7 @@ def build_delta(arm, source_dir=None):
     import anndata as ad
     import numpy as np
 
-    d = Path(source_dir or ARM_DIR[arm])
+    d = Path(source_dir or DECODES[arm])
     side = json.loads((d / "sham_cells.json").read_text())
     offsets = np.concatenate([[0], np.cumsum(side["counts"])])[:-1]
     rows = np.concatenate([np.arange(o, o + c)

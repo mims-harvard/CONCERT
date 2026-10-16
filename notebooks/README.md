@@ -5,10 +5,10 @@ retrains anything: every notebook loads a `model.pt` and runs inference.
 
 | Notebook | What it reproduces | Checkpoints |
 |---|---|---|
-| [`01_spac_seq_benchmark.ipynb`](01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark (v4), both settings, and the comparison against the published methods and the reference strategies | `ms_spac1_niche_seen_clonegate_v4`, `ms_spac1_niche_unseen_clonegate_v4` |
-| [`02_perturb_map_benchmark.ipynb`](02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay, scored with the v4 reference | `ms_pmap_niche_seen_bandI`, `ms_pmap_niche_unseen_bandI` |
-| [`03_dss_colitis_per_mouse_marker_trend.ipynb`](03_dss_colitis_per_mouse_marker_trend.ipynb) | The inflammation marker trajectory of each animal over the DSS time course - a longitudinal curve for animals measured once | `dss_timekernel_markersign_timefield_fixedt` |
-| [`04_stroke_2d_and_3d_prediction.ipynb`](04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, in a 2D and a 3D arm, against the measured lesion | `stroke_2d_cr`, `stroke_3d_cr` |
+| [`01_spac_seq_benchmark.ipynb`](01_spac_seq_benchmark.ipynb) | SPAC-seq held-out perturbation benchmark, both settings, and the comparison against the published methods and the reference strategies | `spacseq_within_niche`, `spacseq_cross_slide` |
+| [`02_perturb_map_benchmark.ipynb`](02_perturb_map_benchmark.ipynb) | The same benchmark on the spatial Perturb-map assay, scored with the disjoint reference | `perturbmap_within_niche`, `perturbmap_cross_slide` |
+| [`03_dss_colitis_per_mouse_marker_trend.ipynb`](03_dss_colitis_per_mouse_marker_trend.ipynb) | The inflammation marker trajectory of each animal over the DSS time course - a longitudinal curve for animals measured once | `dss_colitis` |
+| [`04_stroke_2d_and_3d_prediction.ipynb`](04_stroke_2d_and_3d_prediction.ipynb) | A stroke lesion imposed on a healthy brain and predicted, in a 2D and a 3D arm, against the measured lesion | `stroke_2d_core_rim`, `stroke_3d_core_rim` |
 
 Read 01 first if you are reading more than one: the scoring protocol, the two benchmark settings
 and the two metrics are explained there and only referred to afterwards.
@@ -24,22 +24,21 @@ notebooks that predict are unusably slow on CPU, and the environment is pinned t
 cannot use Blackwell GPUs:
 
 ```bash
-salloc -p gpu --gres=gpu:1 --mem=200G -c 8 -t 0-08:00
-source activate concert_env
+# inside a one-GPU allocation from your scheduler (H100 or A100, about 200 GB host memory)
+conda activate concert_env
 cd notebooks && jupyter lab --no-browser --ip=0.0.0.0
 ```
 
 Start Jupyter from anywhere inside the repository: the first cell walks up from the working
-directory to find the repository root. Every other root - data, checkpoints, scoring library,
-reported tables - is read from an environment variable with the paths these results were
-produced on as the fallback, so on another machine set those first; see
+directory to find the repository root. Every input comes from the two download folders, `data/`
+and `checkpoints/`, named by `CONCERT_DATA_DIR` and `CONCERT_CHECKPOINT_ROOT`; see
 [`../datasets/README.md`](../datasets/README.md).
 
 Notebooks 3 and 4 are mostly CPU work - they read result tables and draw - and only need the GPU
 for the one cell that re-runs the decode, which is off by default.
 
 Each notebook writes under `CONCERT/notebook_runs/<name>/`, or wherever the environment variable
-`CONCERT_NB_WORKDIR` points. Nothing writes to `/n/holylfs06`, which is close to its group quota
+`CONCERT_NB_WORKDIR` points. Nothing writes into `data/` or `checkpoints/`
 and where a failed write can truncate the target file to zero.
 
 ## Expensive cells
@@ -62,15 +61,12 @@ still come out.
 ## What the notebooks depend on
 
 * the released code in `../models/` and `../benchmark_evaluation/`;
-* the trained checkpoints under `$CONCERT_OUTPUT_ROOT` - each checkpoint directory must
-  contain `model.pt` **and** `pert_map.json`, because the perturbation vocabulary is read
-  rather than rebuilt;
-* the data described in each experiment's `README.md` under `../experiments/`;
-* two helper modules (`eval_utils`, `spac_edist_align`) from the evaluation working tree at
-  `$CONCERT_HELPER_LIB`, which the scoring code imports by absolute path;
-* the reported tables, used to check the reproduced numbers against the reported ones:
-  `$CONCERT_SCORING_LIB/v4_aggregate_sampled/` (01), `$CONCERT_SCORING_LIB/multi_pm_ho_v4/` (02)
-  and `$CONCERT_PAPER_NUMBERS` (03, 04).
+* the trained checkpoints: the `checkpoints/` folder at `$CONCERT_CHECKPOINT_ROOT` - each
+  checkpoint directory holds `model.pt` **and** `pert_map.json`, because the perturbation
+  vocabulary is read from that file;
+* the `data/` folder at `$CONCERT_DATA_DIR`: the measured sections, the benchmark assets, the
+  shipped decodes of the case studies and the reported tables the notebooks check their numbers
+  against (`data/README.md` lists every file).
 
 Every path is resolved and existence-checked in the first code cell of each notebook, so a
 missing input is reported there rather than three cells later.

@@ -13,6 +13,10 @@ Features
 """
 
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import os
 import sys
 import argparse
@@ -132,7 +136,7 @@ class RunConfig:
     train_size: float = 0.95
     holdout_unassigned_frac: float = 0.0   # fraction of unassigned cells to hold out (saved for eval)
     holdout_unassigned_file: str = ""      # explicit unassigned indices to hold out (post-exclusion concat space)
-    holdout_v3_file: str = ""              # v3 benchmark holdout: coord-keyed (sid,array_coords) unassigned source + masked KO
+    holdout_file: str = ""                 # benchmark holdout: coord-keyed (sid,array_coords) unassigned source + masked KO
     # Deconvolution / imputation stages ("deconv" / "impute_patch")
     pseudobulk_file: str = ""              # pseudo-bulk spot h5ad (deconv input)
     deconv_perts: str = ""                # comma KO-gene list; empty -> top-K by patch size
@@ -227,7 +231,7 @@ class RunConfig:
     beta_warmup_epochs: int = 0            # linear KL warmup 0 -> beta_target
     beta_target: float = 1.0
     free_bits: float = 0.0                 # per-dim KL floor (nats) on Gaussian block
-    gp_free_bits: float = 0.0              # per-dim KL floor (nats) on GP block (v5a)
+    gp_free_bits: float = 0.0              # per-dim KL floor (nats) on GP block
     use_pert_correction: bool = False      # default-off leakage fallback
 
     # NNGP local field + precomputed spatial graph
@@ -268,7 +272,7 @@ class RunConfig:
     use_shared_basal: Optional[bool] = None   # basal = shared Tier1 embed + linear(arch_desc) (no free per-cell latent); None -> follows use_timekernel
     # Directory of per-slice day-invariant architectural-descriptor sidecars
     # (<Slice_ID>.npy + manifest.json). Required when use_timekernel is on.
-    arch_desc_dir: str = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/processed/dryad_merfish_dss_arch"
+    arch_desc_dir: str = f"{_rp.DATA}/dss_colitis/architecture"
     # Baseline anchor a(t=0)->0: day 0 is pre-injury, so basal alone must reconstruct it.
     # This identifies the SIGN of f_pert (without it the model stores inflammation in basal
     # and has f_pert subtract it -- the inverted mechanism found by the shift-sign check).
@@ -1349,9 +1353,9 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             tier1_idx_all = tier1_idx_all[keep_ho]
             arch_desc_all = arch_desc_all[keep_ho]
 
-    elif cfg.holdout_v3_file:
+    elif cfg.holdout_file:
         import json as _json
-        hv = _json.load(open(cfg.holdout_v3_file))
+        hv = _json.load(open(cfg.holdout_file))
         sid_arr = (sample_id_all if sample_id_all is not None
                    else np.zeros(len(X), dtype=np.int32))
         kx = np.rint(np.asarray(pos_raw)[:, 0]).astype(np.int64)
@@ -1374,13 +1378,13 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if w_ko:
             leaked = int((m_ko & una_all).sum())
             if leaked:
-                logging.warning("[holdout-v3] %d ko-coord cells were unassigned (unexpected)", leaked)
+                logging.warning("[holdout] %d ko-coord cells were unassigned (unexpected)", leaked)
         hold_mask = m_una | m_ko
         np.save(str(outdir / "holdout_unassigned_indices.npy"), np.where(m_una)[0])
         np.save(str(outdir / "holdout_ko_indices.npy"), np.where(m_ko)[0])
-        logging.info("[holdout-v3] %s: held out %d unassigned + %d KO = %d cells "
+        logging.info("[holdout] %s: held out %d unassigned + %d KO = %d cells "
                      "(coords listed: %d una, %d ko)",
-                     os.path.basename(cfg.holdout_v3_file), int(m_una.sum()),
+                     os.path.basename(cfg.holdout_file), int(m_una.sum()),
                      int(m_ko.sum()), int(hold_mask.sum()), len(w_una), len(w_ko))
         keep_ho = ~hold_mask
         X           = X[keep_ho]; pos_raw     = pos_raw[keep_ho]
@@ -2144,7 +2148,7 @@ def parse_args() -> RunConfig:
     p.add_argument("--train_size", type=float)
     p.add_argument("--holdout_unassigned_frac", type=float)
     p.add_argument("--holdout_unassigned_file", type=str, default=None)
-    p.add_argument("--holdout_v3_file", type=str, default=None)
+    p.add_argument("--holdout_file", type=str, default=None)
     p.add_argument("--maxiter", type=int)
     p.add_argument("--patience", type=int)
     p.add_argument("--earlystop_min_delta", type=float)
@@ -2260,7 +2264,7 @@ def parse_args() -> RunConfig:
     p.add_argument("--beta_target", type=float, default=None)
     p.add_argument("--free_bits", type=float, default=None)
     p.add_argument("--gp_free_bits", type=float, default=None,
-                   help="Per-dim KL free-bits floor (nats) on the GP block (v5a). "
+                   help="Per-dim KL free-bits floor (nats) on the GP block. "
                         ">0 keeps GP latent dims from collapsing to the SVGP prior.")
     p.add_argument("--use_pert_correction", type=str2bool, default=None)
 

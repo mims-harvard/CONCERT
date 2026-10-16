@@ -18,41 +18,51 @@ gives the study the sections come from, where the raw data lives, and a processe
 > manuscript's data-availability statement as well. They will be filled in here when the
 > deposits are released; until then, contact the authors.
 
-## Where the code looks for the data
+## The two download folders
 
-The scripts and notebooks resolve every root from an environment variable, with the paths the
-published results were produced on as the fallback. Set these once and nothing else needs
-editing:
+Every input the notebooks, the `scripts/` and the experiment run scripts read sits in two
+folders, `data/` and `checkpoints/` (download: link to be added). Place both in the repository
+root; reruns write to `runs/` there. Each location can be moved with an environment variable:
+`CONCERT_DATA_DIR`, `CONCERT_CHECKPOINT_ROOT` and `CONCERT_WORKDIR`.
 
-```bash
-export CONCERT_DATA_ROOT=/path/to/datasets          # the measured sections
-export CONCERT_OUTPUT_ROOT=/path/to/outputs         # trained checkpoints, one dir per run
-export CONCERT_SCORING_LIB=/path/to/spac_seq_eval   # prepared cell sets + shipped results
-export CONCERT_PAPER_NUMBERS=/path/to/paper_numbers # reported per-record tables
-export CONCERT_WORKDIR=/path/to/scratch             # where the scripts write
-```
-
-`config/paths.sh` carries the same roots for the SLURM run scripts under `experiments/`.
+`data/README.md` lists every file, its size and the notebook or script that reads it. The layout
+is defined once, in `benchmark_evaluation/release_paths.py`; the scripts, the notebooks and
+`config/paths.sh` (for the SLURM run scripts under `experiments/`) all derive their paths from it.
 `python scripts/01_spac_seq_benchmark.py --steps weights` prints an existence table for every
 input it needs and stops on the first missing one, which is the quickest way to check a new
 machine is wired up.
 
-## What each experiment expects
+## What each experiment reads
 
-| Experiment | Input |
+| Experiment | Input in `data/` |
 |---|---|
-| `01_spac_seq_benchmark` | five sections `raw_output_1-{1..5}.h5ad` under `$CONCERT_DATA_ROOT/newdata/spac_seq`, plus the prepared matched cell sets and the evaluation panel |
-| `02_perturb_seq_benchmark` | four sections `perturbmap_s{0..3}_spacfmt.h5ad` under `$CONCERT_DATA_ROOT`, plus the niche patches and the assay panel mask `in_panel_1053` |
-| `03_dss_gut_case_study` | the MERFISH sections listed in `manifest.csv`, plus the tissue-architecture descriptors in the sibling `_arch` directory |
-| `07_stroke_case_study` | the PASTE2-aligned stacks `stroke_paste2_{PT,Sham}{1..4}.h5ad` and the ICA/PIA region labels of the measured animal |
-
-The per-experiment `README.md` under `experiments/` lists the derived files each pipeline
-builds from these, and the order to build them in.
+| `01_spac_seq_benchmark` | `spacseq/raw/` (five sections), `spacseq/prepared/` (matched cell sets, raw counts), `benchmark_assets/spacseq_benchmark/`, `benchmark_assets/holdout_coords/`, `benchmark_assets/results/spacseq_*` |
+| `02_perturb_seq_benchmark` | `perturbmap/raw/` (four sections), `perturbmap/prepared/`, `perturbmap/patches/`, `benchmark_assets/perturbmap_benchmark/`, `benchmark_assets/results/perturbmap_*` |
+| `03_dss_gut_case_study` | `dss_colitis/sections/` (MERFISH sections and `manifest.csv`), `dss_colitis/architecture/`, `dss_colitis/case_study/`, `dss_colitis/heldout_eval/` |
+| `04_kernel_interpretability` | `spacseq/kernel_params/`, `perturbfish/` |
+| `06_sensitivity_analysis` | `benchmark_assets/results/spacseq_sensitivity/`, `benchmark_assets/results/sensitivity_tables/` |
+| `07_stroke_case_study` | `stroke/slides/` (the PASTE2-aligned stacks), `stroke/Mouse_brain_stroke_all_data.h5` (ICA/PIA labels), `stroke/decodes_{2d,3d}/` |
+| `08_deconvolution_imputation` | `deconvolution/spacseq_2-1/` (task 1) |
 
 ## Trained checkpoints
 
-Checkpoints are not included. Each result can be retrained from the scripts under
-`experiments/`, and the tutorials in `notebooks/` and `scripts/` load a checkpoint directory
-that must contain **both** `model.pt` and `pert_map.json` - the perturbation vocabulary is read
-rather than rebuilt, so that the integer code of every perturbation matches the one the weights
-were trained with.
+The trained checkpoints form one folder, `checkpoints/`, with one subdirectory per model:
+
+| Directory | Model code (`models/`) | Result | Notebook / script |
+|---|---|---|---|
+| `spacseq_within_niche` | `concert_benchmark` | SPAC-seq within-niche benchmark (experiment 01) | `01_spac_seq_benchmark` |
+| `spacseq_cross_slide` | `concert_benchmark` | SPAC-seq cross-slide benchmark (experiment 01) | `01_spac_seq_benchmark` |
+| `perturbmap_within_niche` | `concert_benchmark` | Perturb-map within-niche benchmark (experiment 02) | `02_perturb_map_benchmark` |
+| `perturbmap_cross_slide` | `concert_benchmark` | Perturb-map cross-slide benchmark (experiment 02) | `02_perturb_map_benchmark` |
+| `dss_colitis` | `concert_temporal` | DSS colitis time course (experiment 03) | `03_dss_colitis_per_mouse_marker_trend` |
+| `perturbfish` | `concert_benchmark` | Perturb-FISH repetition of the interpretability readout (experiment 04) | `experiments/04_kernel_interpretability/run_perturbfish_interp.sh` (step 3) |
+| `spacseq_kernel_analysis` | `concert_benchmark` | SPAC-seq kernel-parameter readout (experiment 04) | `experiments/04_kernel_interpretability/analyze_kernel_params_spac.py` |
+| `stroke_2d_core_rim` | `concert_spac_niche` | Stroke case study, 2D arm (experiment 07) | `04_stroke_2d_and_3d_prediction` |
+| `stroke_3d_core_rim` | `concert_spac_niche` | Stroke case study, 3D arm (experiment 07) | `04_stroke_2d_and_3d_prediction` |
+
+Each directory holds `model.pt` and the files needed to load it, at least `pert_map.json` (the
+perturbation vocabulary, read from this file so that the integer code of every perturbation
+matches the one the weights were trained with) and `hvg_gene_names.txt` (the model's gene axis).
+The folder is about 5.9 GB. Every notebook and
+script reads its checkpoint from `$CONCERT_CHECKPOINT_ROOT`. Every result can also be retrained
+from the scripts under `experiments/`.

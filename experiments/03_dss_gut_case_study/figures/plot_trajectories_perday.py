@@ -11,6 +11,10 @@
 Predicted = mean log1p DSS-marker (imputed at t=0/3/9/21). Observed-GT for velocity is the
 cell-weighted population level per day (per_mouse_observed.csv). Head-node safe.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv, json
 from collections import defaultdict
 import numpy as np
@@ -20,8 +24,8 @@ import matplotlib.pyplot as plt
 import paper_style
 paper_style.use()
 
-CS = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/dss_timekernel_markersign_timefield_fixedt/case_study"
-HERE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study"
+CS = f"{_rp.DATA}/dss_colitis/case_study"
+HERE = f"{_rp.WORKDIR}/paper/Outputs/case_study"
 DAYS = [0, 3, 9, 21]
 DC = paper_style.DAY_COLORS
 MID = [(DAYS[i] + DAYS[i + 1]) / 2 for i in range(3)]   # segment midpoints for velocity

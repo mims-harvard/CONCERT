@@ -13,51 +13,55 @@ Two holdout settings are reported:
 
 ## Inputs
 
-`SPAC_SEQ_DIR` (set in `config/paths.sh`) must contain:
+Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `data/README.md`):
 
-- `raw_output_1-1.h5ad` ... `raw_output_1-5.h5ad` - the five measured sections, with expression,
-  per-cell perturbation assignment and array coordinates;
-- `holdout_v4_spac_seen.json`, `holdout_v4_spac_unseen.json` - which perturbations are held out
-  on which slide, written by `data_preparation/build_v4_holdout_coords.py`;
-- `prepared/benchmark_v4/` - the evaluation panel, holdout pools and shared source cells the
-  evaluation reads, written by `data_preparation/build_benchmark_v4_assets.py` and
-  `benchmark_evaluation/build_v4_source_cells.py`.
+- `spacseq/raw/raw_output_1-1.h5ad` ... `raw_output_1-5.h5ad` - the five measured sections, with
+  expression, per-cell perturbation assignment and array coordinates;
+- `spacseq/prepared/` - the matched cell sets and raw counts the scoring reads;
+- `benchmark_assets/holdout_coords/holdout_spac_{seen,unseen}.json` - which cells are held out on
+  which slide, written by `data_preparation/build_holdout_coords.py --dataset spac`;
+- `benchmark_assets/spacseq_benchmark/` (also reachable as `spacseq/prepared/benchmark/`) - the
+  evaluation panel, holdout pools and shared source cells, written by
+  `data_preparation/build_spacseq_benchmark_assets.py` and `benchmark_evaluation/build_source_cells.py`;
+- `benchmark_assets/results/spacseq_predictions/` - every method's per-unit results.
+
+The scoring runs default to the released checkpoints in `checkpoints/`; `MODEL=<model.pt>`
+scores your own training run.
 
 ## Order
 
 1. **Filter and select genes.** `data_preparation/filter_spac.py` applies the cell and guide
    quality rules; `data_preparation/find_hvgs.py` ranks genes so training can take the top
    2000. `data_preparation/build_spatial_graph.py` writes the neighbour graph.
-2. **Define the holdouts.** `data_preparation/build_v3_holdout_coords.py` chooses the held-out
-   perturbations for both settings and records the affected cells.
+2. **Define the holdouts.** `data_preparation/build_holdout_coords.py --dataset spac` turns the
+   holdout pools of `prepared/benchmark/` into the coordinate-keyed files training reads, for
+   both settings. Run it after step 3.
    `data_preparation/make_niche_holdout.py` covers the microenvironment-level variant.
-3. **Build evaluation assets.** `data_preparation/build_benchmark_v4_assets.py` writes the
+3. **Build evaluation assets.** `data_preparation/build_spacseq_benchmark_assets.py` writes the
    evaluation panel (85 knockout-target-slide pairs in the unseen setting) and holdout pools;
-   `benchmark_evaluation/build_v4_source_cells.py` draws the 5,000 shared source spots per
+   `benchmark_evaluation/build_source_cells.py` draws the 5,000 shared source spots per
    target slide.
 4. **Train.** `sbatch train/train_spac_seq.sh seen` (and `unseen`). One GPU; the reported runs
    trained for up to 1500 epochs with early stopping. Both settings use the clonality gate
    (`--clonality_gate clone_size --clone_min_cells 100`) and the per-slide guide shift
    (`--slide_guide_shift True`).
-5. **Score.** `sbatch evaluation/eval_spac_seq_benchmark_v4.sh unseen` scores every unseen
-   pair in one job; `sbatch --array=1-5 evaluation/eval_spac_seq_benchmark_v4.sh seen` runs one
+5. **Score.** `sbatch evaluation/eval_spac_seq_benchmark.sh unseen` scores every unseen
+   pair in one job; `sbatch --array=1-5 evaluation/eval_spac_seq_benchmark.sh seen` runs one
    slide per array task. Both use the reported scoring rule: one Poisson draw at each source
    spot's measured library size (`--cf_output poisson_depth`), the LFC taken against the
    measured source spots (`--cf_seen_ref observed`), and the shared gene rule of
-   `genefix_wrap.py`. The competitors are scored under the same draw (`--sampled_output True`).
-6. **Aggregate.** `sbatch evaluation/aggregate_spac_seq_benchmark_v4.sh` collects every method's
-   per-record results from `${SCORING_LIB}/multi_1-5_ho_v4_sampled/`, rebuilds Mean target from
-   50 randomly drawn knockout cells per unit (`rescore_mean_target_capped_v4.py`), and writes the
+   `shared_gene_rule.py`. The competitors are scored under the same draw (`--sampled_output True`).
+6. **Aggregate.** `sbatch evaluation/aggregate_spac_seq_benchmark.sh` collects every method's
+   per-record results from `data/benchmark_assets/results/spacseq_predictions/`, rebuilds Mean target from
+   50 randomly drawn knockout cells per unit (`rescore_mean_target_capped.py`), and writes the
    reported tables, the paired significance tests, the supplementary-table workbook, every
-   benchmark figure (sorted by `evaluation/organize_v4_sampled_figures.sh`) and the per-knockout
-   panel numbers to `${SCORING_LIB}/v4_aggregate_sampled/`. STATE enters through
-   `spac_{seen,unseen}_state_our_rule.csv` (`rescore_state_our_rule.py`).
+   benchmark figure (sorted by `evaluation/organize_figures.sh`) and the per-knockout
+   panel numbers to `${CONCERT_WORKDIR}/spacseq_results/` (the shipped copy is
+   `data/benchmark_assets/results/spacseq_results/`). STATE enters through
+   `spac_{seen,unseen}_state_our_rule.csv` (`score_state_predictions.py`).
 7. **Mean target audit.** `mean_target_audit/` measures how Mean target depends on the number of
    knockout cells it averages (`sbatch mean_target_audit/run_mean_target_audit.sh seen`, then
    `unseen`, then `summarize_sweep.py`); it is the basis for the 50-cell rule.
-
-   The v3 scripts (`build_v3_holdout_coords.py`, `build_benchmark_v3_assets.py`,
-   `eval_spac_seq_benchmark.sh`) remain as the record of the earlier protocol; `build_v4_holdout_coords.py` asserts it reproduces their holdout files.
 
 ## Notes
 

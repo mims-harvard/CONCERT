@@ -13,6 +13,10 @@ location_signatures.npz MUST include mu_ko, mu_un, mu_normal (CONCERT CFs).
 Never use empirical panel means as imputed / predicted signatures.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -34,13 +38,13 @@ from scipy.optimize import nnls
 from scipy.spatial import cKDTree
 from scipy.stats import spearmanr
 
-DATA = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s0_spacfmt.h5ad")
+DATA = Path(f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad")
 OUT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
+    f"{_rp.WORKDIR}/paper/Outputs/"
     "spac_seq/pmap_s0_jak2_concert_amortized"
 )
 EXT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/ext_exp"
+    f"{_rp.WORKDIR}/paper/Outputs/ext_exp"
 )
 KO_GENE = "Jak2"
 N_HVG = 1500

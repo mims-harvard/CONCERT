@@ -12,12 +12,16 @@ median nearest-neighbour spacing, so the sweep is in units of spot rings, not ra
 The observed PIA rim is measured in the same units and emitted as the reference point.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json
 from pathlib import Path
 import anndata as ad, h5py, numpy as np, pandas as pd
 from scipy.spatial import cKDTree
 
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 
 
 def load_stack(slide_dir: Path, prefix: str, stack: str):

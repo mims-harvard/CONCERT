@@ -52,14 +52,17 @@ relative ordering across perturbations, not an absolute test of randomness.
 The same readout is repeated on a Perturb-FISH tumour section, trained with the within-slide
 configuration used for SPAC-seq.
 
-1. `run_perturbfish_interp.sh` runs `prep_perturbfish_concert.py`, which moves the perturbation
-   assignment and the MERFISH centroids into the layout `run_concert_spac.py` reads and rescales
-   the coordinates to one unit per cell spacing; it then trains the model from
-   `models/concert_benchmark` and runs `analyze_kernel_params_spac.py` on the checkpoint.
+1. `run_perturbfish_interp.sh` runs `prep_perturbfish_concert.py` on
+   `data/perturbfish/perturbfish_tumor_count.h5ad`, which moves the perturbation assignment and the
+   MERFISH centroids into the layout `run_concert_spac.py` reads and rescales the coordinates to one
+   unit per cell spacing; it then trains the model from `models/concert_benchmark` and runs
+   `analyze_kernel_params_spac.py` on the checkpoint. The trained checkpoint ships as
+   `checkpoints/perturbfish/` and its readout as `data/perturbfish/kernel_param_analysis/`.
 2. `run_partial_corr.sh` runs `partial_corr_perturbfish.py`, which computes the partial rank
    correlations with the same two controls (log10 cell number and perturbation embedding norm)
-   on the per-perturbation table and prints them beside the SPAC-seq values.
-3. `make_fig_perturbfish_consistency.py` writes the supplementary figure and its stats JSON:
+   on the per-perturbation table and prints them beside the SPAC-seq values
+   (`data/spacseq/kernel_params/`), and then
+3. `make_fig_perturbfish_consistency.py`, which writes the supplementary figure and its stats JSON:
    panel a places the four pre-specified relations of the two datasets side by side with 95%
    Fisher intervals, panels b and c show the Perturb-FISH rank residuals behind two of them.
 

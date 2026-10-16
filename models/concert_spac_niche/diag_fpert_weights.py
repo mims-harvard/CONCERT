@@ -1,8 +1,12 @@
 """Early-stage sanity: load mid-training checkpoints and confirm the f_pert field
 is LEARNING -- i.e. the zero-init residual MLP departed from init (std 1e-3) and,
 for svgp, the lengthscale/inducing points moved. No data load; weights only."""
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import torch, glob, os, math
-BASE = "/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT/outputs"
+BASE = f"{_rp.WORKDIR}/scratch/CONCERT/outputs"
 
 def softplus(x): return math.log1p(math.exp(-abs(x))) + max(x, 0.0)
 

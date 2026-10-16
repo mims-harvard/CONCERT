@@ -35,10 +35,12 @@ activate_env
 
 REGIME="${1:?usage: sbatch eval_perturb_seq.sh <seen|unseen>}"
 EVAL_DIR="${CODEBASE_ROOT}/benchmark_evaluation"
-MODEL="${OUTPUT_ROOT}/perturb_seq_${REGIME}/model.pt"
+# Default: the released checkpoint. MODEL=<your model.pt> scores your own training run.
+CKPT_NAME=$([ "$REGIME" = "seen" ] && echo perturbmap_within_niche || echo perturbmap_cross_slide)
+MODEL="${MODEL:-${CONCERT_CHECKPOINT_ROOT}/${CKPT_NAME}/model.pt}"
 OUT="${OUTPUT_ROOT}/perturb_seq_${REGIME}_eval"
 
-[ -f "$MODEL" ] || { echo "[FATAL] checkpoint missing: $MODEL -- run train/ first"; exit 1; }
+[ -f "$MODEL" ] || { echo "[FATAL] checkpoint missing: $MODEL"; exit 1; }
 mkdir -p "$OUT"
 cd "$EVAL_DIR"
 
@@ -48,13 +50,13 @@ GUARD="--ls_prior_min 3 --ls_prior_max 18 --fpert_svgp_inducing 64 \
 
 # In the cross-section setting the held-out perturbations are named in the holdout file, and
 # records with too few cells to score are dropped.
-V3KO=""
+UNSEEN_KO=""
 if [ "$REGIME" = "unseen" ]; then
-    V3KO="--v3_unseen_ko_file ${PERTURB_SEQ_DIR}/holdout_perturb_seq_unseen.json --min_g_cells 20"
+    UNSEEN_KO="--unseen_ko_file ${HOLDOUT_COORDS}/holdout_pmap_unseen.json --min_g_cells 20"
 fi
 
 python -u run_concert_pm_niche.py \
     --model_file "$MODEL" --outdir "$OUT" --slides ${SLIDES:-0 1 2 3} --n_boot 10 \
-    ${GUARD} ${V3KO}
+    ${GUARD} ${UNSEEN_KO}
 
 echo "[$(date)] Perturb-seq ${REGIME} evaluation finished -> ${OUT}"

@@ -13,11 +13,15 @@ Reported per perturbation:
                   lesion -- this is the quantity a core-vs-rim contrast needs
   core vs rim     the residual averaged over imposed core spots vs imposed rim spots
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import anndata as ad, numpy as np, torch
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
+NS = Path(f"{_rp.WORKDIR}")
 COORD_SCALE, TILE = 20.0, 20.0
 EK = "lord_encoder.s_encoder.perturbation.weight"
 SETS = NS / "outputs/thick_rim_sets"

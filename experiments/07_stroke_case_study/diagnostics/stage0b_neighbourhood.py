@@ -14,6 +14,10 @@ Everything is slice-mean-centred: in the model the slide attribute absorbs the a
 batch offset, so the centred comparison is the honest analogue. Raw is reported alongside.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 
@@ -23,8 +27,8 @@ import pandas as pd
 from scipy.spatial import cKDTree
 from sklearn.decomposition import PCA
 
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
+OUT = Path(f"{_rp.WORKDIR}/stroke3d")
 N_PC = 30
 
 # (label, k within own slice, k per slice at offset +-1, k per slice at offset +-2)

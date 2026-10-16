@@ -13,9 +13,12 @@ import argparse
 import csv
 import json
 from pathlib import Path
+import sys
 
-RES = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map/"
-           "results_panel1053ko_niche")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+
+RES = rp.PERTURBMAP_CONCERT / "sensitivity"
 
 # tag -> (factor, value at that arm). The base arm belongs to every factor panel, so it is
 # expanded into one row per factor by BASE_IN_ALL below.
@@ -50,7 +53,7 @@ SEED_TAGS = {"base42", "seed1", "seed2", "seed3", "seed4"}
 # factor panel is the same three seeds, so arm and base carry comparable error bars.
 REP_SEEDS = [42, 1, 2]
 BASE_TAG_FOR_SEED = {42: "base42", 1: "seed1", 2: "seed2"}
-# lfc_dist is the LFC RMSE reported in the benchmark figure (rescore_pm_lfc_distance.py:2)
+# lfc_dist is the LFC RMSE reported in the benchmark figure (perturbmap_harness_rescore.py:2)
 METRICS = ["spearman_mean", "lfc_dist_mean", "e_dist_mean", "sign_agreement_mean",
            "topk_overlap_mean", "spearman_sd", "lfc_dist_sd", "e_dist_sd",
            "spearman_boot_std_mean", "n_scored_genes"]
@@ -80,8 +83,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--regime", default="seen")
     ap.add_argument("--out", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
-                                 "CONCERT-main/results/sens_pmap_arms.csv"))
+                    default=rp.WORKDIR / "sensitivity" / "sens_pmap_arms.csv")
     args = ap.parse_args()
 
     rows = []

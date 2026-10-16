@@ -1,9 +1,14 @@
 #!/bin/bash
 # Fan out the 20 remaining SI sensitivity arms (base42 is submitted separately as the smoke test).
 # Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
-# Caps: 12 concurrent on kempner_h100, 12 on kempner (lab policy), overflow -> kempner_requeue.
+# Caps: 12 concurrent on ${PART_H100}, 12 on ${PART_A100} (lab policy), overflow -> ${PART_REQUEUE}.
+# Partition names of your cluster: an H100 partition, an A100 partition and a preemptible one.
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
+PART_H100="${PART_H100:?set PART_H100}"; PART_A100="${PART_A100:?set PART_A100}"; PART_REQUEUE="${PART_REQUEUE:?set PART_REQUEUE}"
 set -euo pipefail
-cd /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 
 # Replicate every factor arm at extra seeds: REPS="1 2" ./launch_sens_pmap.sh
 # (seed noise turned out to be as large as the factor effects, so one run per arm cannot
@@ -46,8 +51,8 @@ ARMS=(
 )
 
 count_part () { squeue -u "$USER" -h -p "$1" -o "%i" | wc -l; }
-n_h100=$(count_part kempner_h100)
-n_a100=$(count_part kempner)
+n_h100=$(count_part ${PART_H100})
+n_a100=$(count_part ${PART_A100})
 
 if [ -n "$ONLY" ]; then
   KEEP=(); for e in "${ARMS[@]}"; do for w in $ONLY; do [ "${e%%|*}" = "$w" ] && KEEP+=("$e"); done; done
@@ -65,11 +70,11 @@ fi
 
 for entry in "${ARMS[@]}"; do
   tag="${entry%%|*}"; envs="${entry#*|}"
-  if   [ "$n_h100" -lt 12 ]; then part=kempner_h100; n_h100=$((n_h100+1))
-  elif [ "$n_a100" -lt 12 ]; then part=kempner;      n_a100=$((n_a100+1))
-  else                            part=kempner_requeue
+  if   [ "$n_h100" -lt 12 ]; then part=${PART_H100}; n_h100=$((n_h100+1))
+  elif [ "$n_a100" -lt 12 ]; then part=${PART_A100};      n_a100=$((n_a100+1))
+  else                            part=${PART_REQUEUE}
   fi
   jid=$(env TAG="$tag" $envs sbatch --parsable -p "$part" -J "sens_${tag}" sub_sens_pmap_arm.sh)
   echo "${tag}  ${part}  ${jid}  [${envs}]"
 done
-echo "h100=${n_h100} kempner=${n_a100}"
+echo "h100=${n_h100} ${PART_A100}=${n_a100}"

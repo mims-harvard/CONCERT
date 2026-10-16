@@ -12,6 +12,10 @@ Two figures, house style (paper_style.py):
 
 Reads pathway_trajectories.csv + pathway_calibration.json (head node, no torch).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv, json
 from pathlib import Path
 import numpy as np
@@ -21,7 +25,7 @@ from matplotlib import colormaps
 import paper_style as ps
 ps.use()
 
-HERE = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study")
+HERE = Path(f"{_rp.WORKDIR}/paper/Outputs/case_study")
 DAYS = [0, 3, 9, 21]
 
 rows = list(csv.DictReader(open(HERE / "pathway_trajectories.csv")))

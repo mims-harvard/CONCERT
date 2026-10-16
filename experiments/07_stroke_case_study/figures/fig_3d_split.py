@@ -14,6 +14,10 @@ PIA-weighted (Vim and Timp1 are rim markers) and scoring with it puts the observ
 middle section, which contradicts section 1 being nearest the infarct.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json, sys
 from pathlib import Path
 import anndata as ad, h5py, numpy as np, pandas as pd
@@ -25,8 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]
                        / "experiments" / "03_dss_gut_case_study" / "figures"))
 import paper_style
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+NS = Path(f"{_rp.WORKDIR}")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 LABEL_FS, TICK_FS, CBAR_FS = 19, 15, 14
 PRED_C, MIN_SEP, SAT_Q = "#2166ac", 0.5, 0.97
 ZERO_CMAP = LinearSegmentedColormap.from_list(

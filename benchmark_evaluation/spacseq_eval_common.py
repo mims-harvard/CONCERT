@@ -1,6 +1,10 @@
 """Shared helpers for SPAC-seq counterfactual baseline evaluation."""
 
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import logging
@@ -16,13 +20,11 @@ from method_input_lib import normalize_pred_cache
 log = logging.getLogger(__name__)
 
 BIOLORD_TRAIN_OUTPUT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/"
+    f"{_rp.WORKDIR}/"
     "biolord/biolord/exp_spacseq/outputs"
 )
-EVAL_UTILS_DIR = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/"
-    "spaVAE/CONCERT-main/src/CONCERT-spac"
-)
+# The two metric helpers (eval_utils, spac_edist_align) every scorer imports.
+EVAL_UTILS_DIR = Path(__file__).resolve().parent / "scoring_helpers"
 
 UNASSIGNED_LABELS = frozenset([
     "unassigned", "Unassigned", "No_guide", "no_guide", "unknown",

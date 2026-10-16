@@ -1,5 +1,9 @@
 """Energy-distance scoring aligned with CONCERT eval_utils.energy_distance."""
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 import os
 import sys
@@ -7,7 +11,7 @@ from pathlib import Path
 import numpy as np
 
 EVAL_UTILS_DIR = Path(__file__).resolve().parent
-DEFAULT_RAW_COUNTS_DIR = Path("/n/netscratch/mzitnik_lab/Lab/xiang/spac_seq_eval/raw_counts")
+DEFAULT_RAW_COUNTS_DIR = Path(f"{_rp.WORKDIR}/scratch/spac_seq_eval/raw_counts")
 RAW_COUNTS_NAME = "filtered_raw_counts.npy"
 LIB_SIZES_NAME = "filtered_lib_sizes.npy"
 RAW_META_NAME = "raw_counts_meta.json"
@@ -80,5 +84,5 @@ def hvg_info_dict(hvg_mask: np.ndarray) -> dict:
         "hvg_gene_indices": np.where(hvg_mask)[0].tolist(),
         "hvg_selection": "hvg_rank",
         "hvg_rank_max": 2000,
-        "edist": "concert_eval_utils_v1",
+        "edist": "concert_eval_utils",
     }

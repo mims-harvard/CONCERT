@@ -15,15 +15,19 @@ panel mixed the two, which is why the injury score was rim-weighted while the pr
 core-peaked.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, sys
 from pathlib import Path
 import anndata as ad, h5py, numpy as np, pandas as pd
 from scipy.spatial import cKDTree
 from scipy.stats import spearmanr
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
+NS = Path(f"{_rp.WORKDIR}")
 SLIDES = NS / "stroke3d/slides_cr"
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 GENES = ["Gm42418", "Scgb1a1", "Vim", "Lgals1", "Timp1", "Spp1"]
 MIN_SEP = 0.5
 NB = 6

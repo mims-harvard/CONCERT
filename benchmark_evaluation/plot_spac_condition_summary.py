@@ -20,13 +20,14 @@ import json
 import sys
 from pathlib import Path
 
+import release_paths as rp  # noqa: E402
+
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-EVAL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from plot_spac_benchmark_bars import BAR_EDGE, BAR_EDGE_LW, COLORS  # noqa: E402
@@ -174,8 +175,8 @@ SHEET_ORDER = ["value", "heatmap", "rank", "delta"]
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--indir", type=Path, default=EVAL / "v4_aggregate_sampled")
-    ap.add_argument("--outroot", type=Path, default=EVAL / "v4_aggregate_sampled" / "figures")
+    ap.add_argument("--indir", type=Path, default=rp.SPACSEQ_RESULTS)
+    ap.add_argument("--outroot", type=Path, default=rp.WORKDIR / "spacseq_results" / "figures")
     args = ap.parse_args()
 
     stats, cache = {}, {}

@@ -2,22 +2,23 @@
 #SBATCH -J zkernel
 #SBATCH --mem=64G
 #SBATCH --time 0-03:00
-#SBATCH -p kempner
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/zkernel_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/zkernel_%j.err
+#SBATCH -o zkernel_%j.out
+#SBATCH -e zkernel_%j.err
 # 2D vs 3D footprint kernel: one fixed lesion footprint imposed at each z in turn, response read on
 # the perturbed spots. Replaces the propagation test, which measured a quantity that is zero by
 # construction (f_pert is gated by is_real_KO, concert_spac.py:1223).
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 SETS=${NS}/outputs/stroke_3d/pert_sets_z

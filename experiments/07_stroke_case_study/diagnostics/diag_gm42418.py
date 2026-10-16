@@ -7,9 +7,13 @@ lesion, Gm42418's SHARE of the library falls even if its absolute expression doe
 delta prints negative. Test: compare the delta in CPM space against the delta in RAW count space
 for the same spots, and report Gm42418's share of the library.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, numpy as np, anndata as ad
 from pathlib import Path
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2d")
+OUT = Path(f"{_rp.WORKDIR}/outputs/stroke_2d")
 G = ["Gm42418", "Vim", "Timp1"]
 
 def cpm(X):

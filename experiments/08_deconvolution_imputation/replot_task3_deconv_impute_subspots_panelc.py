@@ -20,6 +20,10 @@ CONCERT counterfactual profile for all three populations. This script:
 The original script is not modified. Pure matplotlib/PIL, no model reload.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 from pathlib import Path
@@ -33,25 +37,25 @@ import pandas as pd
 from PIL import Image, ImageDraw, ImageFont
 
 RUN_DIR = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
+    f"{_rp.WORKDIR}/paper/Outputs/"
     "spac_seq/pmap_s0_jak2_concert_amortized"
 )
 SCORES = RUN_DIR / "peri_deconv_impute_scores.csv"
 SUMMARY = RUN_DIR / "summary_deconv_impute.json"
 SUPP = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/manuscript/MAIN/FIG/supp"
+    f"{_rp.WORKDIR}/paper/manuscript/MAIN/FIG/supp"
 )
 SRC_COMPOSITE = SUPP / "resp_deconv_perturbmap.png.bak_panelc"
 OUT_COMPOSITE = SUPP / "resp_deconv_perturbmap.png"
 OUT_COMPOSITE_PDF = SUPP / "resp_deconv_perturbmap.pdf"
 OUT_STATS = SUPP / "resp_deconv_perturbmap_stats.json"
-WORK = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/panelc_rebuild")
+WORK = Path(f"{_rp.WORKDIR}/outputs/panelc_rebuild")
 ORIG_SCRIPT = (
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/"
+    f"{_rp.WORKDIR}/scoring/"
     "replot_task3_deconv_impute_subspots.py"
 )
 CACHE_SCRIPT = (
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/"
+    f"{_rp.WORKDIR}/scoring/"
     "cache_task3_concert_state_signatures.py"
 )
 
@@ -206,7 +210,7 @@ def main() -> None:
     stats = {
         "figure": str(OUT_COMPOSITE),
         "panel": "c",
-        "built_by": "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/"
+        "built_by": f"{_rp.WORKDIR}/scoring/"
                     "replot_task3_deconv_impute_subspots_panelc.py",
         "backup_of_previous_png": str(SRC_COMPOSITE),
         "source_table": str(SCORES),

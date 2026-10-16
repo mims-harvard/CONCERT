@@ -15,6 +15,10 @@ evenly-spaced categorical axis (linear time crowds Day 0 and Day 3 together).
 Predictions are put on the observed scale by the ONE shared readout calibration
 (paper_style.calibrate). Pure numpy/matplotlib, head-node safe.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv
 from pathlib import Path
 import numpy as np
@@ -24,8 +28,8 @@ import matplotlib.pyplot as plt
 import paper_style as ps
 ps.use()
 
-HERE = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study")
-CS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+HERE = Path(f"{_rp.WORKDIR}/paper/Outputs/case_study")
+CS = Path(f"{_rp.WORKDIR}/outputs/"
           "dss_timekernel_markersign_timefield_fixedt/case_study")
 DAYS = np.array([0, 3, 9, 21], float)
 DDAY = np.diff(DAYS)                                   # [3,6,12]

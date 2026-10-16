@@ -11,6 +11,10 @@ Scale: raw counts and CONCERT mu (non-negative rate-like) both use the same
 CP10K -> log1p recipe before HVG / StandardScaler / PCA / UMAP.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -30,13 +34,13 @@ from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
 from sklearn.preprocessing import StandardScaler
 
-DATA = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s0_spacfmt.h5ad")
+DATA = Path(f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad")
 OUT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
+    f"{_rp.WORKDIR}/paper/Outputs/"
     "spac_seq/pmap_s0_jak2_concert_amortized"
 )
 EXT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/ext_exp"
+    f"{_rp.WORKDIR}/paper/Outputs/ext_exp"
 )
 KO_GENE = "Jak2"
 N_HVG = 1500

@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 """Acceptance gate table for the retrained 2dpara arms (and anything else under gate_*)."""
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys
 from pathlib import Path
 import numpy as np, anndata as ad
-B = Path("/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest")
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
+B = Path(f"{_rp.WORKDIR}/scratch/CONCERT_rimtest")
+NS = Path(f"{_rp.WORKDIR}")
 SETS = NS / "outputs/stroke_2dpara/pert_sets"
 GENES = ["Gm42418", "Scgb1a1", "Lcn2", "Vim", "Gfap", "Timp1"]
 KEY = ["Lcn2", "Vim", "Timp1"]

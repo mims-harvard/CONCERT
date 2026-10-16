@@ -11,12 +11,16 @@ If noise_LFC >> null -> real CRISPR noise that must be disentangled (spac).
 
 Outputs: a 3-dataset figure + a quantitative summary table + npz of the LFC vectors.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import numpy as np, anndata as ad, scipy.sparse as sp, os
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-OUTDIR = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/figures/crispr_noise"
+OUTDIR = f"{_rp.WORKDIR}/scoring/figures/crispr_noise"
 os.makedirs(OUTDIR, exist_ok=True)
 RNG = np.random.RandomState(0)
 MAX_UNA = 30000   # subsample unassigned for memory / balanced null
@@ -24,9 +28,9 @@ CPM_FLOOR = 1.0   # expressed-gene filter: pseudobulk CPM > 1 in at least one gr
 DE_THR = 1.0      # |log2FC| > 1 (2-fold) = "DE"
 
 DATASETS = [
-    ("spac_1-1",   "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad", "perturbation"),
-    ("spac_2-2",   "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_2-2.h5ad", "perturbation"),
-    ("perturbmap", "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturb_map_data_all_fullgene.h5ad", "perturbation_canon"),
+    ("spac_1-1",   f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad", "perturbation"),
+    ("spac_2-2",   f"{_rp.DATA}/spacseq/raw/raw_output_2-2.h5ad", "perturbation"),
+    ("perturbmap", f"{_rp.DATA}perturbmap/raw/perturb_map_data_all_fullgene.h5ad", "perturbation_canon"),
 ]
 
 def log2cpm(counts_sum):

@@ -9,6 +9,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import release_paths as rp  # noqa: E402
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 import numpy as np
@@ -19,24 +21,22 @@ import numpy as np
 plt.rcParams["pdf.fonttype"] = 42
 plt.rcParams["ps.fonttype"] = 42
 
-SPAC_V3 = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/multi_1-5_ho_v3")
-CONCERT_V3 = SPAC_V3 / "concert"
-DEFAULT_OUT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/spac_seq"
-)
-SPAC_PANEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/multi_1-5/prepared/benchmark_v3/eval_panel.json")
+SPAC_ROOT = rp.SPACSEQ_PREDICTIONS
+CONCERT_ROOT = SPAC_ROOT / "concert"
+DEFAULT_OUT = rp.WORKDIR / "spacseq_results"
+SPAC_PANEL = rp.SPACSEQ_BENCHMARK / "eval_panel.json"
 
 SPAC_SEEN_SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 SPAC_SEEN_TOP_N = 8
 SPATIAL_SUBDIRS = ("celcomen", "cellagentchat")
 
 METHOD_SOURCES: list[tuple[str, Path, str]] = [
-    ("Biolord", SPAC_V3, "biolord"),
-    ("GEARS", SPAC_V3, "gears"),
-    ("scGEN", SPAC_V3, "scgen"),
-    ("CelComen", SPAC_V3, "celcomen"),
-    ("Steamboat", SPAC_V3, "steamboat"),
-    ("CellAgentChat", SPAC_V3, "cellagentchat"),
+    ("Biolord", SPAC_ROOT, "biolord"),
+    ("GEARS", SPAC_ROOT, "gears"),
+    ("scGEN", SPAC_ROOT, "scgen"),
+    ("CelComen", SPAC_ROOT, "celcomen"),
+    ("Steamboat", SPAC_ROOT, "steamboat"),
+    ("CellAgentChat", SPAC_ROOT, "cellagentchat"),
 ]
 # Naive + STATE (from rescored / collab CSVs) sit with competing methods
 EXTRA_COMPETITORS = [
@@ -77,7 +77,7 @@ CONCERT_EDGE_LW = BAR_EDGE_LW
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--outdir", type=Path, default=DEFAULT_OUT)
-    p.add_argument("--concert-v3", type=Path, default=CONCERT_V3)
+    p.add_argument("--concert-dir", type=Path, default=CONCERT_ROOT)
     p.add_argument("--top-n", type=int, default=SPAC_SEEN_TOP_N)
     p.add_argument("--regime", choices=("seen", "unseen"), default="seen")
     # Drop named knockouts from the panel selection. The next knockouts in the existing
@@ -206,9 +206,9 @@ def _unseen_scores_path(root: Path, subdir: str, gene: str, target: str) -> Path
     return None
 
 
-def load_concert_by_gene(v3_root: Path | None = None, task: str = "seen", eval_units=None) -> dict[str, dict]:
-    """Load CONCERT v3 benchmark results from multi_1-5_ho_v3/concert/."""
-    root = v3_root or CONCERT_V3
+def load_concert_by_gene(concert_root: Path | None = None, task: str = "seen", eval_units=None) -> dict[str, dict]:
+    """Load CONCERT benchmark results from spacseq_predictions/concert/."""
+    root = concert_root or CONCERT_ROOT
     out: dict[str, dict] = {}
 
     def _add(gene: str, lfc: np.ndarray, dist: np.ndarray, boot: np.ndarray | None = None):
@@ -278,12 +278,12 @@ def spatial_coverage_seen(root: Path, gene: str) -> int:
 def spatial_coverage_unseen(root: Path, gene: str, target: str) -> int:
     return sum(1 for sub in SPATIAL_SUBDIRS if method_can_predict_unseen(root, sub, gene, target))
 
-def v3_coverage_seen(root: Path, gene: str) -> int:
+def baseline_coverage_seen(root: Path, gene: str) -> int:
     return sum(1 for _, _, subdir in METHOD_SOURCES if method_can_predict_seen(root, subdir, gene))
 
 
 def select_top_genes(concert: dict[str, dict], root: Path, top_n: int) -> list[str]:
-    """Top genes: prefer CelComen/CellAgentChat, then # v3 baselines; require CONCERT eval."""
+    """Top genes: prefer CelComen/CellAgentChat, then # baselines; require CONCERT eval."""
     niche_counts: Counter[str] = Counter()
     all_genes: set[str] = set()
     for _, _, subdir in METHOD_SOURCES:
@@ -299,14 +299,14 @@ def select_top_genes(concert: dict[str, dict], root: Path, top_n: int) -> list[s
         all_genes,
         key=lambda g: (
             -spatial_coverage_seen(root, g),
-            -v3_coverage_seen(root, g),
+            -baseline_coverage_seen(root, g),
             -niche_counts.get(g, 0),
             g,
         ),
     )
     eligible = [
         g for g in ranked
-        if v3_coverage_seen(root, g) > 0 and concert_has_eval(concert, g)
+        if baseline_coverage_seen(root, g) > 0 and concert_has_eval(concert, g)
     ]
     return eligible[:top_n]
 
@@ -373,7 +373,7 @@ def collect_lfc_stats_unseen(genes: list[str], eval_units: list[tuple[str, str]]
     return stats
 
 
-def v3_coverage_unseen(root: Path, gene: str, target: str) -> int:
+def baseline_coverage_unseen(root: Path, gene: str, target: str) -> int:
     return sum(
         1 for _, _, subdir in METHOD_SOURCES
         if method_can_predict_unseen(root, subdir, gene, target)
@@ -385,7 +385,7 @@ def select_unseen_genes(concert: dict, eval_units: list[tuple[str, str]], root: 
 
     def coverage(g: str) -> int:
         t = unit_map.get(g)
-        return v3_coverage_unseen(root, g, t) if t else 0
+        return baseline_coverage_unseen(root, g, t) if t else 0
 
     def spatial(g: str) -> int:
         t = unit_map.get(g)
@@ -427,8 +427,6 @@ def load_lfc_dist_from_csv(csv_path: Path, genes: list[str]) -> dict:
         "cellagentchat": "CellAgentChat",
         "concert_niche_seen": "CONCERT",
         "concert_niche_unseen": "CONCERT",
-        "concert_v3_seen": "CONCERT",
-        "concert_v3_unseen": "CONCERT",
         "mean_target": "Mean target",
         "mean_niche": "Mean niche",
         "local_knn": "Local kNN",
@@ -738,17 +736,17 @@ def main():
     args = parse_args()
     drop = set(args.drop_genes)
     if args.regime == "seen":
-        concert = load_concert_by_gene(args.concert_v3, "seen")
+        concert = load_concert_by_gene(args.concert_dir, "seen")
         # Drop before truncating to top-n, so the next-ranked knockouts fill the slots.
-        genes = [g for g in select_top_genes(concert, SPAC_V3, args.top_n + len(drop))
+        genes = [g for g in select_top_genes(concert, SPAC_ROOT, args.top_n + len(drop))
                  if g not in drop][:args.top_n]
         lfc_stats = collect_lfc_stats(genes, concert)
         dist_csv = args.outdir / "spac_seen_lfc_dist_per_record.csv"
         prefix, title_tag = "spacseq_seen", "seen -- patch holdout"
     else:
         eval_units = load_eval_units()
-        concert = load_concert_by_gene(args.concert_v3, "unseen", eval_units)
-        genes = [g for g in select_unseen_genes(concert, eval_units, SPAC_V3)
+        concert = load_concert_by_gene(args.concert_dir, "unseen", eval_units)
+        genes = [g for g in select_unseen_genes(concert, eval_units, SPAC_ROOT)
                  if g not in drop]
         if args.gene_order:
             missing = [g for g in args.gene_order if g not in genes]

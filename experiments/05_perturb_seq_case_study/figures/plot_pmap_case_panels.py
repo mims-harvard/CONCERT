@@ -6,6 +6,10 @@ head node. Every panel is standalone and carries no title -- identity and number
 the emitted legend file, which is generated from the same stats the panels are drawn from.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -273,10 +277,10 @@ def panel_pathways(bundle, preds, out, name, top_n=8):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", type=Path,
-                    default=Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/"
+                    default=Path(f"{_rp.WORKDIR}/"
                                  "spac_seq_eval/figures/pmap_case_study"))
     ap.add_argument("--out", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/"
+                    default=Path(f"{_rp.WORKDIR}/"
                                  "spaVAE/CONCERT-main/Outputs/case_study_pm"))
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)

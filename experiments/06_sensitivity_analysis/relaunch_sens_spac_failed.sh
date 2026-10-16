@@ -5,10 +5,15 @@
 # because the concert_env torch build ships no sm_120 kernels. The Blackwell nodes are the only
 # ones carrying the rtx6000pro feature, so we exclude them by name (computed live from sinfo).
 # Usage: ./relaunch_sens_spac_failed.sh [tag ...]        (no args = the 22 known-failed arms)
-set -euo pipefail
-cd /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/CONCERT-spac-niche
+# Partition names of your cluster: an H100 partition, an A100 partition and a preemptible one.
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
 
-EXCL=$(sinfo -N -h -o "%N %f" -p kempner_requeue,kempner,kempner_h100 \
+PART_H100="${PART_H100:?set PART_H100}"; PART_A100="${PART_A100:?set PART_A100}"; PART_REQUEUE="${PART_REQUEUE:?set PART_REQUEUE}"
+set -euo pipefail
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
+
+EXCL=$(sinfo -N -h -o "%N %f" -p "${PART_REQUEUE},${PART_A100},${PART_H100}" \
        | awk '/rtx6000pro/{print $1}' | sort -u | paste -sd, -)
 [ -n "$EXCL" ] || { echo "[FATAL] could not resolve rtx6000pro node list"; exit 1; }
 echo "excluding: ${EXCL}"
@@ -36,7 +41,7 @@ env_for () {                       # tag -> knob overrides, mirroring launch_sen
 }
 
 count_part () { squeue -u "$USER" -h -p "$1" -o "%i" | wc -l; }
-n_h100=$(count_part kempner_h100); n_a100=$(count_part kempner)
+n_h100=$(count_part ${PART_H100}); n_a100=$(count_part ${PART_A100})
 for tag in "${TAGS[@]}"; do
   case "$tag" in
     *_s1) base="${tag%_s1}"; seed=1 ;;
@@ -47,9 +52,9 @@ for tag in "${TAGS[@]}"; do
   esac
   knobs=$(env_for "$base")
   [ "$knobs" = "UNKNOWN" ] && { echo "!! unknown tag ${tag} - skipped"; continue; }
-  if   [ "$n_h100" -lt 12 ]; then part=kempner_h100; n_h100=$((n_h100+1))
-  elif [ "$n_a100" -lt 12 ]; then part=kempner;      n_a100=$((n_a100+1))
-  else part=kempner_requeue
+  if   [ "$n_h100" -lt 12 ]; then part=${PART_H100}; n_h100=$((n_h100+1))
+  elif [ "$n_a100" -lt 12 ]; then part=${PART_A100};      n_a100=$((n_a100+1))
+  else part=${PART_REQUEUE}
   fi
   jid=$(env TAG="$tag" RESUME=True $knobs SEED="$seed" \
         sbatch --parsable --requeue -x "$EXCL" -p "$part" -J "spsens_${tag}" sub_sens_spac_arm.sh)

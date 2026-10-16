@@ -4,6 +4,10 @@ Phase 1: prepare the SPAC-seq 2-2 scRNA-seq reference and the imputation inputs
 2. Build the scRNA-seq reference (sampled from non-masked cells)
 3. Build sp_adata.h5ad (imputation input)
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import numpy as np
 import anndata
 import scanpy as sc
@@ -17,10 +21,10 @@ def log(msg):
     print(msg, flush=True)
 
 # Configuration
-SPAC_PATH = '/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/processed/SPAC/raw_output_2-2.h5ad'
-MASK_PATH = '/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/imputation/patch_removal_2-2_top5_cellindex.npz'
-OUT_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2'
-IMPUTATION_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/test_output/spac_2-2'
+SPAC_PATH = f'{_rp.WORKDIR}/concert_data/processed/SPAC/raw_output_2-2.h5ad'
+MASK_PATH = f'{_rp.WORKDIR}/concert_data/exp/imputation/patch_removal_2-2_top5_cellindex.npz'
+OUT_DIR = f'{_rp.WORKDIR}/spatial_baselines/concert_baselines/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2'
+IMPUTATION_DIR = f'{_rp.WORKDIR}/spatial_baselines/concert_baselines/SpatialScope/test_output/spac_2-2'
 N_HVGS = 2000
 N_REF_SAMPLE = 30000
 N_CELL_TYPES_TARGET = 15  # the Leiden resolution is tuned towards this

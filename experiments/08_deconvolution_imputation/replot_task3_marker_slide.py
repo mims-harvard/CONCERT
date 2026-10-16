@@ -11,6 +11,10 @@ inflates markers. Instead: mu composition x parent HVG depth -> counts, then
 log1p(CP10K) with the parent spot's full library (same units as observed).
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 from collections import deque
@@ -25,13 +29,13 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-DATA = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s0_spacfmt.h5ad")
+DATA = Path(f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad")
 OUT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
+    f"{_rp.WORKDIR}/paper/Outputs/"
     "spac_seq/pmap_s0_jak2_concert_amortized"
 )
 EXT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/ext_exp"
+    f"{_rp.WORKDIR}/paper/Outputs/ext_exp"
 )
 KO_GENE = "Jak2"
 DEFAULT_GENE = "Fn1"

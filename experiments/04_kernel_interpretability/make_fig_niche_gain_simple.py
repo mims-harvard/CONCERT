@@ -29,17 +29,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-# Checkpoint whose learned kernel parameters are analysed, and where the figures go.
-# Both are overridable so the shipped code carries no machine-specific assumption.
-CKPT_DIR = os.environ.get(
-    "CONCERT_CKPT_DIR",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/ms_spac1_niche_seen_lsfix")
-ANA = os.path.join(CKPT_DIR, "kernel_param_analysis")
-OUT = os.environ.get(
-    "CONCERT_FIGURE_DIR",
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
-    "case_study/kernel_interpretability")
-SP = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq"
+import sys as _sys
+_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+
+# The kernel-parameter tables of the analysed checkpoint (analyze_kernel_params_spac.py output,
+# shipped in data/spacseq/kernel_params/), and where the figures go.
+ANA = os.environ.get("CONCERT_KERNEL_PARAMS_DIR", str(rp.DATA / "spacseq" / "kernel_params"))
+OUT = os.environ.get("CONCERT_FIGURE_DIR", str(rp.WORKDIR / "kernel_interpretability"))
+SP = str(rp.SPACSEQ_RAW)
 PATHS = [f"{SP}/raw_output_1-{i}.h5ad" for i in range(1, 6)]
 CACHE = os.path.join(OUT, "_exemplar_coords.npz")
 

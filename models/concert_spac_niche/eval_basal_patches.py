@@ -14,6 +14,10 @@ Patch rows map to model rows by cell_index (verified: perturbation_canon positio
 load_data keeps all 1903 cells in native order; cell_index is a permutation of arange(N)).
 Loops basal_field in {svgp, rff} so one run gives the rff-vs-svgp comparison table.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json, logging, os
 from pathlib import Path
 import numpy as np, torch
@@ -23,8 +27,8 @@ import eval_utils as eu
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-DATA = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s0_spacfmt.h5ad"
-BASE = "/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT/outputs"
+DATA = f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad"
+BASE = f"{_rp.WORKDIR}/scratch/CONCERT/outputs"
 GENES = ["Jak2", "Tgfbr2"]
 MIN_SUPPORT = 5   # min real-KO and min control cells in target_bin to trust a patch's obs_lfc
 
@@ -32,7 +36,7 @@ MIN_SUPPORT = 5   # min real-KO and min control cells in target_bin to trust a p
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--patch_file",
-                   default="/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map/patches/slide0.npz")
+                   default=f"{_rp.DATA}/perturbmap/patches/slide0.npz")
     p.add_argument("--data", default=DATA)
     p.add_argument("--fields", nargs="+", default=["svgp", "rff"],
                    help="arm labels; substituted into --ckpt_template as {field} and used as basal_field")

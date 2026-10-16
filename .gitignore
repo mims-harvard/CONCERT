@@ -18,3 +18,11 @@ wandb/
 slurm-*.out
 *.out
 *.err
+
+# Downloaded inputs and local outputs (place data/ and checkpoints/ here)
+data/
+checkpoints/
+runs/
+data
+checkpoints
+runs

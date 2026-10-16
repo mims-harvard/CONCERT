@@ -5,11 +5,15 @@ Same shape, same coordinates, healthy brain. If f_pert is a genuine perturbation
 response here should look like the response at the real lesion; if it is position-locked or
 sign-flipped by niche, it will not.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 from pathlib import Path
 import numpy as np, h5py
 from scipy.spatial import cKDTree
-SL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d/slides")
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara/pert_sets")
+SL = Path(f"{_rp.WORKDIR}/stroke3d/slides")
+OUT = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara/pert_sets")
 ORDER = ["PT1", "PT2", "PT3", "PT4", "Sham1", "Sham2", "Sham3", "Sham4"]
 def cat(f, c):
     o = f["obs"][c]

@@ -1,7 +1,23 @@
 #!/usr/bin/env python3
-"""Post-hoc LFC-vector RMSE for SPAC-seq seen: competitors + CONCERT niche eval CSV."""
+"""SPAC-seq benchmark rescore (LFC rank correlation + LFC RMSE), seen and unseen.
+
+Every method is read from spacseq_predictions/<method>/{seen,unseen}, written by shared_gene_rule.py:
+the competitors scored with --sampled_output True and CONCERT (concert/) with
+--cf_output poisson_depth. Their hvg_info.json holds the shared gene set (hvg_rank <= 2000 AND
+CONCERT model gene), and build_gene_mask removes the KO gene, so every method is rescored on the
+same genes.
+  * unseen: panel = benchmark/eval_panel.json; observed reference = unassigned outside patch
+    roles 1/2 (spacseq_unseen_eval_lib.unseen_reference_idx).
+  * seen: the patch-holdout records of every slide.
+
+Usage: rescore_spac_lfc_distance.py --regime {seen,unseen,all} --outdir DIR
+"""
 
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import csv
@@ -9,41 +25,42 @@ import dataclasses
 import json
 from pathlib import Path
 
+import release_paths as rp  # noqa: E402
+
 import anndata as ad
 import numpy as np
 
-from benchmark_v3_eval_lib import ko_holdout_indices
-from seen_residual_scoring import (
+from spacseq_unseen_eval_lib import ko_holdout_indices, unseen_reference_idx
+from lfc_scoring import (
     align_mlfc_vector,
     build_gene_mask,
     load_hvg_indices,
     observed_lfc_on_gene_axis,
     observed_lfc_seen_patch_niche,
-    observed_lfc_unseen_v3,
     score_lfc_agreement,
 )
 
-PREP = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/multi_1-5/prepared")
-BENCHMARK_V3 = PREP / "benchmark_v3"
-SPAC_PANEL = BENCHMARK_V3 / "eval_panel.json"
-SPAC_V3 = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/multi_1-5_ho_v3")
-CONCERT_V3 = SPAC_V3 / "concert"
+PREP = rp.SPACSEQ_PREPARED
+BENCHMARK_DIR = rp.SPACSEQ_BENCHMARK
+SPAC_PANEL = BENCHMARK_DIR / "eval_panel.json"
+PREDICTIONS = rp.SPACSEQ_PREDICTIONS
+CONCERT_EVAL_ROOT = PREDICTIONS / "concert"
 CONCERT_CSV = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/eval/detailed_per_slide_niche_pert.csv"
+    f"{_rp.WORKDIR}/eval/detailed_per_slide_niche_pert.csv"
 )
-OUT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/spac_seq"
-)
+OUT = rp.WORKDIR / "spacseq_results"
 
 SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 METHODS = {
-    "scgen": (SPAC_V3 / "scgen", "scGEN"),
-    "biolord": (SPAC_V3 / "biolord", "Biolord"),
-    "gears": (SPAC_V3 / "gears", "GEARS"),
-    "steamboat": (SPAC_V3 / "steamboat", "Steamboat"),
-    "celcomen": (SPAC_V3 / "celcomen", "CelComen"),
-    "cellagentchat": (SPAC_V3 / "cellagentchat", "CellAgentChat"),
+    "scgen": (PREDICTIONS / "scgen", "scGEN"),
+    "biolord": (PREDICTIONS / "biolord", "Biolord"),
+    "gears": (PREDICTIONS / "gears", "GEARS"),
+    "steamboat": (PREDICTIONS / "steamboat", "Steamboat"),
+    "celcomen": (PREDICTIONS / "celcomen", "CelComen"),
+    "cellagentchat": (PREDICTIONS / "cellagentchat", "CellAgentChat"),
 }
+# unseen: competitor roots hold unseen/unseen_pert/<unit> (see unseen_eval_dir)
+METHODS_UNSEEN = dict(METHODS)
 
 
 @dataclasses.dataclass
@@ -72,11 +89,11 @@ def load_eval_units() -> list[tuple[str, str]]:
     ]
 
 
-def load_concert_v3_records(v3_root: Path, task: str, method_key: str, eval_units=None) -> list[Record]:
+def load_concert_eval_records(eval_root: Path, task: str, method_key: str, eval_units=None) -> list[Record]:
     rows: list[Record] = []
     if task == "unseen" and eval_units:
         for gene, slide in eval_units:
-            path = v3_root / "unseen" / "unseen_pert" / f"{gene}__slide_{slide}" / "lfc_scores.json"
+            path = eval_root / "unseen" / "unseen_pert" / f"{gene}__slide_{slide}" / "lfc_scores.json"
             if not path.is_file():
                 continue
             recs = json.loads(path.read_text()).get("L2", {}).get(gene, [])
@@ -99,7 +116,7 @@ def load_concert_v3_records(v3_root: Path, task: str, method_key: str, eval_unit
                 ))
         return rows
     for slide in SLIDES:
-        path = v3_root / "seen" / "patch" / f"slide_{slide}" / "lfc_scores.json"
+        path = eval_root / "seen" / "patch" / f"slide_{slide}" / "lfc_scores.json"
         if not path.is_file():
             continue
         data = json.loads(path.read_text()).get("L2", {})
@@ -205,15 +222,19 @@ def _observed_lfc_seen_gt(
 
 def _observed_lfc_unseen_gt(
     adata: ad.AnnData,
-    benchmark_v3_dir: Path,
+    benchmark_dir: Path,
     gene: str,
     target_slide: str,
     niche_bin: int,
     min_g_cells: int,
 ) -> np.ndarray | None:
     if niche_bin < 0:
-        ko_idx = ko_holdout_indices(benchmark_v3_dir, gene, target_slide)
-        return observed_lfc_unseen_v3(adata, ko_idx, min_g_cells)
+        from lfc_scoring import pseudobulk_lfc, to_dense
+        ko_idx = ko_holdout_indices(benchmark_dir, gene, target_slide)
+        ref_idx = unseen_reference_idx(adata, PREP, target_slide)
+        if len(ko_idx) < min_g_cells or len(ref_idx) < min_g_cells:
+            return None
+        return pseudobulk_lfc(to_dense(adata[ko_idx].X), to_dense(adata[ref_idx].X))
     return observed_lfc_on_gene_axis(adata, gene, niche_bin, np.asarray(adata.var_names), min_g_cells)
 
 
@@ -225,7 +246,7 @@ def rescore_method_unseen(
     method: str,
     method_label: str,
     min_g_cells: int,
-    benchmark_v3_dir: Path,
+    benchmark_dir: Path,
 ) -> list[Record]:
     edir = unseen_eval_dir(result_dir, gene, target_slide)
     mlfc_path = edir / "model_lfc.json"
@@ -255,7 +276,7 @@ def rescore_method_unseen(
         if niche_bin is None:
             niche_bin = -1
         obs = _observed_lfc_unseen_gt(
-            adata, benchmark_v3_dir, gene, target_slide, niche_bin, min_g_cells,
+            adata, benchmark_dir, gene, target_slide, niche_bin, min_g_cells,
         )
         if obs is not None and np.isfinite(pred).any():
             sc = score_lfc_agreement(pred[keep], obs[keep])
@@ -276,7 +297,7 @@ def rescore_method_unseen(
         niche_bin = int(str(key).split(":")[0])
         pred = align_mlfc_vector(vec, gene_names, hvg_idx)
         obs = _observed_lfc_unseen_gt(
-            adata, benchmark_v3_dir, gene, target_slide, niche_bin, min_g_cells,
+            adata, benchmark_dir, gene, target_slide, niche_bin, min_g_cells,
         )
         if obs is None or not np.isfinite(pred).any():
             continue
@@ -302,7 +323,7 @@ def rescore_competitor_at_cell(
     method_label: str,
     min_g_cells: int,
     unseen: bool = False,
-    benchmark_v3_dir: Path | None = None,
+    benchmark_dir: Path | None = None,
 ) -> Record | None:
     """Rescore one competitor at a CONCERT-eval (gene, slide, niche) cell."""
     if unseen:
@@ -337,10 +358,10 @@ def rescore_competitor_at_cell(
         pred = align_mlfc_vector(niche_vecs, gene_names, hvg_idx)
 
     if unseen or niche_bin < 0:
-        if benchmark_v3_dir is None:
+        if benchmark_dir is None:
             return None
         obs = _observed_lfc_unseen_gt(
-            adata, benchmark_v3_dir, gene, slide_id, niche_bin, min_g_cells,
+            adata, benchmark_dir, gene, slide_id, niche_bin, min_g_cells,
         )
     else:
         obs = _observed_lfc_seen_gt(
@@ -376,14 +397,14 @@ def rescore_seen_competitors_at_master(
 
 def rescore_unseen_competitors_at_master(
     prepared_dir: Path, result_dir: Path, method: str, method_label: str,
-    master: list[Record], min_g_cells: int, benchmark_v3_dir: Path,
+    master: list[Record], min_g_cells: int, benchmark_dir: Path,
 ) -> list[Record]:
     rows: list[Record] = []
     for m in master:
         r = rescore_competitor_at_cell(
             prepared_dir, result_dir, m.gene, m.slide, int(m.niche_key),
             method, method_label, min_g_cells, unseen=True,
-            benchmark_v3_dir=benchmark_v3_dir,
+            benchmark_dir=benchmark_dir,
         )
         if r is not None:
             rows.append(r)
@@ -446,7 +467,7 @@ def _write_outputs(outdir: Path, all_records: list[Record], prefix: str, concert
 
 def attach_concert_gene_bootstrap(
     prepared_dir: Path, concert_root: Path, master: list[Record], min_g_cells: int,
-    unseen: bool, benchmark_v3_dir: Path | None = None, rho_tol: float = 1e-3,
+    unseen: bool, benchmark_dir: Path | None = None, rho_tol: float = 1e-3,
 ) -> None:
     """Give CONCERT the SAME gene bootstrap every competitor gets.
 
@@ -469,7 +490,7 @@ def attach_concert_gene_bootstrap(
         r = rescore_competitor_at_cell(
             prepared_dir, concert_root, m.gene, m.slide, int(m.niche_key),
             m.method, m.method_label, min_g_cells, unseen=unseen,
-            benchmark_v3_dir=benchmark_v3_dir,
+            benchmark_dir=benchmark_dir,
         )
         if r is None:
             n_skip += 1
@@ -487,9 +508,9 @@ def attach_concert_gene_bootstrap(
 
 
 def run_seen(args) -> None:
-    master = load_concert_v3_records(args.concert_v3, "seen", "concert_v3_seen")
+    master = load_concert_eval_records(args.concert_dir, "seen", "concert_seen")
     attach_concert_gene_bootstrap(
-        args.prepared_dir, args.concert_v3, master, args.min_g_cells, unseen=False,
+        args.prepared_dir, args.concert_dir, master, args.min_g_cells, unseen=False,
     )
     all_records: list[Record] = list(master)
     for method, (root, label) in METHODS.items():
@@ -498,33 +519,33 @@ def run_seen(args) -> None:
         all_records.extend(rescore_seen_competitors_at_master(
             args.prepared_dir, root, method, label, master, args.min_g_cells,
         ))
-    _write_outputs(args.outdir, all_records, "spac_seen", "concert_v3_seen")
+    _write_outputs(args.outdir, all_records, "spac_seen", "concert_seen")
 
 
 def run_unseen(args) -> None:
     # CONCERT master carries its eval-native gene bootstrap (spearman_boot_std / lfc_dist_boot_std,
-    # n_boot=10) read straight from lfc_scores.json (see load_concert_v3_records unseen branch). The
+    # n_boot=10) read straight from lfc_scores.json (see load_concert_eval_records unseen branch). The
     # niche-gated attach_concert_gene_bootstrap CANNOT be used for unseen (niche_key=-1: the rho
     # recompute never matches and every unit is rejected), and routing CONCERT through the competitor
     # recompute path corrupts its point estimate (rho 0.383 -> 0.011, a model_lfc format mismatch). For
     # unseen the eval-native boot is comparable in width to the competitor gene bootstrap.
-    master = load_concert_v3_records(args.concert_v3, "unseen", "concert_v3_unseen", load_eval_units())
+    master = load_concert_eval_records(args.concert_dir, "unseen", "concert_unseen", load_eval_units())
     all_records: list[Record] = list(master)
-    for method, (root, label) in METHODS.items():
+    for method, (root, label) in METHODS_UNSEEN.items():
         if not root.is_dir():
             continue
         all_records.extend(rescore_unseen_competitors_at_master(
             args.prepared_dir, root, method, label, master, args.min_g_cells,
-            args.benchmark_v3_dir,
+            args.benchmark_dir,
         ))
-    _write_outputs(args.outdir, all_records, "spac_unseen", "concert_v3_unseen")
+    _write_outputs(args.outdir, all_records, "spac_unseen", "concert_unseen")
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--prepared-dir", type=Path, default=PREP)
-    ap.add_argument("--benchmark-v3-dir", type=Path, default=BENCHMARK_V3)
-    ap.add_argument("--concert-v3", type=Path, default=CONCERT_V3)
+    ap.add_argument("--benchmark-dir", type=Path, default=BENCHMARK_DIR)
+    ap.add_argument("--concert-dir", type=Path, default=CONCERT_EVAL_ROOT)
     ap.add_argument("--concert-csv", type=Path, default=CONCERT_CSV)
     ap.add_argument("--outdir", type=Path, default=OUT)
     ap.add_argument("--min-g-cells", type=int, default=5)

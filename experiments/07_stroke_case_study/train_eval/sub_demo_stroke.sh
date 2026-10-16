@@ -4,23 +4,25 @@
 #SBATCH --time 0-04:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/stroke_%x_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/stroke_%x_%j.err
+#SBATCH -o stroke_%x_%j.out
+#SBATCH -e stroke_%x_%j.err
 
 # 2D capability demos: lesions no real experiment can deliver.
 # Builds the perturbation sets, then runs ONE counterfactual per set through the same tested
 # --stage eval path, plus a single matched control (__basal__). Perturbed spots KEEP their own
 # anatomy (__KEEP__) so the surface-vs-deep comparison is not flattened to one tissue code.
 # Usage: sbatch sub_demo_stroke.sh [arm]   (default 2dflat)
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 
 ARM="${1:-2dflat}"
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_${ARM}"

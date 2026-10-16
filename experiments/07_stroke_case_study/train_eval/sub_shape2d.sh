@@ -4,22 +4,24 @@
 #SBATCH --time 0-02:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/stroke_%x_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/stroke_%x_%j.err
+#SBATCH -o stroke_%x_%j.out
+#SBATCH -e stroke_%x_%j.err
 #
 # The 2D arm never got a shape-matched counterfactual, so its per-gene figures fell back to
 # thresholding the model's OWN field at the lesion rate. With a 2D field that is barely
 # informative (field r = 0.017) that threshold picks a SCATTER of spots, not a contiguous patch --
 # which is why the 2D predicted region looks nothing like the observed lesion. Here the real
 # lesion's shape is imposed, exactly as it already is for 3D, so the two arms are comparable.
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_2d"

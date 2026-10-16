@@ -23,6 +23,10 @@ All expression is raw counts aligned to the ground-truth gene order.
 Context cells come from context_pool.h5ad (build_context_pool.py): 324,012
 unassigned cells with the 10,690 experiment patch cells excluded (no leakage).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 from pathlib import Path
 
 import anndata
@@ -33,7 +37,7 @@ from scipy.stats import pearsonr, spearmanr
 from scipy.sparse import issparse
 
 CONTEXT_POOL_PATH = Path(
-    "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
+    f"{_rp.WORKDIR}/spatial_baselines/concert_baselines"
     "/SpatialScope/test_output/spac_2-2/context_pool.h5ad"
 )
 

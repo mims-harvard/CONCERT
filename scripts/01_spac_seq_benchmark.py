@@ -17,7 +17,7 @@ Two settings, named `seen` / `unseen` on disk and *within-niche prediction* /
   cross-slide   the perturbation is removed from one target slide (85 knockout-target-slide
                 pairs) and its effect is carried over from the donor slides
 
-Scoring rule (benchmark v4), identical for every method: each source spot's predicted profile
+Scoring rule, identical for every method: each source spot's predicted profile
 is turned into counts by one Poisson draw at the spot's measured library size, the predicted
 LFC is taken against the measured source spots, and the scored genes are the slide's highly
 variable genes inside the 2,000-gene CONCERT panel, minus the knocked-out gene.
@@ -51,27 +51,27 @@ import concert_paths as cp
 SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 
 MODEL_SRC = cp.MODELS / "concert_benchmark"
-SPAC_RAW = cp.DATA_ROOT / "newdata" / "spac_seq"
-PREPARED = cp.SCORING_LIB / "multi_1-5" / "prepared"
-BENCH_V4 = PREPARED / "benchmark_v4"
+SPAC_RAW = cp.rp.SPACSEQ_RAW
+PREPARED = cp.rp.SPACSEQ_PREPARED
+BENCH = cp.rp.SPACSEQ_BENCHMARK
 # clonality gate + slide guide shift
 CKPT = {
-    "seen": cp.OUTPUT_ROOT / "ms_spac1_niche_seen_clonegate_v4" / "model.pt",
-    "unseen": cp.OUTPUT_ROOT / "ms_spac1_niche_unseen_clonegate_v4" / "model.pt",
+    "seen": cp.CHECKPOINT_ROOT / "spacseq_within_niche" / "model.pt",
+    "unseen": cp.CHECKPOINT_ROOT / "spacseq_cross_slide" / "model.pt",
 }
 SHIPPED = {
-    "seen": cp.SCORING_LIB / "multi_1-5_ho_v4_sampled" / "concert_clonegate" / "seen",
-    "unseen": cp.SCORING_LIB / "multi_1-5_ho_v4_sampled" / "concert_clonegate" / "unseen",
+    "seen": cp.rp.SPACSEQ_PREDICTIONS / "concert" / "seen",
+    "unseen": cp.rp.SPACSEQ_PREDICTIONS / "concert" / "unseen",
 }
-NUMBERS = cp.SCORING_LIB / "v4_aggregate_sampled"       # the reported per-record tables
-CONCERT_KEY = {"seen": "concert_nichefix_seen", "unseen": "concert_v4_unseen"}
+NUMBERS = cp.rp.SPACSEQ_RESULTS       # the reported per-record tables
+CONCERT_KEY = {"seen": "concert_seen", "unseen": "concert_unseen"}
 
 
 def spac_args(bench, regime, outdir, target_slide=None, units=None):
     """Evaluation configuration for one SPAC-seq run, parsed by the entry point itself.
 
     The flags are the ones experiments/01_spac_seq_benchmark/evaluation/
-    eval_spac_seq_benchmark_v4.sh passes, so this script and the SLURM job cannot drift apart.
+    eval_spac_seq_benchmark.sh passes, so this script and the SLURM job cannot drift apart.
 
     Three of them fail silently rather than loudly when they are wrong:
       fpert_ls_min / fpert_ls_max  the footprint lengthscale band. It is a plain float
@@ -83,14 +83,14 @@ def spac_args(bench, regime, outdir, target_slide=None, units=None):
     """
     import sys
 
-    argv = ["run_concert_v4_benchmark_eval.py", "--regime", regime,
+    argv = ["run_concert_benchmark_eval.py", "--regime", regime,
             "--prepared_dir", str(PREPARED), "--model_file", str(CKPT[regime]),
             "--outdir", str(outdir), "--n_boot", "10", "--min_g_cells", "20",
             "--ls_prior_min", "3", "--ls_prior_max", "18",
             "--fpert_ls_min", "0.15", "--fpert_ls_max", "0.90",
             "--cf_output", "poisson_depth", "--cf_seen_ref", "observed", "--force"]
     if regime == "unseen":
-        argv += ["--benchmark_dir", str(BENCH_V4), "--max_src_cells", "5000"]
+        argv += ["--benchmark_dir", str(BENCH), "--max_src_cells", "5000"]
         if units:
             argv += ["--units", *units]
     else:
@@ -103,19 +103,19 @@ def spac_args(bench, regime, outdir, target_slide=None, units=None):
         sys.argv = saved
 
 
-def install_gene_rule(sec, genefix_wrap):
-    """The shared gene rule of genefix_wrap.py: slide HVGs AND the 2,000 CONCERT genes."""
+def install_gene_rule(sec, shared_gene_rule):
+    """The shared gene rule of shared_gene_rule.py: slide HVGs AND the 2,000 CONCERT genes."""
     import numpy as np
 
-    genes = set(genefix_wrap.load_concert_genes())
+    genes = set(shared_gene_rule.load_concert_genes())
     orig = sec.select_hvgs
 
-    def select_hvgs_genefix(adata_all, n_top, sa_):
+    def select_hvgs_shared(adata_all, n_top, sa_):
         mask = orig(adata_all, n_top, sa_)
         names = np.asarray(adata_all.var_names).astype(str)
         return np.asarray(mask, dtype=bool) & np.isin(names, list(genes))
 
-    sec.select_hvgs = select_hvgs_genefix
+    sec.select_hvgs = select_hvgs_shared
     print(f"gene rule        : slide HVGs AND {len(genes)} CONCERT genes, minus the knockout")
 
 
@@ -278,7 +278,7 @@ def step_slide(env, out):
     """Score one slide with the shipped harness -- the slow step (15-40 min on one H100).
 
     eval_seen_slide is exactly what experiments/01_spac_seq_benchmark/evaluation/
-    eval_spac_seq_benchmark_v4.sh runs, one slide per array task: it finds the niches of the
+    eval_spac_seq_benchmark.sh runs, one slide per array task: it finds the niches of the
     held-out patch and the perturbation dominating each, decodes every source cell to every
     perturbation in the panel and draws counts at depth, scores each (niche, perturbation)
     record against the measured cells, and bootstraps the source cells within each niche.
@@ -334,12 +334,12 @@ def step_crossslide(env, out):
     """The cross-slide setting: the panel, one unit run live, then the reported number.
 
     A knockout is removed from one target slide and its effect is carried over from the donor
-    slides. benchmark_v4/eval_panel.json lists the 85 (knockout, target slide) units; every
+    slides. benchmark/eval_panel.json lists the 85 (knockout, target slide) units; every
     method is scored on the same 5,000 source cells per target slide.
     """
     import numpy as np
 
-    panel = json.loads((BENCH_V4 / "eval_panel.json").read_text())
+    panel = json.loads((BENCH / "eval_panel.json").read_text())
     import pandas as pd
     units = pd.DataFrame([{"gene": u["gene"], "target_slide": u["target_slide"],
                            "donor_slides": ",".join(map(str, u.get("donor_slides", []))),
@@ -375,7 +375,7 @@ def step_crossslide(env, out):
 def step_compare(env, out):
     """CONCERT next to the published methods and the reference strategies, paired per method.
 
-    The reported tables (v4_aggregate_sampled/) hold the published methods
+    The reported tables (spacseq_results/) hold the published methods
     (spac_<setting>_lfc_dist_per_record.csv), the four reference strategies
     (spac_<setting>_naive_baselines_our_rule.csv; Mean target = 50 knockout cells per unit) and
     STATE (spac_<setting>_state_our_rule.csv). The methods cover very different subsets of the
@@ -478,11 +478,11 @@ def main():
     cp.section("0. Inputs")
     cp.check([
         ("model source", MODEL_SRC / "concert_spac.py"),
-        ("scoring code", cp.EVAL_SRC / "run_concert_v4_benchmark_eval.py"),
-        ("metric helper lib", cp.HELPER_LIB / "spac_edist_align.py"),
+        ("scoring code", cp.EVAL_SRC / "run_concert_benchmark_eval.py"),
+        ("metric helpers", cp.EVAL_SRC / "scoring_helpers" / "spac_edist_align.py"),
         ("raw section 1-1", SPAC_RAW / "raw_output_1-1.h5ad"),
         ("prepared cell sets", PREPARED / "slide_1-1.h5ad"),
-        ("cross-slide panel", BENCH_V4 / "eval_panel.json"),
+        ("cross-slide panel", BENCH / "eval_panel.json"),
         ("seen checkpoint", CKPT["seen"]),
         ("seen vocabulary", CKPT["seen"].parent / "pert_map.json"),
         ("unseen checkpoint", CKPT["unseen"]),
@@ -498,17 +498,17 @@ def main():
     import eval_spatial_counterfactual as ecf     # binds the released model copy first
     import spacseq_eval_common as sec
     import spacseq_multi_common as smc
-    import benchmark_v4_eval_lib as b4
-    import genefix_wrap
-    import run_concert_v4_benchmark_eval as bench
+    import spacseq_unseen_eval_lib as suel
+    import shared_gene_rule
+    import run_concert_benchmark_eval as bench
     eu, _sa = sec.import_eval_utils()
-    for m in (ecf, sec, smc, b4, genefix_wrap, bench):
+    for m in (ecf, sec, smc, suel, shared_gene_rule, bench):
         assert Path(m.__file__).resolve().is_relative_to(cp.REPO_ROOT.resolve()), \
             f"{m.__name__} loaded from outside the release: {m.__file__}"
     print(f"\nmodel source      : {ecf.__file__}")
     print(f"scoring entrypoint: {bench.__file__}")
     print(f"metric helpers    : {eu.__file__}")
-    install_gene_rule(sec, genefix_wrap)
+    install_gene_rule(sec, shared_gene_rule)
     cp.describe_device()
 
     args = spac_args(bench, "seen", outdir=out / "seen_eval", target_slide=args_cli.slide)

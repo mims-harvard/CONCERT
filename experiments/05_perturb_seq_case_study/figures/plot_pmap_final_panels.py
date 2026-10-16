@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Final Perturb-map case-study panels, one file each (PNG + PDF), for assembly."""
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import os
@@ -20,12 +24,12 @@ from pmap_pathways_powered import niche_tumour_content, RAW  # noqa: E402
 
 # Reads the two result directories the evaluation step wrote; must match the values used
 # there. OUT is where the assembled panels are collected.
-_BASE = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/figures"
+_BASE = f"{_rp.WORKDIR}/scoring/figures"
 SYS_D = Path(os.environ.get("PMAP_SYSTEMATIC_OUT", f"{_BASE}/pmap_systematic"))
 INT_D = Path(os.environ.get("PMAP_INTERPRET_OUT", f"{_BASE}/pmap_interpret"))
 OUT = Path(os.environ.get(
     "PMAP_PANEL_OUT",
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study_pm"))
+    f"{_rp.WORKDIR}/paper/Outputs/case_study_pm"))
 
 PERTS = ["Tgfbr2", "Ifngr2", "Jak2"]
 COL = {"Tgfbr2": "#3366BB", "Ifngr2": "#CC6677", "Jak2": "#228833"}

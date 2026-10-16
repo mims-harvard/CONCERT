@@ -25,6 +25,10 @@ Outputs in --outdir:
   level_arrays.npz   (umap coords for L1/L4, gp latent for L3, pert umap for L2)
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import logging
@@ -50,9 +54,9 @@ from make_umap import load_data, classify_perts, build_model as build_umap_model
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
-DATA_FILE  = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
-MODEL_FILE = "/n/holylabs/mzitnik_lab/Users/xianglin226/CONCERT/outputs/raw_output_1-1/model_spac_1-1_v2.pt"
-OUTDIR     = "/n/holylabs/mzitnik_lab/Users/xianglin226/CONCERT/umap_v2"
+DATA_FILE  = f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad"
+MODEL_FILE = f"{_rp.CHECKPOINTS}/spacseq_within_niche/model.pt"
+OUTDIR     = f"{_rp.WORKDIR}/decompose_levels"
 
 UNASSIGNED = frozenset(["unassigned","Unassigned","No_guide","no_guide","unknown"])
 CONTROL    = frozenset(["Non_targeting","non_targeting","NonTargeting","control","Control","CTRL","ctrl","NT"])
@@ -82,10 +86,10 @@ def parse_args():
     p.add_argument("--paracrine_l1",          type=float, default=0.0)
     p.add_argument("--use_niche_interaction", type=lambda x: x.lower() == "true", default=False)
     p.add_argument("--niche_rank",            type=int, default=8)
-    # Step 0: per-cell scalar gate (must match training to load v5d_gate checkpoints)
+    # Step 0: per-cell scalar gate (must match training to load checkpoints that carry it)
     p.add_argument("--use_pert_gate",         type=lambda x: x.lower() == "true", default=False)
     p.add_argument("--gate_hidden",           type=int, default=64)
-    # Phase 2.9: inductive expression encoder (must match training to load v4+ checkpoints)
+    # Phase 2.9: inductive expression encoder (must match training to load checkpoints that carry it)
     p.add_argument("--use_expr_encoder",      type=lambda x: x.lower() == "true", default=False)
     p.add_argument("--expr_hidden_dims",      nargs="+", type=int, default=[512, 256])
     return p.parse_args()
@@ -330,7 +334,7 @@ def main():
         ax = fig.add_subplot(gs[1, d])
         # FIXED absolute color scale (+/-2.5 latent units). A collapsed near-constant
         # field renders uniformly mid-color (flat); a real field varies. Prevents the
-        # per-panel autoscale artifact that produced the false "L3 pass" in v3a/v3b.
+        # per-panel autoscale artifact that produced the false "L3 pass" in earlier runs.
         sc_ = ax.scatter(pos_scaled[:,0], pos_scaled[:,1], c=gp_latent[:,d],
                          cmap="coolwarm", s=0.3, alpha=0.7, linewidths=0, rasterized=True,
                          vmin=-2.5, vmax=2.5)

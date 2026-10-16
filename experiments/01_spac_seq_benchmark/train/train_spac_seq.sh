@@ -14,7 +14,7 @@
 #   seen   perturbations held out within a slide; the perturbation is observed on other slides
 #   unseen perturbations held out from every slide
 #
-# The holdout file is produced by ../data_preparation/build_v4_holdout_coords.py.
+# The holdout file is produced by ../data_preparation/build_holdout_coords.py --dataset spac.
 #
 # Clonality gate: guide spots of a (slide, perturbation) clone with fewer than 100 training
 # spots get weight 0 in the likelihood and in the LFC targets; all NTC spots of a slide form one
@@ -38,45 +38,20 @@ activate_env
 REGIME="${1:?usage: sbatch train_spac_seq.sh <seen|unseen>}"
 MODEL_DIR="${CODEBASE_ROOT}/models/concert_benchmark"
 OUT="${OUTPUT_ROOT}/spac_seq_${REGIME}"
-HOLDOUT="${SPAC_SEQ_DIR}/holdout_v4_spac_${REGIME}.json"
+HOLDOUT="${HOLDOUT_COORDS}/holdout_spac_${REGIME}.json"
 
 FILES=$(for i in 1 2 3 4 5; do echo -n "${SPAC_SEQ_DIR}/raw_output_1-${i}.h5ad,"; done | sed 's/,$//')
 [ -f "$HOLDOUT" ] || { echo "[FATAL] holdout file missing: $HOLDOUT"; exit 1; }
 mkdir -p "$OUT"
 cd "$MODEL_DIR"
 
-# Spatial field over perturbation effects. The lengthscale band is given in normalized
-# coordinates, matching the units the field itself uses.
-GUARD="--ls_prior_lambda 1.0 --ls_prior_min 3 --ls_prior_max 18 \
-       --fpert_svgp_inducing 16 --fpert_svgp_ls_init 0.25 --fpert_ls_min 0.15 --fpert_ls_max 0.90"
-
-# Niche-conditioned FiLM head: the predicted response is rescaled by a factor that depends on
-# the local microenvironment, with a per-perturbation gain controlling how strong that
-# dependence may become.
-NICHE="--use_niche_interaction False --use_niche_film True --niche_film_dim 8 \
-       --niche_film_k 25 --niche_film_gcap 3.0 --niche_film_l2 1e-3"
-
-python -u run_concert_spac.py \
-    --config config.yaml --sample "spac_seq" --stage train \
-    --multi_sample_files "${FILES}" --outdir "$OUT" --model_file "model.pt" --project_index spac \
-    --holdout_v3_file "${HOLDOUT}" \
-    --hvg_max_rank 2000 --seed 42 \
-    --inducing_point_steps 6 --grid_inducing_points True --loc_range 20.0 --kernel_scale 10.0 \
-    --multi_kernel_mode True \
-    --maxiter 1500 --patience 50 --earlystop_min_delta 0.05 --lr 1e-4 --batch_size 2048 \
-    --train_size 0.95 \
-    --use_action_correction True --use_pad False --min_cells_per_pert 25 \
-    --use_expr_encoder True --expr_hidden_dims 512 256 --use_basal_encoder_only True \
-    --dynamicVAE False --beta_warmup_epochs 20 --beta_target 1.0 --free_bits 0.5 --gp_free_bits 1.0 \
-    --use_nngp False --use_paracrine False ${NICHE} \
-    --use_pert_gate True --gate_hidden 64 \
-    --use_f_pert True --f_pert_init_std 0.01 --f_pert_clamp 5.0 \
-    --spatial_basal_only True --lfc_lambda 1.0 \
-    --basal_field rff --basal_bayes True --moran_lambda 1.0 --disentangle_radius 4.0 \
-    --fpert_field gp_pp --fpert_coord_scale 20.0 --fpert_rff_features 128 --fpert_rff_bandwidth 0.15 \
-    ${GUARD} \
-    --clonality_gate clone_size --clone_min_cells 100 --slide_guide_shift True \
-    --resume "${RESUME:-False}" \
-    --verbosity 1
+# Every model setting of the reported runs, including the lengthscale band of the spatial field
+# and the clonality gate, is in models/concert_benchmark/configs/spacseq.yaml. Evaluation reads
+# the same file through `run_concert_spac.py --stage eval --config`; the benchmark scorer
+# (evaluation/eval_spac_seq_benchmark.sh) passes the same band explicitly.
+python -u run_concert_spac.py --config configs/spacseq.yaml --stage train \
+    --sample "spac_seq" --project_index spac \
+    --multi_sample_files "${FILES}" --outdir "$OUT" --model_file model.pt \
+    --holdout_file "${HOLDOUT}" --resume "${RESUME:-False}"
 
 echo "[$(date)] SPAC-seq ${REGIME} training finished -> ${OUT}"

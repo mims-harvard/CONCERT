@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Paper-grade pmap s0 Jak2 deconv -- SAME method as SPAC 2-1 v2.
+"""Paper-grade pmap s0 Jak2 deconv -- SAME method as the SPAC-seq 2-1 deconvolution.
 
 Caller: sub_pmap_s0_jak2_concert_amortized.sh
 
-Pipeline (mirrors concert_deconv_methods_v2.py):
+Pipeline (mirrors concert_deconv_methods.py):
   1. Full contiguous non-normal patch around Jak2.
   2. Location-matched CONCERT signatures mu_KO(x), mu_un(x).
   3. Amortized head on synthetic mixtures with those location mu's.
@@ -16,6 +16,10 @@ Writes: location_signatures.npz {spot_ids, mu_ko, mu_un, mu_normal, y_obs, genes
 Never store empirical panel means as CONCERT signatures.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -37,11 +41,11 @@ from scipy.optimize import nnls
 from scipy.stats import spearmanr
 from sklearn.preprocessing import MinMaxScaler
 
-NICHE_DIR = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/CONCERT-spac-niche")
-CKPT_DEFAULT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/ms_pmap_niche_seen")
-DATA = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s0_spacfmt.h5ad")
+NICHE_DIR = Path(f"{_rp.REPO}/models/concert_spac_niche")
+CKPT_DEFAULT = Path(f"{_rp.WORKDIR}/outputs/ms_pmap_niche_seen")
+DATA = Path(f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad")
 OUT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
+    f"{_rp.WORKDIR}/paper/Outputs/"
     "spac_seq/pmap_s0_jak2_concert_amortized"
 )
 LOC_RANGE = 20.0
@@ -514,7 +518,7 @@ def main():
         ) if len(df) else None,
     }
     summary = {
-        "method": "identical_to_spac_2-1_v2: location-matched CONCERT mu + amortized head vs NNLS",
+        "method": "identical_to_spac_2-1: location-matched CONCERT mu + amortized head vs NNLS",
         "cohort": "full_contiguous_non_normal_CC_from_Jak2",
         "n_patch_total": int(in_patch.sum()),
         "n_jak2": int(is_jak2.sum()),

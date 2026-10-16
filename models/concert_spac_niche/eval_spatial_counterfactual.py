@@ -13,6 +13,10 @@ basal-embedding table (panel/grid/NTC counts are therefore computed in-driver on
 the filtered arrays, never hard-coded). No retraining, no model-code changes.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse
 import json
 import logging
@@ -30,7 +34,7 @@ from run_concert_spac import load_h5ad_multi, build_attributes_spac
 logging.basicConfig(level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 
-DATA_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
+DATA_FILE = f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad"
 
 
 def _bool(x):
@@ -63,10 +67,10 @@ def _add_fpert_kwargs(extra, args):
         extra["fpert_svgp_inducing"] = args.fpert_svgp_inducing
         extra["fpert_svgp_ls_init"] = args.fpert_svgp_ls_init
         extra["fpert_coord_scale"] = args.fpert_coord_scale
-        # v4 collapse-proof band: gp_pp squashes its per-pert lengthscale into
+        # Collapse-proof band: gp_pp squashes its per-pert lengthscale into
         # [ls_min,ls_max] via sigmoid. This band MUST match the trained checkpoint or the
         # SAME ls_head weights render a DIFFERENT lengthscale at inference (silent corruption).
-        # Left unset => CONCERT defaults (3,8), which mismatches v4's [3,18].
+        # Left unset => CONCERT defaults (3,8), which mismatches the reported models' [3,18].
         if getattr(args, "ls_prior_min", None) is not None:
             extra["ls_prior_min"] = args.ls_prior_min
         if getattr(args, "ls_prior_max", None) is not None:
@@ -108,7 +112,7 @@ def parse_args():
     p.add_argument("--panel_genes", default="", help="comma-separated gene names; bypasses auto panel selection")
     p.add_argument("--scenarios", default="c", help="comma list of scenarios to run: c,b,a")
     p.add_argument("--setup_only", action="store_true", help="load + grid + panel, then return (smoke)")
-    # v5a model flags (MUST match training keys, mirrors sub_decompose_levels_v5a.sh)
+    # GP free-bits model flags (MUST match training keys)
     p.add_argument("--use_expr_encoder", type=_bool, default=True)
     p.add_argument("--expr_hidden_dims", nargs="+", type=int, default=[512, 256])
     p.add_argument("--use_nngp", type=_bool, default=False)
@@ -118,7 +122,7 @@ def parse_args():
     p.add_argument("--paracrine_l1", type=float, default=1e-4)
     p.add_argument("--use_niche_interaction", type=_bool, default=True)
     p.add_argument("--niche_rank", type=int, default=8)
-    # Step 0: per-cell scalar gate (must match training to load v5d_gate checkpoints)
+    # Step 0: per-cell scalar gate (must match training to load checkpoints that carry it)
     p.add_argument("--use_pert_gate", type=_bool, default=False)
     p.add_argument("--gate_hidden", type=int, default=64)
     # Phase 3: spatial-basal disentanglement (no new params; routing flag for consistency)
@@ -149,7 +153,7 @@ def parse_args():
     # GP-latent inducing grid steps -- training used 4 (pmap) / 6 (spac). Wrong value ->
     # inducing-point shape mismatch on load.
     p.add_argument("--inducing_point_steps", type=int, default=6)
-    # v5c holdout: path to holdout_unassigned_indices.npy saved during training
+    # Unassigned holdout: path to holdout_unassigned_indices.npy saved during training
     p.add_argument("--holdout_unassigned_file", type=str, default=None)
     # multi-slide vocab: pass all training slide files so the pert embedding matches the checkpoint
     p.add_argument("--multi_sample_files", default="",

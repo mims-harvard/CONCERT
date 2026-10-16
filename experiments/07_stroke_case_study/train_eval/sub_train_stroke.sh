@@ -1,13 +1,12 @@
 #!/bin/bash -l
 #SBATCH -J stroke_tr
-#SBATCH -p kempner_h100
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --mem=64G
 #SBATCH --time 1-00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/stroke_%x_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/stroke_%x_%j.err
+#SBATCH -o stroke_%x_%j.out
+#SBATCH -e stroke_%x_%j.err
 
 # CONCERT stroke run. Two arms, identical except whether f_pert can resolve the z axis:
 #   3d : --fpert_n_z_levels 4  -> footprint field is (x, y, ordinal section)
@@ -15,9 +14,11 @@
 # BOTH tile by z-STACK (mouse), so the 4 registered sections of a mouse share one XY frame --
 # that is what lets a footprint learned on the PT lesion be evaluated at Sham coordinates.
 # Usage: sbatch sub_train_stroke.sh <2d|3d>
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
@@ -35,7 +36,7 @@ case "$ARM" in
   *)  echo "[FATAL] arm must be 2d, 2dflat, 2dpara or 3d"; exit 1 ;;
 esac
 
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${SLIDES:-${NS}/stroke3d/slides}
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_${ARM}${TAG:-}"

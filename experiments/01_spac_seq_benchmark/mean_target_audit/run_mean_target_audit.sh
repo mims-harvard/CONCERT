@@ -33,6 +33,5 @@ activate_env
 export PYTHONHASHSEED=0
 
 ARM="${1:?usage: sbatch run_mean_target_audit.sh <seen|unseen>}"
-cd "${SCORING_LIB}"
 python -u "${CODEBASE_ROOT}/experiments/01_spac_seq_benchmark/mean_target_audit/mean_target_ncells_sweep.py" \
-    --outdir mean_target_audit --arms "${ARM}"
+    --outdir "${CONCERT_WORKDIR}/mean_target_audit" --arms "${ARM}"

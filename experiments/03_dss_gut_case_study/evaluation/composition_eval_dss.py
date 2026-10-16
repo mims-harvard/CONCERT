@@ -142,7 +142,7 @@ def run_composition_eval(model, adata, cell_atts, pos_batched, sample_indices, s
 def run_field_trajectory_test(model, adata, cell_atts, pos_batched, sample_indices,
                               sample_id_all, multi_paths, gene_names, pert_map, cfg, outdir,
                               tier1_id=None, arch_desc=None, infl_score_all=None) -> Dict:
-    """THE MAKE-OR-BREAK TEST (v3 continuous inflammation field, spec Sec. 6).
+    """THE MAKE-OR-BREAK TEST (continuous inflammation field, spec Sec. 6).
 
     Re-decode each cell at target days using counterfactualPrediction(time_t=...) and read the
     predicted DSS marker composition. SUCCESS = inflammation MOVES with time under re-decode:

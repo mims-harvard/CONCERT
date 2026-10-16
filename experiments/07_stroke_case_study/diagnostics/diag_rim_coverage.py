@@ -6,15 +6,19 @@ carry the PIA label at all (coverage), and how strongly a labelled spot responds
 Unlabelled spots contribute exactly 0.000 (is_real_KO gate), so a patchy mask reads as a weak
 response even when every labelled spot responds fully.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import anndata as ad, h5py, numpy as np, pandas as pd
 from scipy.spatial import cKDTree
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
+NS = Path(f"{_rp.WORKDIR}")
 SL = NS / "stroke3d/slides_cr"
 SETS = NS / "outputs/thick_rim_sets"
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 
 
 def load_stack(stack):

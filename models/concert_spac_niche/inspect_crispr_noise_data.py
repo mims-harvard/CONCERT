@@ -1,11 +1,15 @@
 """Inspect obs structure of the 3 datasets to design the CRISPR-noise analysis.
 Lazy (backed) read of obs only -- does not load X."""
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import anndata as ad, numpy as np, collections, h5py
 
 FILES = {
-    "spac_1-1":   "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad",
-    "spac_2-2":   "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_2-2.h5ad",
-    "perturbmap": "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturb_map_data_all_fullgene.h5ad",
+    "spac_1-1":   f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad",
+    "spac_2-2":   f"{_rp.DATA}/spacseq/raw/raw_output_2-2.h5ad",
+    "perturbmap": f"{_rp.DATA}perturbmap/raw/perturb_map_data_all_fullgene.h5ad",
 }
 
 def h5_obs_keys(path):

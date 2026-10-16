@@ -39,45 +39,20 @@ activate_env
 REGIME="${1:?usage: sbatch train_perturb_seq.sh <seen|unseen>}"
 MODEL_DIR="${CODEBASE_ROOT}/models/concert_benchmark"
 OUT="${OUTPUT_ROOT}/perturb_seq_${REGIME}"
-HOLDOUT="${PERTURB_SEQ_DIR}/holdout_perturb_seq_${REGIME}.json"
+HOLDOUT="${HOLDOUT_COORDS}/holdout_pmap_${REGIME}.json"
 
 FILES=$(for s in 0 1 2 3; do echo -n "${PERTURB_SEQ_DIR}/perturbmap_s${s}_spacfmt.h5ad,"; done | sed 's/,$//')
 [ -f "$HOLDOUT" ] || { echo "[FATAL] holdout file missing: $HOLDOUT"; exit 1; }
 mkdir -p "$OUT"
 cd "$MODEL_DIR"
 
-# Spatial field over perturbation effects. The band is given in the normalized coordinates the
-# field itself uses, so it must be read together with --fpert_coord_scale below: at scale 70 the
-# band [0.01, 0.60] is [0.7, 42] in section units, a section being 20 units wide. It is wide
-# enough that the learned lengthscales settle inside it rather than against either end, which is
-# what lets them be read as learned. The same values must be passed at evaluation time, because
-# the band defines the squashing function inside the field, not just a training penalty.
-GUARD="--ls_prior_lambda 1.0 --ls_prior_min 3 --ls_prior_max 18 \
-       --fpert_svgp_inducing 64 --fpert_svgp_ls_init 0.04 \
-       --fpert_ls_min 0.01 --fpert_ls_max 0.60"
-NICHE="--use_niche_interaction False --use_niche_film True --niche_film_dim 8 \
-       --niche_film_k 25 --niche_film_gcap 3.0 --niche_film_l2 1e-3"
-LABELS="--excluded_label= --unassigned_label unperturbed --control_label __NONE__"
-
-python -u run_concert_spac.py \
-    --config config.yaml --sample "perturb_seq" --stage train \
-    --multi_sample_files "${FILES}" --outdir "$OUT" --model_file "model.pt" --project_index spac \
-    --holdout_v3_file "${HOLDOUT}" \
-    --hvg_max_rank 2000 --seed 42 \
-    --inducing_point_steps 4 --grid_inducing_points True --loc_range 20.0 --kernel_scale 10.0 \
-    --multi_kernel_mode True \
-    --maxiter 1500 --patience 300 --lr 1e-4 --batch_size 2048 --train_size 0.95 \
-    --use_action_correction False --use_pad False ${LABELS} --min_cells_per_pert 0 \
-    --use_expr_encoder True --expr_hidden_dims 512 256 --use_basal_encoder_only True \
-    --dynamicVAE False --beta_warmup_epochs 20 --beta_target 1.0 --free_bits 0.5 --gp_free_bits 1.0 \
-    --use_nngp False --use_paracrine False ${NICHE} \
-    --use_pert_gate True --gate_hidden 64 \
-    --use_f_pert True --f_pert_init_std 0.01 --f_pert_clamp 5.0 \
-    --spatial_basal_only True --lfc_lambda 1.0 \
-    --basal_field rff --basal_bayes True --moran_lambda 1.0 --disentangle_radius 4.0 \
-    --fpert_field gp_pp --fpert_coord_scale 70.0 --fpert_rff_features 128 --fpert_rff_bandwidth 0.15 \
-    ${GUARD} \
-    --resume "${RESUME:-False}" \
-    --verbosity 1
+# Every model setting of the reported runs (64 inducing points, patience 300, the lengthscale band
+# [0.01, 0.60] at coordinate scale 70, no action correction, no control class) is in
+# models/concert_benchmark/configs/perturbmap.yaml; `run_concert_spac.py --stage eval --config` reads
+# the same file, and evaluation/eval_perturb_seq.sh passes the same band explicitly.
+python -u run_concert_spac.py --config configs/perturbmap.yaml --stage train \
+    --sample "perturb_seq" --project_index spac \
+    --multi_sample_files "${FILES}" --outdir "$OUT" --model_file model.pt \
+    --holdout_file "${HOLDOUT}" --resume "${RESUME:-False}"
 
 echo "[$(date)] Perturb-seq ${REGIME} training finished -> ${OUT}"

@@ -2,12 +2,12 @@
 """Aggregate the SPAC-seq SI sensitivity arms into one tidy CSV.
 
 SPAC-seq counterpart of agg_sens_pmap.py. The layouts differ: SPAC arms are five-slide models
-evaluated with run_concert_v3_benchmark_eval.py, which writes
+evaluated with run_concert_benchmark_eval.py, which writes
     <root>/seen_<tag>/patch/slide_<sid>/lfc_agg.json
 and the sweep straddles two roots because it was moved to netscratch mid-flight (see
 CONCERT-spac-niche/move_sens_spac_to_requeue.sh). Emits one row per arm x slide x perturbation.
 
-Seen regime only: the regime is fixed at train time (--holdout_v3_file, sub_sens_spac_arm.sh:79),
+Seen regime only: the regime is fixed at train time (--holdout_file, sub_sens_spac_arm.sh:79),
 so an unseen sweep would be 65 fresh trainings rather than a re-scoring.
 
 Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
@@ -18,12 +18,14 @@ import argparse
 import csv
 import json
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
 
 # wave 1 landed here; the relaunches went to netscratch. First root holding a complete
 # five-slide arm wins, so a half-written duplicate never shadows a finished one.
-ROOTS = [Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/multi_1-5_ho_v3/"
-              "concert_sens"),
-         Path("/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_sens/results")]
+ROOTS = [rp.SPACSEQ_SENSITIVITY / "batch1", rp.SPACSEQ_SENSITIVITY / "batch2"]
 SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 
 # tag -> (factor, value at that arm), anchored at the REPORTED spac config
@@ -86,8 +88,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--regime", default="seen")
     ap.add_argument("--out", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
-                                 "CONCERT-main/results/sens_spac_arms.csv"))
+                    default=rp.WORKDIR / "sensitivity" / "sens_spac_arms.csv")
     args = ap.parse_args()
 
     rows, missing = [], []

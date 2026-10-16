@@ -6,6 +6,10 @@ Row per condition, columns:
 Plus a fine radial profile in units of the lesion radius, and the in-mask relation between
 delta and the control baseline (tests whether the effect is multiplicative on the baseline).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import numpy as np, anndata as ad, h5py
@@ -13,7 +17,7 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara")
+OUT = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara")
 GENE = "Scgb1a1"
 EXPR = LinearSegmentedColormap.from_list("expr", ["#f7f7f7", "#fdd0a2", "#fc8d59", "#d7301f", "#7f0000"])
 

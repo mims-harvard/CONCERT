@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Perturb-map benchmark panel: CONCERT vs published methods, per perturbation.
 
-Reads the per-record CSV written by rescore_pm_lfc_distance.py and scores every
+Reads the per-record CSV written by perturbmap_harness_rescore.py and scores every
 method on the SAME set of niche-patch records (the intersection across methods) --
 without that restriction CONCERT is scored on 22/3/2 records where the competitors
 have 23/6/2, which is not a like-for-like comparison.

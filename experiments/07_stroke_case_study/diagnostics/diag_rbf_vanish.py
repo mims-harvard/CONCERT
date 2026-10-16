@@ -5,11 +5,15 @@ feat_m(x) = exp(-||x - Z_m||^2 / 2 ls^2). If the inducing grid is too coarse for
 lengthscale, every feature is ~0 for a lesion spot, the MLP sees an all-zero spatial block, and
 its output collapses to the bias -- a flat field, regardless of how short ls is.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import anndata as ad, numpy as np, torch
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
+NS = Path(f"{_rp.WORKDIR}")
 SETS = NS / "outputs/thick_rim_sets"
 EK = "lord_encoder.s_encoder.perturbation.weight"
 A = ad.concat([ad.read_h5ad(p) for p in

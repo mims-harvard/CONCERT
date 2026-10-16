@@ -15,7 +15,7 @@ train_eval/   SLURM submitters for training, evaluation and the figure jobs
 | output dir | what it is |
 |---|---|
 | `stroke_2d` / `stroke_3d` | one perturbation label for the whole lesion. **Cannot express core vs rim** |
-| `stroke_2d_cr` / `stroke_3d_cr` | ICA and PIA as SEPARATE perturbations (`prep_stroke_h5ad.py --pert_by_region`). This is the arm that works |
+| `stroke_2d_cr` / `stroke_3d_cr` | ICA and PIA as SEPARATE perturbations (`prep_stroke_h5ad.py --pert_by_region`). This is the arm that works; shipped as `checkpoints/stroke_{2d,3d}_core_rim` |
 | `stroke_2dpara_fixC` | the condition demos (lesion size, region). Paracrine REMOVED |
 | `*_i64`, `*_i256` | inducing-grid retrains, 2026-08-30. Informative, not adopted |
 

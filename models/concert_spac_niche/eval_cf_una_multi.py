@@ -17,6 +17,10 @@ The multi model is loaded via eval_spatial_counterfactual.load_eval_context_mult
 slide via allow_cell_size_mismatch=True).
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json, logging, sys
 from pathlib import Path
 from collections import Counter
@@ -31,9 +35,9 @@ logging.basicConfig(level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-DATA_DIR = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq"
+DATA_DIR = f"{_rp.DATA}/spacseq/raw"
 DEFAULT_SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
-DEFAULT_MODEL = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/multi_v6/model_spac_multi_v6b.pt"
+DEFAULT_MODEL = f"{_rp.CHECKPOINTS}/spacseq_within_niche/model.pt"
 
 
 def parse_args():
@@ -56,7 +60,7 @@ def parse_args():
     p.add_argument("--n_samples",       type=int, default=10)
     p.add_argument("--batch_size",      type=int, default=512)
     p.add_argument("--n_hvg",           type=int, default=2000)
-    # Architecture -- must match multi_v6b training
+    # Architecture -- must match the checkpoint's training flags
     p.add_argument("--use_expr_encoder",      type=lambda x: x.lower()=="true", default=True)
     p.add_argument("--expr_hidden_dims",      type=int, nargs="+", default=[512, 256])
     p.add_argument("--use_basal_encoder_only",type=lambda x: x.lower()=="true", default=True)
@@ -117,7 +121,7 @@ def main():
     res = run_setup("seen", ctx, ko_ref, args, eu, _predict_swap)
     if res:
         (args.outdir / "summary_seen.json").write_text(json.dumps(
-            dict(target=args.target_slide, model="multi_v6b",
+            dict(target=args.target_slide, model=Path(args.model_file).parent.name,
                  abs_rho_mean=res["abs_rho_mean"], lfc_rho_mean=res["lfc_rho_mean"],
                  e_dist_mean=res["e_dist_mean"], knn_abs_rho_mean=res["knn_abs_rho_mean"],
                  knn_lfc_rho_mean=res["knn_lfc_rho_mean"], knn_e_dist_mean=res["knn_e_dist_mean"],

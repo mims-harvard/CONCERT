@@ -20,11 +20,15 @@ Spatial covariates are computed from the same inputs/preprocessing as training
 
 Usage (concert_env):
   python analyze_kernel_params_spac.py \
-      --model_file /n/holylfs06/.../CONCERT/outputs/ms_spac1_niche_seen/model.pt \
-      --pert_map   /n/holylfs06/.../CONCERT/outputs/ms_spac1_niche_seen/pert_map.json \
-      --cutoffs_csv /n/holylfs06/.../CONCERT/outputs/ms_spac1_niche_seen/ms_spac1_spac_cutoffs.csv \
+      --model_file $CONCERT_CHECKPOINT_ROOT/spacseq_kernel_analysis/model.pt \
+      --pert_map   $CONCERT_CHECKPOINT_ROOT/spacseq_kernel_analysis/pert_map.json \
+      --cutoffs_csv $CONCERT_CHECKPOINT_ROOT/spacseq_kernel_analysis/ms_spac1_spac_cutoffs.csv \
       --outdir <dir>
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json, logging, os
 import numpy as np
 import pandas as pd
@@ -44,7 +48,7 @@ COORD_SCALE = 20.0
 LS_MIN, LS_MAX = 3.0, 18.0
 G_CAP = 3.0
 
-SP = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq"
+SP = f"{_rp.DATA}/spacseq/raw"
 DEFAULT_FILES = ",".join(f"{SP}/raw_output_1-{i}.h5ad" for i in range(1, 6))
 
 ap = argparse.ArgumentParser()

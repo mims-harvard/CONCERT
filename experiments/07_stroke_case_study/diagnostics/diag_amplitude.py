@@ -12,10 +12,14 @@ same gene, same place, healthy vs struck. This reports both, plus the per-gene s
 observed_delta / predicted_delta -- which IS the model's amplitude deficit. If we calibrate, that
 number disappears into the fit, so it is reported here rather than silently applied.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, sys, numpy as np, anndata as ad, h5py, pandas as pd
 from pathlib import Path
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+NS = Path(f"{_rp.WORKDIR}")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 tag = sys.argv[1] if len(sys.argv) > 1 else "_crA"
 OUT = NS / f"outputs/stroke_3d{tag}"
 SL = NS / "stroke3d/slides_cr"

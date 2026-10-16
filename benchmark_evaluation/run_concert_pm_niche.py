@@ -15,6 +15,8 @@ import json
 import logging
 import sys
 from pathlib import Path
+
+import release_paths as rp  # noqa: E402
 from types import SimpleNamespace
 
 import anndata as ad
@@ -39,16 +41,15 @@ import perturbmap_common as pm  # noqa: E402
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-DATA = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets")
-PMAP = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map")
-DEF_MODEL = Path("/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT/outputs/ms_pmap_gp_pp_bayesTrue/model.pt")
+DATA = rp.PERTURBMAP_RAW
+DEF_MODEL = rp.CHECKPOINTS / "perturbmap_within_niche" / "model.pt"
 SLIDES = ["0", "1", "2", "3"]
 
 
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--model_file", type=Path, default=DEF_MODEL)
-    p.add_argument("--patch_dir", type=Path, default=PMAP / "patches")
+    p.add_argument("--patch_dir", type=Path, default=rp.PERTURBMAP_PATCHES)
     p.add_argument("--outdir", required=True, type=Path)
     p.add_argument("--slides", nargs="*", default=SLIDES)
     p.add_argument("--hvg_max_rank", type=int, default=2000)
@@ -84,8 +85,8 @@ def parse_args():
     p.add_argument("--fpert_hidden", type=int, default=256)
     p.add_argument("--fpert_svgp_inducing", type=int, default=16)
     p.add_argument("--fpert_svgp_ls_init", type=float, default=5.0)
-    # v4 gp_pp lengthscale band -- MUST match the trained checkpoint (v4 used [3,18]).
-    # Left as None => CONCERT construction defaults (3,8); pass explicitly for v4 models.
+    # gp_pp lengthscale band -- MUST match the trained checkpoint (the reported models used [3,18]).
+    # Left as None => CONCERT construction defaults (3,8); pass explicitly for the reported models.
     p.add_argument("--ls_prior_min", type=float, default=None)
     p.add_argument("--ls_prior_max", type=float, default=None)
     # lsfix: gp_pp footprint band in NORMALIZED units. Must match the checkpoint --
@@ -97,10 +98,10 @@ def parse_args():
     p.add_argument("--f_pert_clamp", type=float, default=5.0)
     smc.add_bootstrap_args(p, default_n=10)
     p.add_argument("--setup_only", action="store_true")
-    # v3 UNSEEN: score with the unseen-trained model; GT restricted to the held-out
+    # UNSEEN: score with the unseen-trained model; GT restricted to the held-out
     # (masked) KO cells named in this coords file. Non-masked genes auto-drop (empty
     # ko_idx&holdout). When set, run_seen writes to unseen_pert and donor run_unseen is skipped.
-    p.add_argument("--v3_unseen_ko_file", type=Path, default=None)
+    p.add_argument("--unseen_ko_file", type=Path, default=None)
     # Diagnostic: disable the coord-conditioned FpertField at inference (core f_pert /
     # niche / gate kept). Tests whether the spatial field corrupts unseen/multimodal perts.
     p.add_argument("--fpert_off", action="store_true")
@@ -150,7 +151,7 @@ def build_pm_ctx(args, sid: str) -> dict:
     )
     # Robustness: the gp_pp inducing-grid size is a hard architecture dim (fpert_field.Z).
     # A CLI/checkpoint mismatch aborts load_model. Read the true count from the checkpoint
-    # so the eval self-configures (v3=16, v4=64) and can never mismatch again.
+    # so the eval self-configures (16 or 64 inducing points) and can never mismatch again.
     try:
         import torch as _torch
         _z = _torch.load(str(args.model_file), map_location="cpu").get("fpert_field.Z")
@@ -250,12 +251,12 @@ def _patch_obs_on_model_rows(args, sid: str, ctx: dict) -> dict:
                 bin_id=bin_m, perturbation_canon=canon_m, n_mapped=nmap)
 
 
-def _v3_ko_gt_rows(args, sid: str, ctx: dict) -> np.ndarray:
+def _unseen_ko_gt_rows(args, sid: str, ctx: dict) -> np.ndarray:
     """Model-row indices of the HELD-OUT (masked) KO cells for this slide, from the
-    v3 unseen coords file. Matched by (array_coords) against ctx['coords_raw'].
+    unseen holdout-coords file. Matched by (array_coords) against ctx['coords_raw'].
     Coords are pooled across masked genes; the per-gene GT falls out of the
     canon==g & ko_gt_rows intersection in niche_lfc_seen_loop."""
-    hv = json.load(open(args.v3_unseen_ko_file))
+    hv = json.load(open(args.unseen_ko_file))
     sid_key = str(hv.get("slide_to_sid", {}).get(sid, sid))
     coords = hv.get("ko", {}).get(sid_key, [])
     if not coords:
@@ -266,23 +267,23 @@ def _v3_ko_gt_rows(args, sid: str, ctx: dict) -> np.ndarray:
     return rows
 
 
-def _v3_units_by_slide(args) -> dict:
-    """Map target_slide -> [gene] from the v3 eval_panel. Panel-driven UNSEEN units:
+def _unseen_units_by_slide(args) -> dict:
+    """Map target_slide -> [gene] from the eval_panel. Panel-driven UNSEEN units:
     each gene is MASKED on its target slide (GT = same-slide masked KO) and KEPT on
     >=1 donor slide (so the model learns it). ONLY these (gene,target_slide) pairs are
     valid unseen units -- nothing else may be scored as unseen."""
-    panel_path = pm.DEFAULT_PREPARED / "benchmark_v3" / "eval_panel.json"
+    panel_path = pm.DEFAULT_PREPARED / "benchmark" / "eval_panel.json"
     ep = json.load(open(panel_path))
     out: dict[str, list[str]] = {}
     for u in ep.get("eval_units", []):
         out.setdefault(str(u["target_slide"]), []).append(u["gene"])
-    log.info("v3 eval panel target_slide->genes: %s", out)
+    log.info("eval panel target_slide->genes: %s", out)
     return out
 
 
-def run_seen(args, sid: str, v3_units=None):
-    v3_unseen = v3_units is not None
-    sub = "unseen_pert" if v3_unseen else "seen_pert"
+def run_seen(args, sid: str, unseen_units=None):
+    masked_unseen = unseen_units is not None
+    sub = "unseen_pert" if masked_unseen else "seen_pert"
     out = args.outdir / sub / f"slide_{sid}"
     if (out / "lfc_scores.json").exists():
         log.info("slide %s %s exists -- skip", sid, sub)
@@ -321,7 +322,7 @@ def run_seen(args, sid: str, v3_units=None):
     if len(global_src_idx) == 0:
         log.warning("slide %s: no role==1 source cells -- skip", sid)
         return
-    if v3_unseen:
+    if masked_unseen:
         # Panel-driven: score ONLY the masked eval-unit genes on this (target) slide.
         # GT = same-slide masked KO = ALL canon==G cells (holdout == all target KO per
         # eval_panel: n_ko_holdout == n_ko_target). Niche = dominant bin of those masked
@@ -332,16 +333,16 @@ def run_seen(args, sid: str, v3_units=None):
         bin_all = adata_target.obs["bin_id"].astype(int).to_numpy()
         n_src = len(global_src_idx)
         groups = {}
-        for g in v3_units:
+        for g in unseen_units:
             if g not in ctx["name2code"]:
-                log.warning("slide %s v3-unseen: gene %s has no model code -- skip", sid, g)
+                log.warning("slide %s unseen: gene %s has no model code -- skip", sid, g)
                 continue
             gi = np.where(canon_all == g)[0]
             if len(gi) == 0:
-                log.warning("slide %s v3-unseen: gene %s has no KO cells on target -- skip", sid, g)
+                log.warning("slide %s unseen: gene %s has no KO cells on target -- skip", sid, g)
                 continue
-            # APPLES-TO-APPLES with the competitor unseen harness (benchmark_v3_eval_lib.
-            # unseen_v3_pm): competitors score masked-KO-of-G vs WHOLE-SLIDE KP control with
+            # APPLES-TO-APPLES with the competitor unseen harness: competitors score
+            # masked-KO-of-G vs WHOLE-SLIDE KP control with
             # NO niche restriction (niche=-1). Register the group with b=-1 so _ref_ko_idx /
             # _ref_ctrl_idx (which fall back to slide-level when the niche has < min_g_cells)
             # use the whole-slide masked KO and whole-slide control -- identical GT/control to
@@ -349,10 +350,10 @@ def run_seen(args, sid: str, v3_units=None):
             # made CONCERT's unseen numbers not directly comparable to competitors'.)
             groups[(-1, g, 0)] = np.arange(n_src, dtype=int)
         if not groups:
-            log.warning("slide %s v3-unseen: no valid panel-unit genes -- skip", sid)
+            log.warning("slide %s unseen: no valid panel-unit genes -- skip", sid)
             return
         panel = sorted({g for (_, g, _) in groups})
-        log.info("slide %s v3-UNSEEN panel-driven units=%s (masked-GT = same-slide canon==G)", sid, panel)
+        log.info("slide %s UNSEEN panel-driven units=%s (masked-GT = same-slide canon==G)", sid, panel)
     else:
         groups = pm.seen_niche_groups(adata_target, src_role=1)
         if not groups:
@@ -389,7 +390,7 @@ def run_seen(args, sid: str, v3_units=None):
     # pred_KO - pred_basal cancels basal reconstruction error.
     pred_basal = np.asarray(_predict_swap(ctx, global_src_idx, 0, args), dtype=np.float32)
 
-    # v3-unseen GT needs no coord filter: groups already scope observed LFC to
+    # unseen GT needs no coord filter: groups already scope observed LFC to
     # canon==G (the masked KO) per _ref_ko_idx, and all target-slide KO of G was masked.
     scores, agg, mlfc = pm.niche_lfc_seen_loop(
         adata_target, raw_mm, lib_sizes, global_src_idx, groups, pred_g_cache, hvg_mask, args,
@@ -526,17 +527,17 @@ def run_unseen(args, sid: str):
 def main():
     args = parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
-    v3_unseen = args.v3_unseen_ko_file is not None
-    v3_units_by_slide = _v3_units_by_slide(args) if v3_unseen else {}
+    masked_unseen = args.unseen_ko_file is not None
+    unseen_units_by_slide = _unseen_units_by_slide(args) if masked_unseen else {}
     for sid in args.slides:
-        if v3_unseen:
+        if masked_unseen:
             # ONLY target slides with a valid eval unit are scored as unseen.
-            units = v3_units_by_slide.get(str(sid), [])
+            units = unseen_units_by_slide.get(str(sid), [])
             if not units:
-                log.info("=== pmap v3-unseen slide %s: not a target slide -- skip ===", sid)
+                log.info("=== pmap unseen slide %s: not a target slide -- skip ===", sid)
                 continue
-            log.info("=== pmap v3-unseen slide %s units=%s ===", sid, units)
-            run_seen(args, sid, v3_units=units)
+            log.info("=== pmap unseen slide %s units=%s ===", sid, units)
+            run_seen(args, sid, unseen_units=units)
         else:
             log.info("=== pmap seen slide %s ===", sid)
             run_seen(args, sid)

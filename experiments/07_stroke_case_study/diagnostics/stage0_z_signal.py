@@ -21,6 +21,10 @@ Similarity is computed in PC space (sparse per-spot counts make raw gene correla
 every test is also run slice-mean-centred, which removes the additive per-slice batch offset.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 
@@ -30,9 +34,9 @@ import pandas as pd
 from scipy.spatial import cKDTree
 from sklearn.decomposition import PCA
 
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 H5 = DEL / "benchmark_artifacts/data/Mouse_brain_stroke_all_data.h5"
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d")
+OUT = Path(f"{_rp.WORKDIR}/stroke3d")
 RNG = np.random.default_rng(42)
 N_PC = 30
 

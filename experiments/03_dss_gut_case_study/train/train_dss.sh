@@ -45,7 +45,7 @@ activate_env
 TAG="${1:-dss}"
 MODEL_DIR="${CODEBASE_ROOT}/models/concert_temporal"
 MANIFEST="${DSS_DIR}/manifest.csv"
-ARCH_DIR="${DSS_DIR}_arch"
+ARCH_DIR="${CONCERT_DATA_DIR}/dss_colitis/architecture"
 OUT="${OUTPUT_ROOT}/dss_${TAG}"
 
 # Manifest columns: filename, ..., mouse id, sample type.
@@ -58,34 +58,11 @@ echo "[data] $(echo "$FILELIST" | wc -l) sections (held-out animals: ${HOLDOUT_M
 mkdir -p "$OUT"
 cd "$MODEL_DIR"
 
-TIMEKERNEL="--use_timekernel True --use_shared_basal True --use_time_intensity False \
-            --arch_desc_dir ${ARCH_DIR} \
-            --use_inflammation_field True --field_mse_lambda 1.0 --field_time_fixed_t 0.0 \
-            --marker_sign_positive True --time_in_field_mlp True \
-            --amp_anchor_offset 0.0 --amp_anchor_lambda 0.0 --amp_anchor_t 0.0"
-GUARD="--ls_prior_lambda 1.0 --ls_prior_min 3 --ls_prior_max 18 \
-       --fpert_svgp_inducing 16 --fpert_svgp_ls_init 5.0"
-NICHE="--use_niche_interaction False --use_niche_film True --niche_film_dim 8 \
-       --niche_film_k 25 --niche_film_gcap 3.0 --niche_film_l2 1e-3"
-TIME="--use_time_conditioning True --time_col day_norm --time_fourier_bands 6 --time_emb_dim 16"
-
-python -u run_concert_spac.py --stage train \
-    --config config.yaml --sample "dss_${TAG}" \
-    --multi_sample_files "${FILES}" --outdir "$OUT" --model_file model.pt --project_index dss \
-    --maxiter 1000 --patience 50 --earlystop_min_delta 0.05 --lr 1e-4 --resume False \
-    --hvg_max_rank 2000 --seed 42 \
-    --inducing_point_steps 6 --grid_inducing_points True --loc_range 20.0 --kernel_scale 10.0 \
-    --multi_kernel_mode True \
-    --batch_size 1024 --train_size 0.95 \
-    --use_action_correction False --use_pad False --min_cells_per_pert 25 \
-    --use_expr_encoder True --expr_hidden_dims 512 256 --use_basal_encoder_only True \
-    --dynamicVAE False --beta_warmup_epochs 2 --beta_target 1.0 --free_bits 0.5 --gp_free_bits 1.0 \
-    --use_nngp False --use_paracrine False ${TIMEKERNEL} ${NICHE} ${TIME} \
-    --use_pert_gate False \
-    --use_f_pert True --f_pert_init_std 0.01 --f_pert_clamp 5.0 \
-    --spatial_basal_only True --lfc_lambda 0.0 \
-    --basal_field rff --basal_bayes True --moran_lambda 1.0 --disentangle_radius 4.0 \
-    --fpert_field gp_pp --fpert_coord_scale 20.0 --fpert_rff_features 128 --fpert_rff_bandwidth 0.15 \
-    ${GUARD} --verbosity 1
+# Every model setting of the reported run (time kernel, supervised inflammation field with its
+# time input frozen, marker-sign constraint, niche FiLM) is in models/concert_temporal/configs/dss.yaml.
+python -u run_concert_spac.py --config configs/dss.yaml --stage train \
+    --sample "dss_${TAG}" --project_index dss \
+    --multi_sample_files "${FILES}" --outdir "$OUT" --model_file model.pt \
+    --arch_desc_dir "${ARCH_DIR}" --resume False
 
 echo "[$(date)] DSS training finished -> ${OUT}"

@@ -24,6 +24,10 @@ z is written as the SECTION INDEX (0-3), not z_mm: Stage 0 showed similarity dec
 index and ignores the 3x difference between the 0.4 and 1.2 mm gaps, so mm is the wrong metric.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse
 from pathlib import Path
 
@@ -33,7 +37,7 @@ import numpy as np
 import pandas as pd
 import scipy.sparse as sp
 
-DEL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/bof695/CONCERT/delivery/stroke-registration-benchmark")
+DEL = Path(f"{_rp.DATA}/external/CONCERT/delivery/stroke-registration-benchmark")
 PERT_REGIONS = ("ICA", "PIA")
 PERT_LABEL, BASAL_LABEL, LESION_ANATOMY = "stroke", "unperturbed", "CTX"
 
@@ -42,7 +46,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", default="paste2", choices=["paste2", "stalign", "current"])
     ap.add_argument("--outdir", type=Path,
-                    default=Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d/slides"))
+                    default=Path(f"{_rp.WORKDIR}/stroke3d/slides"))
     ap.add_argument("--n_hvg", type=int, default=2000)
     ap.add_argument("--pert_by_region", action="store_true",
                     help="label perturbed spots by COMPARTMENT (ICA/PIA) instead of one pooled\n"

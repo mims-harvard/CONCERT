@@ -23,7 +23,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, "/n/holylabs/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "03_dss_gut_case_study" / "figures"))
 import paper_style as ps  # noqa: E402
 
 FACTORS = [
@@ -117,11 +119,9 @@ def write_caption(outdir: Path, stats: dict, n_cells: int) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
-                                 "CONCERT-main/results/sens_spac_arms.csv"))
+                    default=rp.SPACSEQ_SENSITIVITY.parent / "sensitivity_tables" / "sens_spac_arms.csv")
     ap.add_argument("--outdir", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
-                                 "CONCERT-main/Outputs/sensitivity"))
+                    default=rp.WORKDIR / "sensitivity")
     args = ap.parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
     ps.use()

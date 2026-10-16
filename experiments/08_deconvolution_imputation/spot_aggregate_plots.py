@@ -17,6 +17,10 @@ Plot set 2 (slide 2-2): for the top-5 KO perturbations, treat each perturbation'
 "Cell type" == perturbation identity (no cell-type annotation exists in the data).
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import logging
@@ -38,7 +42,7 @@ logging.basicConfig(level=logging.INFO,
                     format="[%(asctime)s] %(levelname)s - %(message)s", datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-DATA_DIR = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq")
+DATA_DIR = Path(f"{_rp.DATA}/spacseq/raw")
 UNASSIGNED = frozenset(["unassigned", "Unassigned", "No_guide", "no_guide", "unknown"])
 CONTROL = frozenset(["Non_targeting", "non_targeting", "NonTargeting", "control", "Control", "CTRL", "ctrl", "NT"])
 EXCLUDED = frozenset(["multiple", "Multiple"])
@@ -481,7 +485,7 @@ def parse_args():
     p.add_argument("--skip_1a", action="store_true")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--outdir",
-                   default="/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/spot_plots")
+                   default=f"{_rp.WORKDIR}/scoring/spot_plots")
     return p.parse_args()
 
 

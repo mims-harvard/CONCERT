@@ -15,6 +15,10 @@ main() only runs make_lfc_scatter(); the other functions are kept verbatim.
 4) Patch-level LFC scatter (pred vs true) on CP10K -> log1p (never raw counts)
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import sys
@@ -42,19 +46,19 @@ KO_COLORS = {
 }
 
 RAW = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_2-2.h5ad"
+    f"{_rp.DATA}/spacseq/raw/raw_output_2-2.h5ad"
 )
 MASK = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/spot_plots/patch_removal_2-2_top5_cellindex.npz"
+    f"{_rp.WORKDIR}/scoring/spot_plots/patch_removal_2-2_top5_cellindex.npz"
 )
 NPZ = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/task2_2-2_eval5_tune_lfc10/impute_results.npz"
+    f"{_rp.WORKDIR}/scoring/task2_2-2_eval5_tune_lfc10/impute_results.npz"
 )
 CSV = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/task2_2-2_eval5_tune_lfc10/demo_figs/impute_per_group.csv"
+    f"{_rp.WORKDIR}/scoring/task2_2-2_eval5_tune_lfc10/demo_figs/impute_per_group.csv"
 )
 OUT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/ext_exp"
+    f"{_rp.WORKDIR}/paper/Outputs/ext_exp"
 )
 
 
@@ -208,7 +212,7 @@ def make_patch_map():
 
 
 BASELINE_METRICS = Path(
-    "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
+    f"{_rp.WORKDIR}/spatial_baselines/concert_baselines"
     "/baseline_metrics_combined/all_baselines_metrics.csv"
 )
 # Display order for grouped bars (CONCERT first)
@@ -584,7 +588,7 @@ def make_lfc_scatter(n_hvg: int = 200):
     imputed KO vs imputed basal), after CP10K->log1p.
     """
     _src = (
-        "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
+        f"{_rp.WORKDIR}/spaVAE/"
         "CONCERT-main/src/CONCERT-spac-rffbasal"
     )
     if _src not in sys.path:

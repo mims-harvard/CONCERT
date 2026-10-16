@@ -6,6 +6,10 @@ PASTE2 produced; the last column overlays all four, which is where the quality o
 actually visible -- a good registration puts the four outlines on top of one another.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys
 from pathlib import Path
 import anndata as ad, numpy as np
@@ -16,8 +20,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]
 import paper_style as ps
 ps.use()
 
-SL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d/slides")
-OUT = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/manuscript/MAIN/FIG/supp")
+SL = Path(f"{_rp.WORKDIR}/stroke3d/slides")
+OUT = Path(f"{_rp.WORKDIR}/paper/manuscript/MAIN/FIG/supp")
 LABEL_FS, TICK_FS = 20, 15
 SEC_C = ["#2166ac", "#67a9cf", "#ef8a62", "#b2182b"]
 

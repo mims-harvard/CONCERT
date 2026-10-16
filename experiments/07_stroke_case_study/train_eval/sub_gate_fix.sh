@@ -2,25 +2,26 @@
 #SBATCH -J gate_fix
 #SBATCH --mem=64G
 #SBATCH --time 0-01:00
-#SBATCH -p kempner
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/gatefix_%x_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/gatefix_%x_%j.err
+#SBATCH -o gatefix_%x_%j.out
+#SBATCH -e gatefix_%x_%j.err
 # Acceptance gate for a retrained 2dpara arm.
 #   PARA=own : the arm's own trained paracrine setting (what the figures would use)
 #   PARA=off : paracrine disabled, isolating what f_pert alone carries
 # Sets: real PT1 lesion (at-lesion fit), PT1 footprint transplanted to Sham3, region_TH (deep).
 # Usage: sbatch sub_gate_fix.sh <fixA|fixB|fixC> <own|off>
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 ARM="${1:?fixA|fixB|fixC}"; MODE="${2:-own}"
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 SETS=${NS}/outputs/stroke_2dpara/pert_sets
@@ -28,7 +29,7 @@ SRC=${NS}/outputs/stroke_2dpara_${ARM}
 # fixC trained without paracrine; fixA/fixB with the rebuilt r_max=1.0 graph.
 if [ "$ARM" = "fixC" ] || [ "$MODE" = "off" ]; then PARA="--use_paracrine False"
 else PARA="--use_paracrine True --graph_file ${NS}/outputs/stroke_2dpara/graph_r1.npz --paracrine_r_max 1.0"; fi
-OUT=/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/gate_${ARM}_${MODE}
+OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/gate_${ARM}_${MODE}
 mkdir -p $OUT
 for f in model.pt hvg_gene_names.txt pert_map.json; do ln -sf ${SRC}/$f $OUT/$f; done
 cd ${NS}/CONCERT-spac-niche

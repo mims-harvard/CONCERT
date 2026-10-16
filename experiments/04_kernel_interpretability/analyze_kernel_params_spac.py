@@ -20,9 +20,9 @@ Spatial covariates are computed from the same inputs/preprocessing as training
 
 Usage (concert_env):
   python analyze_kernel_params_spac.py \
-      --model_file /n/holylfs06/.../CONCERT/outputs/ms_spac1_niche_seen/model.pt \
-      --pert_map   /n/holylfs06/.../CONCERT/outputs/ms_spac1_niche_seen/pert_map.json \
-      --cutoffs_csv /n/holylfs06/.../CONCERT/outputs/ms_spac1_niche_seen/ms_spac1_spac_cutoffs.csv \
+      --model_file  $CONCERT_CHECKPOINT_ROOT/spacseq_kernel_analysis/model.pt \
+      --pert_map    $CONCERT_CHECKPOINT_ROOT/spacseq_kernel_analysis/pert_map.json \
+      --cutoffs_csv $CONCERT_CHECKPOINT_ROOT/spacseq_kernel_analysis/ms_spac1_spac_cutoffs.csv \
       --outdir <dir>
 """
 import argparse, json, logging, os
@@ -44,7 +44,11 @@ COORD_SCALE = 20.0
 LS_MIN, LS_MAX = 3.0, 18.0
 G_CAP = 3.0
 
-SP = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq"
+import sys as _sys
+_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+
+SP = str(rp.SPACSEQ_RAW)
 DEFAULT_FILES = ",".join(f"{SP}/raw_output_1-{i}.h5ad" for i in range(1, 6))
 
 ap = argparse.ArgumentParser()

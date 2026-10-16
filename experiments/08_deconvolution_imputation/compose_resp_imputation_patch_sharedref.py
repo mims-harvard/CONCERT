@@ -18,6 +18,10 @@ difference to the original composite, and uses the best integer pixel shift
 found there to place the new panels.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 from pathlib import Path
@@ -34,17 +38,17 @@ from PIL import Image
 from scipy.stats import spearmanr
 
 FIG_DIR = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/manuscript/MAIN/FIG/supp"
+    f"{_rp.WORKDIR}/paper/manuscript/MAIN/FIG/supp"
 )
 ORIG = FIG_DIR / "resp_imputation_patch.png.bak_sharedref"
 OUT_PNG = FIG_DIR / "resp_imputation_patch.png"
 OUT_PDF = FIG_DIR / "resp_imputation_patch.pdf"
 OUT_JSON = FIG_DIR / "resp_imputation_patch_stats.json"
-EXT = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/ext_exp")
+EXT = Path(f"{_rp.WORKDIR}/paper/Outputs/ext_exp")
 CSV = EXT / "task2_spac22_impute_rescored_our_rule.csv"
 POINTS = EXT / "task2_spac22_eval5_lfc10_lfc_scatter_sharedref_points.npz"
 CHECK_DIR = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/resp_imputation_sharedref"
+    f"{_rp.WORKDIR}/outputs/resp_imputation_sharedref"
 )
 
 METHODS = ["CONCERT", "SpaIM", "Tangram", "SpatialScope"]

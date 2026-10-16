@@ -6,12 +6,16 @@ Matches the eval's obs_score = log1p(Y_expr[:, marker]).mean(1) (composition_eva
 L473) so the per-day pooled mean reproduces the committed obs_by_day, and the per-mouse
 values give a real replicate-mouse variance band in the SAME scale as the predicted curve.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv
 from collections import defaultdict
 import numpy as np, anndata as ad, scipy.sparse as sp
 
-DD = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/processed/dryad_merfish_dss"
-OUT = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study/per_mouse_observed.csv"
+DD = f"{_rp.DATA}/dss_colitis/sections"
+OUT = f"{_rp.WORKDIR}/paper/Outputs/case_study/per_mouse_observed.csv"
 MK = ['Isg15','Ifit1','Tnf','Cxcl1','Nos2','Il11','Il1b','Mmp3','Mmp10','Mmp13',
       'Plau','Igfbp5','Col18a1','Mmp2','Osm','Cxcl10','Cxcl5']
 MICE = ['062221_D9_m3','062921_D0_m3a','062921_D9_m2a','062921_D9_m5','082421_D0_m6',

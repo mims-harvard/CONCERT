@@ -1,13 +1,12 @@
 #!/bin/bash -l
 #SBATCH -J pfish_interp
-#SBATCH -p kempner_requeue
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --mem=64G
 #SBATCH --time 0-04:00
-#SBATCH --gres=gpu:nvidia_h200:1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/perturbfish_interp/pfish_interp_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/perturbfish_interp/pfish_interp_%j.err
+#SBATCH -o pfish_interp_%j.out
+#SBATCH -e pfish_interp_%j.err
 #
 # Small perturb-FISH test of experiment 04 (are the learned spatial parameters interpretable?).
 #
@@ -15,19 +14,21 @@
 # train the same within-slide configuration used for the SPAC-seq sections on the single
 # perturb-FISH section, then run the experiment-04 readout on the resulting checkpoint.
 
-CODEBASE_ROOT=/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/codebase
-source "${CODEBASE_ROOT}/config/paths.sh"
+# Locate config/paths.sh. Under sbatch the batch script is copied to a spool directory, so a
+# path relative to this file does not resolve there; CODEBASE_ROOT is the fallback.
+_PATHS="$(dirname "${BASH_SOURCE[0]}")/../../config/paths.sh"
+[ -f "$_PATHS" ] || _PATHS="${CODEBASE_ROOT:-}/config/paths.sh"
+[ -f "$_PATHS" ] || { echo "[FATAL] cannot find config/paths.sh; sbatch --export=ALL,CODEBASE_ROOT=/path/to/repo $0"; exit 1; }
+source "$_PATHS"
 activate_env
 
-W=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/perturbfish_interp
-FT=/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/perturb-fish/extras/tumors/processed/finaltables
-RAW="${FT}/perturbfish_tumor_count.h5ad"
-PREP="${W}/perturbfish_tumor_concert.h5ad"
-OUT="${W}/pfish_tumor_niche"
+RAW="${PERTURBFISH_DIR}/perturbfish_tumor_count.h5ad"
+OUT="${PFISH_OUT:-${CONCERT_WORKDIR}/perturbfish}"
+PREP="${OUT}/perturbfish_tumor_concert.h5ad"
 mkdir -p "$OUT"
 
 echo "[$(date)] step 1: prepare"
-python -u "${W}/prep_perturbfish_concert.py" --in_h5ad "$RAW" --out_h5ad "$PREP"
+python -u "${CODEBASE_ROOT}/experiments/04_kernel_interpretability/prep_perturbfish_concert.py" --in_h5ad "$RAW" --out_h5ad "$PREP"
 
 echo "[$(date)] step 2: train"
 cd "${CODEBASE_ROOT}/models/concert_benchmark"

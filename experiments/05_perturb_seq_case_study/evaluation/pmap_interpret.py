@@ -16,6 +16,10 @@ modulation. Their relative sizes say what the model thinks is spatial about each
 which is a statement about the model and needs no external validation to report.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import json
 import sys
@@ -35,7 +39,7 @@ import pmap_case_study as CS      # noqa: E402
 
 OUT = Path(os.environ.get(
     "PMAP_INTERPRET_OUT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/figures/pmap_interpret"))
+    f"{_rp.WORKDIR}/scoring/figures/pmap_interpret"))
 PERTS = ["Tgfbr2", "Ifngr2", "Jak2"]
 
 

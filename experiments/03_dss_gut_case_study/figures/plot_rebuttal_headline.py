@@ -16,6 +16,10 @@ Four panels, all from the leave-one-mouse-out imputation dump (count space):
 Every calibration coefficient is fit LEAVE-ONE-MOUSE-OUT (on the other 7 mice), so no
 mouse is ever scored with a scale fitted to itself.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 
@@ -24,9 +28,9 @@ import matplotlib.pyplot as plt
 
 import paper_style as ps
 
-DUMP = ("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+DUMP = (f"{_rp.WORKDIR}/outputs/"
         "dss_timekernel_markersign_timefield_fixedt/heldout_eval/percell_dump_sizefactor.npz")
-OUTDIR = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study"
+OUTDIR = f"{_rp.WORKDIR}/paper/Outputs/case_study"
 FEATURED = "062221_D9_m3"          # peak-day mouse for the per-cell panel
 
 ps.use()

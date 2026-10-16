@@ -6,8 +6,8 @@ Only panel b changes: it now shows four arms so the learned unmixing head and
 the signature source are separated:
   NNLS + empirical signatures        (naive_nnls_empirical)
   NNLS + CONCERT signatures          (naive_nnls_concert)
-  Learned head + empirical signatures (empirical_amortized_v2)
-  Learned head + CONCERT signatures   (concert_amortized_v2)
+  Learned head + empirical signatures (empirical_amortized)
+  Learned head + CONCERT signatures   (concert_amortized)
 
 Panels a, c and d are taken pixel-for-pixel from the previous composite
 (resp_deconv_spacseq.png.bak_4arm), so layout and panel letters are unchanged.
@@ -19,6 +19,10 @@ Caller:
   python replot_task1_paper_figs_4arm.py
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -35,17 +39,9 @@ from PIL import Image
 matplotlib.rcParams["pdf.fonttype"] = 42
 matplotlib.rcParams["ps.fonttype"] = 42
 
-DV2 = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
-    "spac_seq/spot_only_2-1/deconv_methods_v2"
-)
-FIG = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/manuscript/"
-    "MAIN/FIG/supp"
-)
-WORK = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/resp_deconv_spacseq_4arm"
-)
+DECONV = Path(f"{_rp.DATA}/deconvolution/spacseq_2-1")
+FIG = Path(f"{_rp.WORKDIR}/deconvolution_spacseq_2-1/four_arm")
+WORK = FIG / "work"
 
 GENE_COLORS = {
     "Icam1": "#1f77b4",
@@ -67,9 +63,9 @@ ARMS = [
          label="NNLS, empirical signatures", color="#1565c0"),
     dict(method="naive_nnls_concert", group="NNLS", sig="CONCERT",
          label="NNLS, CONCERT signatures", color="#7fb0e6"),
-    dict(method="empirical_amortized_v2", group="Learned head", sig="Empirical",
+    dict(method="empirical_amortized", group="Learned head", sig="Empirical",
          label="Learned head, empirical signatures", color="#e88a86"),
-    dict(method="concert_amortized_v2", group="Learned head", sig="CONCERT",
+    dict(method="concert_amortized", group="Learned head", sig="CONCERT",
          label="Learned head, CONCERT signatures", color="#c62828"),
 ]
 
@@ -90,7 +86,7 @@ def plot_winrate(pred: pd.DataFrame, out_png: Path):
     """Unmodified from replot_task1_paper_figs.py (panel c)."""
     gt = pred.gt_frac_ko.to_numpy()
     err_nnls = np.abs(gt - pred.naive_nnls_empirical.to_numpy())
-    err_am = np.abs(gt - pred.concert_amortized_v2.to_numpy())
+    err_am = np.abs(gt - pred.concert_amortized.to_numpy())
     d = err_nnls - err_am  # >0 means the CONCERT-signature head is better
     fig, ax = plt.subplots(figsize=(4.6, 3.6))
     ax.hist(d, bins=40, color="#c62828", alpha=0.85)
@@ -112,7 +108,7 @@ def plot_winrate(pred: pd.DataFrame, out_png: Path):
 def plot_gt_pred_scatter_row(
     pred: pd.DataFrame,
     out_png: Path,
-    pred_col: str = "concert_amortized_v2",
+    pred_col: str = "concert_amortized",
     seed: int = 42,
 ):
     """Unmodified from replot_task1_paper_figs.py (panel d); bars are the 25th-75th percentile."""
@@ -226,9 +222,9 @@ def draw_bars_4arm(fig, arm_vals):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--summary", type=Path, default=DV2 / "summary_v2.json")
-    ap.add_argument("--pred_csv", type=Path, default=DV2 / "per_spot_v2.csv")
-    ap.add_argument("--base_png", type=Path, default=FIG / "resp_deconv_spacseq.png.bak_4arm")
+    ap.add_argument("--summary", type=Path, default=DECONV / "summary.json")
+    ap.add_argument("--pred_csv", type=Path, default=DECONV / "per_spot.csv")
+    ap.add_argument("--base_png", type=Path, default=DECONV / "resp_deconv_spacseq_previous_composite.png")
     ap.add_argument("--out_png", type=Path, default=FIG / "resp_deconv_spacseq.png")
     ap.add_argument("--out_pdf", type=Path, default=FIG / "resp_deconv_spacseq.pdf")
     ap.add_argument("--stats", type=Path, default=FIG / "resp_deconv_spacseq_stats.json")
@@ -246,7 +242,7 @@ def main():
         p = pred[a["method"]].to_numpy(dtype=float)
         mae_re = float(np.mean(np.abs(gt - p)))
         r_re = float(np.corrcoef(gt, p)[0, 1])
-        # summary_v2.json is the plotted source; per_spot_v2.csv must reproduce it
+        # summary.json is the plotted source; per_spot.csv must reproduce it
         assert abs(mae_re - float(row.comp_MAE)) < 1e-6, (a["method"], mae_re, row.comp_MAE)
         assert abs(r_re - float(row.comp_pearson)) < 1e-6, (a["method"], r_re, row.comp_pearson)
         assert int(row.n) == len(pred)
@@ -297,13 +293,13 @@ def main():
         "script": str(Path(__file__).resolve()),
         "panel_b_arms": arm_vals,
         "panel_c": {
-            "quantity": "per-spot |GT - naive_nnls_empirical| - |GT - concert_amortized_v2|",
+            "quantity": "per-spot |GT - naive_nnls_empirical| - |GT - concert_amortized|",
             "n_spots": int(len(d)),
             "mean_delta": float(np.mean(d)),
             "win_fraction": float(np.mean(d > 0)),
         },
         "panel_d": {
-            "pred_col": "concert_amortized_v2",
+            "pred_col": "concert_amortized",
             "bars": "25th-75th percentile of predictions per GT level (levels with >=5 spots); dot = mean",
             "per_gene": per_gene,
         },

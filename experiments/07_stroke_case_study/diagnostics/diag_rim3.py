@@ -5,11 +5,15 @@ size_0800.txt is also the CONTROL's __basal__ set (BIG = ls -S | head -1), so fo
 two passes edit the SAME 800 cells and every other cell must be bit-identical. Any unmasked cell
 with delta != 0 is therefore either (a) genuine model spillover or (b) an index-mapping error.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import numpy as np, anndata as ad, h5py
 
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara")
+OUT = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara")
 man = json.loads((OUT / "pert_sets" / "manifest.json").read_text())
 off, n_slide = man["offset"], man["n_slide"]
 rows = slice(off, off + n_slide)

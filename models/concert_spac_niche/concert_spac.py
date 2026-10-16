@@ -1211,7 +1211,7 @@ class CONCERT(nn.Module):
             shift = gamma * shift
             # NOTE: beta is intentionally NOT gated by g_scale. Gating it (niche3 experiment 2026-07-08)
             # HURT held-out Tgfbr2 (unseen 0.48->0.33) without recovering Ifngr2 (flat 0.258) -> the
-            # ungated beta carries real held-out signal for heterogeneous perts. Keep ungated (= v1).
+            # ungated beta carries real held-out signal for heterogeneous perts. Keep ungated (the original behaviour).
             beta = self.beta_out(self.beta_U(pert_emb) * self.beta_V(z_niche))   # (B, G)
             shift = shift + beta
         elif self.use_niche_interaction and niche is not None and self.inter_out is not None:
@@ -1401,8 +1401,8 @@ class CONCERT(nn.Module):
         else:
             gp_ce = self._gauss_cross_entropy(gp_p_m, gp_p_v, gp_mu, gp_var).sum()
             if self.gp_free_bits > 0:
-                # Phase 2.9 v5a: per-dim GP free-bits floor (mirror of the Gaussian block).
-                # v4 left the GP block unfloored while the Normal block had a per-dim floor,
+                # Per-dim GP free-bits floor (mirror of the Gaussian block).
+                # The previous model left the GP block unfloored while the Normal block had a per-dim floor,
                 # so the encoder routed ~no signal into gp_mu and the SVGP smoothed a near-flat
                 # field (gp_latent_std ~1e-3). Decompose gp_KL per GP dim and clamp each to
                 # >= gp_free_bits * bsz: the first gp_free_bits nats/dim become KL-free so

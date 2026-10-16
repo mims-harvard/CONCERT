@@ -13,11 +13,15 @@ any ring. This dumps the numbers that decide it:
   * z separation between adjacent sections, for scale
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, math
 from pathlib import Path
 import numpy as np, torch
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs")
+NS = Path(f"{_rp.WORKDIR}/outputs")
 ARMS = ["stroke_2d", "stroke_3d", "stroke_2d_cr", "stroke_3d_cr"]
 LS_MIN, LS_MAX = 0.05, 0.60
 Z_GAIN = 0.25

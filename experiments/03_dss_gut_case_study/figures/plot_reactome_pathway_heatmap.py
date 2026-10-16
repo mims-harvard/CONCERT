@@ -14,6 +14,10 @@ Scores come from the per-mouse per-gene decode means in pathway_dump.npz (gmean_
 gmean_obs (M,G)); gene sets = reactome_inflammation_gene_sets.json (MSigDB Reactome v2025.1,
 mouse-mapped). Pure CPU/numpy (ssGSEA implemented inline, no gseapy).
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv, json
 from pathlib import Path
 import numpy as np
@@ -25,11 +29,11 @@ import matplotlib.legend_handler as mpl_handler
 import paper_style as ps
 ps.use()
 
-DUMP = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+DUMP = Path(f"{_rp.WORKDIR}/outputs/"
             "dss_timekernel_markersign_timefield_fixedt/heldout_eval/pathway_dump.npz")
-SETS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/"
+SETS = Path(f"{_rp.WORKDIR}/"
             "CONCERT-spac-niche-temporal/reactome_inflammation_gene_sets.json")
-HERE = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study")
+HERE = Path(f"{_rp.WORKDIR}/paper/Outputs/case_study")
 DAYS = [0, 3, 9, 21]
 
 # load

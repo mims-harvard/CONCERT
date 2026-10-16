@@ -1,8 +1,11 @@
 #!/bin/bash
 # gpu_test allows only 2 queued jobs per user, so the chain is driven here instead of with
 # --dependency: wait for the pair of jobs in flight, submit the next pair, repeat.
-cd /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d
-wait_for () { while [ "$(squeue -u xianglin226 -h -j "$1" 2>/dev/null | wc -l)" -ne 0 ]; do sleep 30; done; }
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
+cd ${CONCERT_WORKDIR}/stroke3d
+wait_for () { while [ "$(squeue -u "$USER" -h -j "$1" 2>/dev/null | wc -l)" -ne 0 ]; do sleep 30; done; }
 ok () { [ "$(sacct -X -n -j "$1" --format=State 2>/dev/null | tr -d ' ' | head -1)" = "COMPLETED" ]; }
 
 wait_for "42417267,42417273"

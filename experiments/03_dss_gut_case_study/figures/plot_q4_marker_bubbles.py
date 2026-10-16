@@ -15,6 +15,10 @@ size  = fraction of cells with expression > 0.
 Styling (see the plotting-figures skill): NO title, large text, dense dots,
 minimal whitespace.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -24,8 +28,8 @@ from matplotlib.colors import TwoSlopeNorm
 import paper_style
 paper_style.use()
 
-DUMP = "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/dss_timekernel_markersign_timefield_fixedt/heldout_eval/percell_dump_sizefactor.npz"
-OUTDIR = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study"
+DUMP = f"{_rp.DATA}/dss_colitis/heldout_eval/percell_dump_sizefactor.npz"
+OUTDIR = f"{_rp.WORKDIR}/paper/Outputs/case_study"
 FEATURED = ["092421_D3_m4", "092421_D3_m1", "062221_D9_m3"]   # per-mouse imputed bubbles
 DAYS = [0.0, 3.0, 9.0, 21.0]
 DAY_LBL = {0.0: "Day 0", 3.0: "Day 3", 9.0: "Day 9", 21.0: "Day 21"}

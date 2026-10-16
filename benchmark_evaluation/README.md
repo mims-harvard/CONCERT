@@ -1,8 +1,21 @@
 # Benchmark evaluation
 
-Scoring code shared by the SPAC-seq (experiment 01) and Perturb-seq (experiment 02)
-benchmarks. It is kept in one place because both experiments score the same quantity in the
-same way; only the data and the checkpoint differ.
+The scoring library shared by the SPAC-seq (experiment 01) and Perturb-map (experiment 02)
+benchmarks. The repository ships one benchmark protocol, the one reported in the paper, and the
+files here are its libraries; they are run through the entry points below.
+
+## What to run
+
+| Goal | Entry point |
+|---|---|
+| Reproduce a reported number, step by step | `scripts/01_spac_seq_benchmark.py`, `scripts/02_perturb_map_benchmark.py`, or notebooks 01 and 02 |
+| Score a checkpoint on the SPAC-seq benchmark | `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark.sh` |
+| Rebuild the SPAC-seq tables, tests and figures | `experiments/01_spac_seq_benchmark/evaluation/aggregate_spac_seq_benchmark.sh` |
+| Score a checkpoint on the Perturb-map benchmark | `experiments/02_perturb_seq_benchmark/evaluation/eval_perturb_seq.sh` |
+| Rebuild the Perturb-map tables, tests and Fig. 4j | `experiments/02_perturb_seq_benchmark/evaluation/rescore_perturb_seq.sh` |
+
+Every input path comes from `release_paths.py`, which reads `CONCERT_DATA_DIR` and
+`CONCERT_CHECKPOINT_ROOT` (the downloadable `data/` and `checkpoints/` folders).
 
 ## What is scored
 
@@ -17,75 +30,67 @@ matched unperturbed cells:
 Both are computed per perturbation and slide, then averaged, with bootstrap resampling for the
 reported spread.
 
-## Entry point
+## The scoring rule
 
-`run_concert_v3_benchmark_eval.py` scores one slide of one checkpoint and writes
-`per_pert_summary.json` under its output directory. The experiment run scripts submit it once
-per slide. `build_benchmark_v3_summary.py` collects those files into the reported table.
+`run_concert_benchmark_eval.py` scores one checkpoint on the SPAC-seq benchmark: one slide of
+the seen setting per call, or every cross-slide unit in one call. It runs through
+`shared_gene_rule.py` with `--cf_output poisson_depth --cf_seen_ref observed`, so the prediction is
+one Poisson draw at the measured library size and the LFC reference is the measured source spots
+in both settings. `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark.sh`
+carries the full flag list. The default output flags (predicted mean, LFC against CONCERT's own
+basal prediction) are the ones the SI sensitivity sweep uses.
 
 Pass the same spatial-field lengthscale band that training used. It is a plain attribute of
 the field rather than a saved weight, so leaving it at the default renders a different field
 from identical weights.
-
-## Benchmark v4
-
-The reported SPAC-seq numbers come from the v4 protocol: `run_concert_v4_benchmark_eval.py`
-run through `genefix_wrap.py`, with `--cf_output poisson_depth --cf_seen_ref observed`, so the
-prediction is one Poisson draw at the measured library size and the LFC reference is the measured
-source spots in both settings. `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark_v4.sh`
-carries the full flag list. The v3 scripts remain as the record of the earlier protocol.
 
 Every compared method is scored under that same draw. A competitor's predicted profile is
 converted to counts at each source cell's observed library size, drawn once from a Poisson, and
 returned to log-CP10K before the LFC is taken, so a prediction carries the count sparsity of the
 measurement it is scored against. The reference stays the measured source cells for every method.
 
-`diagnose_spatial_methods_unseen.py` reads the predicted LFC each method wrote for the cross-slide
+`diagnose_cross_slide_errors.py` reads the predicted LFC each method wrote for the cross-slide
 units and reports, beside the benchmark metrics, the RMSE of predicting no change, the predicted
 response magnitude relative to the observed one, the share of genes whose predicted LFC sits at the
 epsilon floor, and how much of a prediction is shared between different knockouts on one slide.
 
 The reported tables and figures are written by
-`experiments/01_spac_seq_benchmark/evaluation/aggregate_spac_seq_benchmark_v4.sh`, which chains the
+`experiments/01_spac_seq_benchmark/evaluation/aggregate_spac_seq_benchmark.sh`, which chains the
 rescoring, the 50-cell Mean target, the significance tables and the plotting modules listed below.
 
-### Perturb-map, benchmark v4
+### Perturb-map
 
-The reported Perturb-map within-niche numbers rescore the stored predicted LFCs of every method
-against a reference built from the niche's control cells outside every held-out patch
-(`perturbmap_v4_scoring.py`), so reference and prediction share no cells.
-`experiments/02_perturb_seq_benchmark/evaluation/rescore_perturb_seq_v4.sh` runs
-`rescore_pm_v4.py` and then `analyze_pm_v4.py`.
+`run_concert_pm_niche.py` is the Perturb-map evaluation harness. The reported within-niche numbers
+rescore the stored predicted LFCs of every method against a reference built from the niche's
+control cells outside every held-out patch (`perturbmap_reference.py`), so reference and
+prediction share no cells. `experiments/02_perturb_seq_benchmark/evaluation/rescore_perturb_seq.sh`
+runs `rescore_perturbmap.py` and then `analyze_perturbmap.py`.
 
 ## Modules
 
 | File | Role |
 |---|---|
-| `run_concert_v3_benchmark_eval.py` | Entry point: loads a checkpoint, predicts held-out perturbations, writes scores |
-| `benchmark_v3_lib.py` | Holdout definitions, pairing of perturbed and unperturbed cells |
-| `benchmark_v3_eval_lib.py` | The metrics themselves and their bootstrap |
-| `build_benchmark_v3_summary.py` | Collects per-slide results into the reported table |
-| `eval_spatial_counterfactual.py` | Counterfactual prediction machinery the entry point builds on |
-| `eval_cf_una_multi_holdout.py`, `eval_cf_una_only.py` | Variants scoring unperturbed-anchored predictions |
-| `eval_utils.py` | Metric helpers shared across the above |
-| `run_concert_v4_benchmark_eval.py` | Benchmark v4 entry point (clonality-gated checkpoints): 85 KO-target-slide pairs in the unseen setting, Poisson output at measured depth |
-| `benchmark_v4_lib.py`, `benchmark_v4_eval_lib.py` | v4 holdout panel, shared source cells and unseen scoring |
-| `build_v4_source_cells.py` | The 5,000 shared source spots per target slide every v4 unseen evaluator predicts from |
-| `genefix_wrap.py` | Runs an eval script under the shared gene rule (slide HVGs in the CONCERT panel, minus the KO) |
-| `agg_clonegate_v4b.py` | Collects v4 per-unit results into paired summary statistics |
-| `rescore_spac_lfc_distance_v4.py`, `rescore_spac_lfc_distance_v4_sampled.py` | Every method's per-record LFC rho and RMSE on the v4 record set (the sampled variant reads `multi_1-5_ho_v4_sampled/`) |
-| `attach_concert_unseen_gene_boot_v4.py` | Attaches the cross-slide bootstrap spread of CONCERT to the per-record table |
-| `rescore_collab_naive_baselines.py`, `rescore_collab_naive_baselines_seen_genefix.py`, `rescore_naive_baselines_unseen_v4_genefix.py` | The four reference strategies (Mean target, Mean niche, Local kNN, GEX kNN) under the shared rule, with `--sampled_output` |
-| `rescore_mean_target_capped_v4.py` | Mean target from a fixed number of knockout cells per unit (50 in the reported tables) |
-| `rescore_state_our_rule.py` | STATE predictions scored under the shared rule |
-| `agg_v4_sampled_unseen.py` | Paired summary of the sampled cross-slide results |
-| `build_v4_significance_tables.py` | Paired Wilcoxon tests with Benjamini-Hochberg adjustment, and the supplementary-table workbook |
-| `summarize_v4.py`, `panel_numbers_sampled.py` | Method summary and the per-knockout numbers of the figure panels |
-| `plot_spac_benchmark_bars.py`, `plot_spac_benchmark_v4.py`, `plot_spac_benchmark_v4_sampled.py`, `plot_spac_concert_vs_competitor_dots.py` | Per-knockout bar and paired-dot panels |
+| `release_paths.py` | The layout of `data/` and `checkpoints/`; every path below derives from it |
+| `run_concert_benchmark_eval.py` | SPAC-seq scorer of one CONCERT checkpoint: one slide of the seen setting, or every cross-slide unit |
+| `shared_gene_rule.py` | Runs a scorer under the shared gene rule (slide HVGs inside the CONCERT panel, minus the knockout) |
+| `run_concert_pm_niche.py` | Perturb-map scorer of one CONCERT checkpoint (the evaluation harness) |
+| `eval_spatial_counterfactual.py`, `make_umap.py` | Load a checkpoint and decode counterfactual predictions |
+| `benchmark_lib.py` | Evaluation panels, knockout holdouts and training manifests (both datasets) |
+| `spacseq_unseen_panel_lib.py`, `spacseq_unseen_eval_lib.py` | SPAC-seq cross-slide panel, shared source cells and cross-slide scoring |
+| `build_source_cells.py` | The 5,000 shared source spots per target slide every cross-slide scorer predicts from |
+| `lfc_scoring.py` | Observed log fold changes, scored-gene masks and the agreement metrics, from stored predictions |
+| `rescore_spac_lfc_distance.py` | Every method's per-record SPAC-seq rank correlation and RMSE |
+| `attach_concert_unseen_gene_boot.py` | Gives CONCERT's cross-slide records the same gene-bootstrap error as every other method |
+| `reference_strategies.py`, `reference_strategies_seen.py`, `reference_strategies_unseen.py` | The four reference strategies (Mean target, Mean niche, Local kNN, GEX kNN): shared code, seen setting, cross-slide setting |
+| `rescore_mean_target_capped.py` | Mean target from 50 knockout cells per unit, the reported rule |
+| `score_state_predictions.py` | STATE's delivered predictions scored under the shared rule |
+| `build_significance_tables.py`, `summarize_methods.py`, `panel_numbers.py` | Paired Wilcoxon tests with Benjamini-Hochberg adjustment and the supplementary workbook; method summary; per-knockout panel numbers |
+| `plot_spac_benchmark.py`, `plot_spac_benchmark_bars.py`, `plot_spac_concert_vs_competitor_dots.py` | Per-knockout bar and paired-dot panels |
 | `plot_spac_overall_rank.py`, `plot_spac_condition_summary.py`, `plot_spac_rho_vs_rmse.py` | Overall rank, per-condition summary and rho-versus-RMSE figures |
-| `perturbmap_v4_scoring.py`, `rescore_pm_v4.py`, `analyze_pm_v4.py`, `plot_pmap_benchmark_v4.py` | Perturb-map benchmark v4: the reference rule, the rescore of every method, the tables and tests, and the Fig. 4j panel |
-| `spacseq_eval_common.py`, `spacseq_multi_common.py` | SPAC-seq data loading, slide handling, matching |
-| `perturbmap_common.py` | The same for the Perturb-seq sections |
+| `diagnose_cross_slide_errors.py` | Decomposes each method's cross-slide error against the do-nothing prediction |
+| `perturbmap_harness_rescore.py` | Registry of every method's stored Perturb-map predictions and the harness-reference rescore |
+| `perturbmap_reference.py`, `rescore_perturbmap.py`, `analyze_perturbmap.py`, `plot_pmap_benchmark_panel.py` | Perturb-map: the disjoint reference, the rescore of every method, the tables and tests, and the Fig. 4j panel |
+| `spacseq_eval_common.py`, `spacseq_multi_common.py`, `perturbmap_common.py` | Data loading, slide handling and matching for each assay |
 | `method_input_lib.py`, `train_manifest_lib.py` | Assemble the inputs and manifests an evaluation run needs |
-| `diagnose_spatial_methods_unseen.py` | Decomposes the cross-slide error of every method against the do-nothing prediction |
-| `make_umap.py` | Embedding plots used to inspect a checkpoint |
+| `eval_utils.py` | Metric helpers of the counterfactual decoder |
+| `scoring_helpers/` | The two metric modules every scorer imports (`eval_utils.py`, `spac_edist_align.py`) |

@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 """How far apart are the two cortical-depth patches, really?"""
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, sys
 from pathlib import Path
 import h5py, numpy as np
 
-SETS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara/pert_sets")
+SETS = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara/pert_sets")
 man = json.loads((SETS / "manifest_depth.json").read_text())
 off, n_slide = man["offset"], man["n_slide"]
 f = [p for p in man["files"] if man["target_slide"] in Path(p).stem][0]

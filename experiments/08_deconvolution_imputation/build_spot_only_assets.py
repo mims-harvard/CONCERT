@@ -11,6 +11,10 @@ Creates:
 Cell expression is NOT written into training assets beyond spot means already in PB.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -35,13 +39,13 @@ DEFAULT_KO = [
     "Bcam", "H2-Q7", "Cxcr4", "Slc2a1", "Utrn",
 ]
 RAW_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_2-1.h5ad"
+    f"{_rp.DATA}/spacseq/raw/raw_output_2-1.h5ad"
 )
 PB_DEFAULT = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/spot_plots/pseudobulk_2-1_wholeslide.h5ad"
+    f"{_rp.WORKDIR}/scoring/spot_plots/pseudobulk_2-1_wholeslide.h5ad"
 )
 COMP_DEFAULT = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/spot_plots/spot_composition_2-1_wholeslide.csv"
+    f"{_rp.WORKDIR}/scoring/spot_plots/spot_composition_2-1_wholeslide.csv"
 )
 
 

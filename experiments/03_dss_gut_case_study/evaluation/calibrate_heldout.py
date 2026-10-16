@@ -14,6 +14,10 @@ whose per-cell correlation is 0 by construction. If per-day calibration lands mo
 below the constant, the amplitude is a readout-scale problem and a retrain buys little;
 if it doesn't, the miscalibration is cell-level and a retrain is the only route.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 
@@ -21,9 +25,9 @@ import numpy as np
 import scipy.sparse as sp
 import anndata as ad
 
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+OUT = Path(f"{_rp.WORKDIR}/outputs/"
            "dss_timekernel_markersign_timefield_fixedt")
-DATADIR = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/processed/"
+DATADIR = Path(f"{_rp.WORKDIR}/concert_data/processed/"
                "dryad_merfish_dss")
 EV = OUT / "heldout_eval"
 

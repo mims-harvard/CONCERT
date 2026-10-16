@@ -1,0 +1,38 @@
+# Perturb-map benchmark (experiment 02): the settings of the reported runs.
+# Every setting that differs from the RunConfig defaults in run_concert_spac.py.
+# Command-line flags override these values; data, output and holdout paths go on the command line.
+
+basal_field: rff
+batch_size: 2048
+beta_warmup_epochs: 20
+control_label: __NONE__
+disentangle_radius: 4.0
+dropoutE: 0.1
+dynamicVAE: false
+fpert_coord_scale: 70.0
+fpert_field: gp_pp
+fpert_ls_max: 0.6
+fpert_ls_min: 0.01
+fpert_svgp_inducing: 64
+fpert_svgp_ls_init: 0.04
+free_bits: 0.5
+gp_free_bits: 1.0
+hvg_max_rank: 2000
+inducing_point_steps: 4
+lfc_lambda: 1.0
+ls_prior_lambda: 1.0
+ls_prior_max: 18.0
+maxiter: 1500
+min_cells_per_pert: 0
+moran_lambda: 1.0
+noise: 0.1
+patience: 300
+seed: 42
+spatial_basal_only: true
+unassigned_label: unperturbed
+use_action_correction: false
+use_basal_encoder_only: true
+use_expr_encoder: true
+use_f_pert: true
+use_niche_film: true
+use_pert_gate: true

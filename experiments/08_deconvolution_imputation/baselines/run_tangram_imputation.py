@@ -15,6 +15,10 @@ Usage:
   conda activate scprint
   python run_tangram_imputation.py --use_ref --device cuda:0
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse
 import os
 import sys
@@ -78,19 +82,19 @@ def parse_args() -> argparse.Namespace:
 
 # Paths
 SPAC_DIR = Path(
-    "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
+    f"{_rp.WORKDIR}/spatial_baselines/concert_baselines"
     "/SpatialScope/test_output/spac_2-2"
 )
 REF_PATH = Path(
-    "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
+    f"{_rp.WORKDIR}/spatial_baselines/concert_baselines"
     "/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2/Ref_SPAC_2-2.h5ad"
 )
 OUT_DIR = Path(
-    "/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines"
+    f"{_rp.WORKDIR}/spatial_baselines/concert_baselines"
     "/tangram_output/spac_2-2"
 )
 SPAC_RAW_PATH = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data"
+    f"{_rp.WORKDIR}/concert_data"
     "/processed/SPAC/raw_output_2-2.h5ad"
 )
 CONTEXT_POOL_PATH = SPAC_DIR / "context_pool.h5ad"

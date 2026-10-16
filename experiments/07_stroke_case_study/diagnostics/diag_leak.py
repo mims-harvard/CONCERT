@@ -5,11 +5,15 @@ A) weight check: fpert output layers vs their init scale (last layer init N(0,1e
 B) leak test : predicted injury genes on the REAL PT1 lesion with the lesion ON vs OFF,
    paracrine disabled, against what is actually observed there.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 from pathlib import Path
 import numpy as np, anndata as ad, h5py, torch
 
-NS = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT")
-WOUT = Path("/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/stroke_2dpara_nopara")
+NS = Path(f"{_rp.WORKDIR}")
+WOUT = Path(f"{_rp.WORKDIR}/scratch/CONCERT_rimtest/stroke_2dpara_nopara")
 GENES = ["Gm42418", "Scgb1a1", "Lcn2", "Vim", "Gfap", "Timp1"]
 
 print("=" * 78); print("A) f_pert weight magnitudes vs init (last layer init std = 1e-3)")

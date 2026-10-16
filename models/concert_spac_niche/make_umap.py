@@ -11,6 +11,10 @@ computes UMAP, and saves:
 Output dir: --outdir (default: datasets/newdata/spac_seq/).
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import logging
@@ -46,8 +50,8 @@ logging.basicConfig(
 # ---
 # Hard-coded paths and config -- mirrors sub_spac_train_1-1.sh exactly
 # ---
-DATA_FILE  = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
-MODEL_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/src/CONCERT-spac/outputs/raw_output_1-1/model_spac_1-1_v2.pt"
+DATA_FILE  = f"{_rp.DATA}/spacseq/raw/raw_output_1-1.h5ad"
+MODEL_FILE = f"{_rp.CHECKPOINTS}/spacseq_within_niche/model.pt"
 
 UNASSIGNED_LABELS  = frozenset(["unassigned", "Unassigned", "No_guide", "no_guide", "unknown"])
 CONTROL_LABELS     = frozenset(["Non_targeting", "non_targeting", "NonTargeting",
@@ -86,7 +90,7 @@ BATCH_SIZE_INFER = 2048
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--outdir",
-                   default="/n/holylabs/mzitnik_lab/Users/xianglin226/CONCERT")
+                   default=f"{_rp.WORKDIR}")
     p.add_argument("--model_file",  default=MODEL_FILE)
     p.add_argument("--data_file",   default=DATA_FILE)
     p.add_argument("--umap_seed",   type=int,   default=42)

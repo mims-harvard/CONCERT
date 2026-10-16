@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Shared unseen prediction-source cells for the SPAC-seq benchmark.
+
+For each target slide T of benchmark/eval_panel.json:
+  pool   = benchmark/holdout_unassigned/slide_T.json (patch role 1 unassigned cells)
+  mapped = pool cells that CONCERT's multi-slide loader keeps (map_prep_to_model_rows); the loader
+           only drops cells by label and coordinate matching, so this set does not depend on weights
+  source = seed-42 subsample (np.random.default_rng(42).choice, no replacement) of N_SOURCE=5000
+           cells from `mapped`, the same draw rule the competitor adapters apply to the pool
+Writes benchmark/source_cells/slide_T.json; every unseen evaluator (CONCERT, competitors,
+reference strategies) scores on exactly these cells.
+"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+import release_paths as rp  # noqa: E402
+
+import numpy as np
+
+N_SOURCE = 5000
+CKPT = str(rp.CHECKPOINTS / "spacseq_cross_slide" / "model.pt")
+
+
+def main():
+    import run_concert_benchmark_eval as rc
+    from spacseq_unseen_eval_lib import load_eval_panel, load_holdout_unassigned
+    from spacseq_multi_common import load_prepared_slide
+
+    prep = rp.SPACSEQ_PREPARED
+    bench = rp.SPACSEQ_BENCHMARK
+    sys.argv = ["x", "--regime", "unseen", "--outdir", str(rp.WORKDIR / "spacseq_source_cells_scratch"),
+                "--model_file", CKPT, "--ls_prior_min", "3", "--ls_prior_max", "18",
+                "--fpert_ls_min", "0.15", "--fpert_ls_max", "0.90"]
+    args = rc.parse_args()
+    panel = load_eval_panel(bench)
+    out_dir = bench / "source_cells"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for T in sorted({u["target_slide"] for u in panel["eval_units"]}):
+        pool = load_holdout_unassigned(bench, T)
+        adata = load_prepared_slide(prep, T)
+        ctx = rc.build_concert_ctx(args, T)
+        kept, _ = rc.map_prep_to_model_rows(T, np.asarray(adata.obs_names), pool, ctx)
+        rng = np.random.default_rng(42)
+        src = rng.choice(kept, N_SOURCE, replace=False) if len(kept) > N_SOURCE else kept
+        src = np.asarray(src, dtype=int)
+        pert = adata.obs["perturbation_canon"].astype(str).to_numpy()
+        assert set(src.tolist()) <= set(pool.tolist())
+        assert len(np.unique(src)) == len(src)
+        payload = {
+            "slide_id": T, "n_source": int(len(src)), "source_idx": src.tolist(),
+            "n_pool_holdout_unassigned": int(len(pool)), "n_pool_mappable_to_concert": int(len(kept)),
+            "rule": f"rng=np.random.default_rng(42).choice(mappable_pool, {N_SOURCE}, replace=False)",
+            "labels": sorted(set(pert[src].tolist())),
+        }
+        (out_dir / f"slide_{T}.json").write_text(json.dumps(payload, indent=2))
+        print(f"slide {T}: pool={len(pool)} mappable={len(kept)} ({len(kept)/len(pool):.4f}) source={len(src)} "
+              f"labels={payload['labels']}", flush=True)
+        del ctx
+    print("DONE", out_dir)
+
+
+if __name__ == "__main__":
+    main()

@@ -43,13 +43,14 @@ import concert_paths as cp
 
 MODEL_SRC = cp.MODELS / "concert_temporal"
 EXP = cp.EXPERIMENTS / "03_dss_gut_case_study"
-ARCH_DIR = Path(str(cp.DSS_DIR) + "_arch")            # tissue-architecture descriptors
-MANIFEST = cp.DSS_DIR / "manifest.csv"
+DSS_DIR = cp.rp.DSS / "sections"                      # the MERFISH sections
+ARCH_DIR = cp.rp.DSS / "architecture"                 # tissue-architecture descriptors
+MANIFEST = DSS_DIR / "manifest.csv"
 
-RUN = cp.OUTPUT_ROOT / "dss_timekernel_markersign_timefield_fixedt"
+RUN = cp.CHECKPOINT_ROOT / "dss_colitis"
 CKPT = RUN / "model.pt"
-SHIPPED = RUN / "case_study"
-NUMBERS = cp.PAPER_NUMBERS / "case_study_colitis"
+SHIPPED = cp.rp.DSS / "case_study"
+NUMBERS = cp.rp.DSS / "paper_numbers"
 
 MARKERS_20 = ["Isg15", "Ifit1", "Tnf", "Cxcl1", "Nos2", "Il11", "Il1b", "Mmp3", "Mmp10",
               "Mmp13", "Plau", "Igfbp5", "Col18a1", "Mmp2", "S100a8", "S100a9", "Osm",
@@ -149,7 +150,7 @@ def step_decode(env, out):
             (shadow / f.name).symlink_to(f)
 
     mice = env["mice"] or sorted(man.Mouse_ID.unique())
-    files = [str(cp.DSS_DIR / f) for f in man[man.Mouse_ID.isin(mice)].file]
+    files = [str(DSS_DIR / f) for f in man[man.Mouse_ID.isin(mice)].file]
     print(f"{len(mice)} animals, {len(files)} sections")
     cmd = decode_command(files, shadow)
     print("command:\n ", " ".join(cmd[:8]), "...")
@@ -203,7 +204,7 @@ def step_observed(env, out):
         for mid, grp in env["man"].groupby("Mouse_ID"):
             ssum, ncell = 0.0, 0
             for f in grp.file:
-                a = ad.read_h5ad(cp.DSS_DIR / f)
+                a = ad.read_h5ad(DSS_DIR / f)
                 idx = [list(a.var_names).index(g) for g in MARKERS_17]
                 x = a.X[:, idx]
                 x = x.toarray() if sp.issparse(x) else np.asarray(x)

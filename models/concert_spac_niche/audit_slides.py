@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Quick audit of SPAC-seq slides: perturbation overlap + NTC-vs-unassigned LFC consistency."""
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys, h5py, numpy as np
 from pathlib import Path
 from collections import Counter
 
-DATA = Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq")
+DATA = Path(f"{_rp.DATA}/spacseq/raw")
 SLIDES = [s for s in sorted(DATA.glob("raw_output_1-*.h5ad"))]
 
 UNASSIGNED = {"unassigned","Unassigned","No_guide","no_guide","unknown"}

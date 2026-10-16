@@ -8,12 +8,16 @@
 induction   = mean over PERTURBED spots of (pert - control), fixed-library log1p-CPM
 spill       = mean over UNPERTURBED spots of the same  (0 if the effect is confined to the lesion)
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 from pathlib import Path
 import numpy as np, anndata as ad, h5py
 
-WITH = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara")
-WOUT = Path("/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/stroke_2dpara_nopara")
+WITH = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara")
+WOUT = Path(f"{_rp.WORKDIR}/scratch/CONCERT_rimtest/stroke_2dpara_nopara")
 GENES = ["Gm42418", "Scgb1a1", "Lcn2", "Vim", "Gfap", "Timp1"]
 NAMES = [f"size_{s:04d}" for s in (25, 50, 100, 200, 400, 800)] + \
         ["depth_surface_CTX", "depth_deep_TH"] + [f"multidot_n{n:02d}" for n in (1, 2, 4, 8, 16)]

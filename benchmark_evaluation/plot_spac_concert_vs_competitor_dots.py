@@ -25,7 +25,7 @@ from plot_spac_benchmark_bars import (
     METHOD_ORDER,
     METHOD_SOURCES,
     SPAC_SEEN_TOP_N,
-    SPAC_V3,
+    SPAC_ROOT,
     collect_lfc_stats,
     collect_lfc_stats_unseen,
     load_concert_by_gene,
@@ -60,7 +60,7 @@ def parse_args():
     # retrain) without touching the module-level default. CONCERT's plotted metrics come
     # from the rescored --outdir CSV either way; this keeps GENE SELECTION consistent with
     # the arm being plotted instead of silently using the old checkpoint's coverage.
-    p.add_argument("--concert-v3", type=Path, default=None)
+    p.add_argument("--concert-dir", type=Path, default=None)
     return p.parse_args()
 
 
@@ -82,20 +82,20 @@ def _merge_extra_csvs(stats, outdir: Path, all_genes: list[str], regime: str) ->
 
 def build_stats(args):
     if args.regime == "seen":
-        concert = load_concert_by_gene(args.concert_v3, "seen")
-        display_genes = select_top_genes(concert, SPAC_V3, args.top_n)
+        concert = load_concert_by_gene(args.concert_dir, "seen")
+        display_genes = select_top_genes(concert, SPAC_ROOT, args.top_n)
         dist_csv = args.outdir / "spac_seen_lfc_dist_per_record.csv"
         prefix, tag = "spacseq_seen", "seen"
         all_genes = _all_genes_from_csv(dist_csv, concert)
         stats = collect_lfc_stats(all_genes, concert)
     else:
         eval_units = load_eval_units()
-        concert = load_concert_by_gene(args.concert_v3, "unseen", eval_units)
-        display_genes = select_unseen_genes(concert, eval_units, SPAC_V3)[: args.top_n]
+        concert = load_concert_by_gene(args.concert_dir, "unseen", eval_units)
+        display_genes = select_unseen_genes(concert, eval_units, SPAC_ROOT)[: args.top_n]
         dist_csv = args.outdir / "spac_unseen_lfc_dist_per_record.csv"
         prefix, tag = "spacseq_unseen", "unseen"
         all_genes = _all_genes_from_csv(dist_csv, concert)
-        for g in select_unseen_genes(concert, eval_units, SPAC_V3):
+        for g in select_unseen_genes(concert, eval_units, SPAC_ROOT):
             if g not in all_genes:
                 all_genes.append(g)
         stats = collect_lfc_stats_unseen(all_genes, eval_units, concert)

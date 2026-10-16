@@ -6,7 +6,7 @@ figure_stats.json, and the caption text driven by the same numbers.
 
 Reading rule: an arm is "insensitive" when its point sits inside the five-seed range of the
 published configuration. That range is reported numerically in the caption and shown directly in
-the first panel; it is not shaded on the panels (Xianglin, 2026-08-18).
+the first panel; it is not shaded on the panels (author decision, 2026-08-18).
 
 Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
 """
@@ -23,7 +23,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, "/n/holylabs/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study")
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "03_dss_gut_case_study" / "figures"))
 import paper_style as ps  # noqa: E402
 
 # panel order, reader-facing names, and whether the x axis is logarithmic
@@ -43,7 +45,7 @@ FACTORS = [
     ("basal_rff_features", "Basal field\nrandom features", True),
     ("basal_rff_bandwidth", "Basal field bandwidth", False),
 ]
-# the two metrics the benchmark figure reports (rescore_pm_lfc_distance.py)
+# the two metrics the benchmark figure reports (perturbmap_harness_rescore.py)
 METRICS = [("spearman_mean", "Log-fold-change\nrank correlation", "up", "rho"),
            ("lfc_dist_mean", "Log-fold-change RMSE", "down", "rmse")]
 BASE = {"seed": 42, "fpert_ls_max_loc": 360.0, "fpert_svgp_inducing": 64,
@@ -112,11 +114,9 @@ def write_caption(outdir: Path, stats: dict, n_cells: int) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
-                                 "CONCERT-main/results/sens_pmap_arms.csv"))
+                    default=rp.SPACSEQ_SENSITIVITY.parent / "sensitivity_tables" / "sens_pmap_arms.csv")
     ap.add_argument("--outdir", type=Path,
-                    default=Path("/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/"
-                                 "CONCERT-main/Outputs/sensitivity"))
+                    default=rp.WORKDIR / "sensitivity")
     args = ap.parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
     ps.use()

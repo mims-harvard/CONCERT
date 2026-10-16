@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Mean target reference strategy with a capped number of knockout cells, SPAC-seq v4, both arms, sampled output.
+"""Mean target reference strategy with a capped number of knockout cells, SPAC-seq, both arms, sampled output.
 
 The published Mean target averages every knockout cell of the full prepared slides (median 560 cells
 unseen, 973 seen), while the trained models see the same knockout through the 50,000-cell training
 manifest (median 18 unseen, 47 seen). This sweep rebuilds the Mean target from a random subset of
 N knockout cells and scores it under the unchanged rule of
-  unseen: rescore_naive_baselines_unseen_v4_genefix.py (donor slides only, v4 source cells + reference)
-  seen:   rescore_collab_naive_baselines.py via the genefix wrapper (all slides, unit cells left out)
+  unseen: reference_strategies_unseen.py (donor slides only, shared source cells + reference)
+  seen:   reference_strategies.py via the shared gene rule (all slides, unit cells left out)
 with Poisson output at the observed source library size (--sampled_output True in both scripts).
 
 Pools (per knockout unit):
@@ -28,20 +28,20 @@ import anndata as ad
 import numpy as np
 import pandas as pd
 
-EVAL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval")
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmark_evaluation"))
-import rescore_collab_naive_baselines_seen_genefix  # noqa: E402,F401  (installs the genefix gene mask on nb)
-import rescore_collab_naive_baselines as nb  # noqa: E402
-import rescore_naive_baselines_unseen_v4_genefix as uv  # noqa: E402
+import release_paths as rp  # noqa: E402
+import reference_strategies_seen  # noqa: E402,F401  (installs the shared gene mask on nb)
+import reference_strategies as nb  # noqa: E402
+import reference_strategies_unseen as uv  # noqa: E402
 import spacseq_eval_common as sec  # noqa: E402
-from benchmark_v4_eval_lib import (  # noqa: E402
-    ko_holdout_indices, load_eval_panel, load_source_cells_v4, unseen_reference_idx_v4)
-from seen_residual_scoring import (  # noqa: E402
+from spacseq_unseen_eval_lib import (  # noqa: E402
+    ko_holdout_indices, load_eval_panel, load_source_cells, unseen_reference_idx)
+from lfc_scoring import (  # noqa: E402
     observed_lfc_seen_patch_niche, pseudobulk_lfc, score_lfc_agreement, to_dense)
 from spacseq_multi_common import load_patch_roles  # noqa: E402
 
 PREP = nb.PREP_SPAC
-B4 = PREP / "benchmark_v4"
+BENCH = PREP / "benchmark"
 SLIDES = uv.SLIDES
 
 
@@ -95,12 +95,12 @@ def main():
         slide_X[s] = a.X
         del a
         print(f"loaded slide {s}", flush=True)
-    man = {r: json.loads((B4 / f"train_manifest_{r}.json").read_text()) for r in ("seen", "unseen_union")}
+    man = {r: json.loads((BENCH / f"train_manifest_{r}.json").read_text()) for r in ("seen", "unseen_union")}
     train = {r: {s: set(m["per_slide"][s]["train_idx"]) for s in SLIDES} for r, m in man.items()}
 
     # unseen
     if "unseen" in arms:
-        panel = load_eval_panel(B4)
+        panel = load_eval_panel(BENCH)
         _, sa = sec.import_eval_utils()
         rows = []
         for T in sorted({u["target_slide"] for u in panel["eval_units"]}):
@@ -108,14 +108,14 @@ def main():
             genes = np.asarray(a.var_names).astype(str)
             hvg_mask = sec.select_hvgs(a, 2000, sa)
             in_concert = np.isin(genes, uv.CONCERT_GENES)
-            ref_idx = unseen_reference_idx_v4(a, PREP, T)
+            ref_idx = unseen_reference_idx(a, PREP, T)
             y_ref = to_dense(a[ref_idx].X)
-            src = load_source_cells_v4(B4, T)
+            src = load_source_cells(BENCH, T)
             src_X = to_dense(a[src].X).astype(np.float64)
             lib = uv.src_lib_sizes(a, src)
             for u in [u for u in panel["eval_units"] if u["target_slide"] == T]:
                 g = u["gene"]
-                ko_idx = ko_holdout_indices(B4, g, T)
+                ko_idx = ko_holdout_indices(BENCH, g, T)
                 if len(ko_idx) < nb.MIN_G:
                     continue
                 o = pseudobulk_lfc(to_dense(a[ko_idx].X), y_ref)
@@ -137,7 +137,7 @@ def main():
 
     # seen
     if "seen" in arms:
-        nb.MASTER_SPAC = EVAL / "v4_aggregate_sampled" / "spac_seen_lfc_dist_per_record.csv"
+        nb.MASTER_SPAC = rp.SPACSEQ_RESULTS / "spac_seen_lfc_dist_per_record.csv"
         master = nb.load_master_spac()
         rows = []
         for slide, gdf in master.groupby("slide"):

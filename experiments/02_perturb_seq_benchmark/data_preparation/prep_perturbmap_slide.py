@@ -14,6 +14,10 @@ No cells are excluded.
 Usage: python prep_perturbmap_slide.py --slide 0|1|2|3
 Output: perturbmap_s<slide>_spacfmt.h5ad
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse
 import numpy as np
 import scanpy as sc
@@ -25,8 +29,8 @@ _p.add_argument("--slide", required=True)   # "0".."3"
 _args = _p.parse_args()
 SLIDE = str(_args.slide)
 
-SRC = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturb_map_data_all_fullgene.h5ad"
-OUT = f"/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturbmap_s{SLIDE}_spacfmt.h5ad"
+SRC = f"{_rp.DATA}perturbmap/raw/perturb_map_data_all_fullgene.h5ad"
+OUT = f"{_rp.DATA}perturbmap/raw/perturbmap_s{SLIDE}_spacfmt.h5ad"
 KO = {"Jak2", "Tgfbr2", "Ifngr2"}   # the 3 real CRISPR-KO genes (perturbmap has no NTC)
 
 a = ad.read_h5ad(SRC)

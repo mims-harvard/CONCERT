@@ -1,29 +1,30 @@
 #!/bin/bash -l
 #SBATCH -J spac_sens
-#SBATCH --account=kempner_mzitnik_lab
 #SBATCH --mem=200G
 #SBATCH --time 2-00:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_sens/logs/spac_sens_%x_%j.out
-#SBATCH -e /n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_sens/logs/spac_sens_%x_%j.err
+#SBATCH -o spac_sens_%x_%j.out
+#SBATCH -e spac_sens_%x_%j.err
 #
-# SPAC-seq sensitivity arm: 5-slide train + the v3 benchmark eval over all 5 slides, one job.
+# SPAC-seq sensitivity arm: 5-slide train + the benchmark eval over all 5 slides, one job.
 # Base = the REPORTED spac config (sub_train_spac_niche_lsfix.sh -> concert/seen_lsfix), so an arm
 # is "base with exactly one factor moved". ~16 h per arm.
 # Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
 #
-# Usage: TAG=seed1 SEED=1 sbatch -p kempner_h100 sub_sens_spac_arm.sh
+# Usage: TAG=seed1 SEED=1 sbatch -p <partition> sub_sens_spac_arm.sh
 # Knobs (env): SEED INDUCE LSINIT LSMIN LSMAX CSCALE MORAN LFCL DISR NFDIM NFK BRFFF BRFFB
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
-# kempner_requeue nodes are shared and often hand out a GPU that is already busy; that surfaces as
+# Preemptible-partition nodes are shared and often hand out a GPU that is already busy; that surfaces as
 # "CUDA-capable device(s) is/are busy or unavailable" ~1 min in and burns the whole arm. Probe the
 # device first and put the job back in the queue instead of failing, so it retries on another node.
 if ! python -c "import torch; torch.zeros(8, device='cuda'); print('CUDA OK')" 2>/dev/null; then
@@ -69,17 +70,18 @@ NFK="${NFK:-25}"
 BRFFF="${BRFFF:-128}"
 BRFFB="${BRFFB:-0.15}"
 
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
-BASE=/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets
-SP=${BASE}/newdata/spac_seq
-HOCO=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/v3_holdout_coords
-EVAL=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval
+NS=${CONCERT_WORKDIR}
+DATA="${CONCERT_DATA_DIR}"
+SP=${DATA}/spacseq/raw
+HOCO=${DATA}/benchmark_assets/holdout_coords
+EVAL=${DATA}/spacseq
+EVAL_CODE="${CODEBASE_ROOT}/benchmark_evaluation"
 
 FILES="${SP}/raw_output_1-1.h5ad,${SP}/raw_output_1-2.h5ad,${SP}/raw_output_1-3.h5ad,${SP}/raw_output_1-4.h5ad,${SP}/raw_output_1-5.h5ad"
-HOLD="${HOCO}/holdout_v3_spac_${REGIME}.json"
+HOLD="${HOCO}/holdout_spac_${REGIME}.json"
 [ -f "$HOLD" ] || { echo "[FATAL] holdout file missing: $HOLD"; exit 1; }
 
-SWEEP=/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_sens
+SWEEP=${CONCERT_WORKDIR}/scratch/CONCERT_sens
 OUT="${SWEEP}/outputs/ms_spac1_sens_${REGIME}_${TAG}"
 RES="${SWEEP}/results/${REGIME}_${TAG}"
 mkdir -p "$OUT" "$RES" "${SWEEP}/logs"
@@ -102,7 +104,7 @@ echo "[$(date)] SPAC SENS TRAIN tag=${TAG} seed=${SEED} induce=${INDUCE} band=[$
 python -u run_concert_spac.py \
     --config config.yaml --sample "ms_spac1" --stage train \
     --multi_sample_files "${FILES}" --outdir "$OUT" --model_file "model.pt" --project_index spac \
-    --holdout_v3_file "${HOLD}" \
+    --holdout_file "${HOLD}" \
     --hvg_max_rank 2000 --seed ${SEED} \
     --inducing_point_steps 6 --grid_inducing_points True --loc_range 20.0 --kernel_scale 10.0 --multi_kernel_mode True \
     --maxiter 1500 --patience 50 --earlystop_min_delta 0.05 --lr 1e-4 --batch_size 2048 --train_size 0.95 \
@@ -120,21 +122,22 @@ python -u run_concert_spac.py \
     --verbosity 1
 echo "[$(date)] SPAC SENS TRAIN ${TAG} done -> ${OUT}"
 
-# Eval: same protocol as the reported numbers (concert/seen_lsfix). Arch flags MUST match the
+# Eval: run_concert_benchmark_eval.py with its default output flags (predicted mean, LFC against
+# CONCERT's own basal prediction), the protocol of the base config (concert/seen_lsfix). Arch flags MUST match the
 # checkpoint -- inducing and basal RFF width auto-detect, but the ls band, coord scale and
 # niche_film_k are plain floats absent from the state_dict and are passed explicitly.
-cd "$EVAL"
+cd "$EVAL_CODE"
 EGUARD="--ls_prior_min 3 --ls_prior_max 18 --fpert_svgp_inducing ${INDUCE} --fpert_svgp_ls_init ${LSINIT} --fpert_ls_min ${LSMIN} --fpert_ls_max ${LSMAX} --fpert_coord_scale ${CSCALE} --niche_film_k ${NFK}"
 if [ "$REGIME" = "seen" ]; then
   for SID in 1-1 1-2 1-3 1-4 1-5; do
     echo "[$(date)] SPAC SENS EVAL ${TAG} slide ${SID}"
-    python -u run_concert_v3_benchmark_eval.py --regime seen --target_slide "${SID}" \
-      --prepared_dir "${EVAL}/multi_1-5/prepared" --model_file "${OUT}/model.pt" \
+    python -u run_concert_benchmark_eval.py --regime seen --target_slide "${SID}" \
+      --prepared_dir "${EVAL}/prepared" --model_file "${OUT}/model.pt" \
       --outdir "$RES" --n_boot 10 --min_g_cells 20 --max_src_cells_per_niche 500 --force ${EGUARD}
   done
 else
-  python -u run_concert_v3_benchmark_eval.py --regime unseen \
-    --prepared_dir "${EVAL}/multi_1-5/prepared" --model_file "${OUT}/model.pt" \
+  python -u run_concert_benchmark_eval.py --regime unseen \
+    --prepared_dir "${EVAL}/prepared" --model_file "${OUT}/model.pt" \
     --outdir "$RES" --n_boot 10 --min_g_cells 20 --max_src_cells_per_niche 500 --force ${EGUARD}
 fi
 cp "${OUT}/arm.json" "${RES}/arm.json"

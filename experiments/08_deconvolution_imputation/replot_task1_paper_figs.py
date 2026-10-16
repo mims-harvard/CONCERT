@@ -10,6 +10,10 @@ Caller:
   python replot_task1_paper_figs.py
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 
 import argparse
 import json
@@ -24,18 +28,10 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
 
-ASSETS_DEFAULT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/spot_only_2-1")
-PRED_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
-    "spac_seq/spot_only_2-1/deconv_methods_v2/per_spot_v2.csv"
-)
-OUT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/"
-    "spac_seq/spot_only_2-1/deconv_methods_v2"
-)
-EXT_DEFAULT = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/ext_exp"
-)
+ASSETS_DEFAULT = Path(f"{_rp.DATA}/deconvolution/spacseq_2-1/spot_assets")
+PRED_DEFAULT = Path(f"{_rp.DATA}/deconvolution/spacseq_2-1/per_spot.csv")
+OUT_DEFAULT = Path(f"{_rp.WORKDIR}/deconvolution_spacseq_2-1")
+EXT_DEFAULT = Path(f"{_rp.WORKDIR}/deconvolution_spacseq_2-1/figures")
 
 # Match overview slide colors (matplotlib tab10 over TOP_KO order used in viz_deconv_slide_2_1)
 GENE_COLORS = {
@@ -123,7 +119,7 @@ def thin_spots(xy, max_n, min_sep, rng):
 def plot_bars(summ_path: Path, out_png: Path):
     summ = pd.read_json(summ_path)
     base = summ.loc[summ.method == "naive_nnls_empirical"].iloc[0]
-    prop = summ.loc[summ.method == "concert_amortized_v2"].iloc[0]
+    prop = summ.loc[summ.method == "concert_amortized"].iloc[0]
     labels = ["NNLS", "CONCERT"]
     mae = [float(base.comp_MAE), float(prop.comp_MAE)]
     pear = [float(base.comp_pearson), float(prop.comp_pearson)]
@@ -156,7 +152,7 @@ def plot_bars_per_ko(
     pred: pd.DataFrame,
     out_png: Path,
     nnls_col: str = "naive_nnls_empirical",
-    concert_col: str = "concert_amortized_v2",
+    concert_col: str = "concert_amortized",
 ):
     """Grouped MAE / Pearson bars per KO gene: NNLS vs CONCERT. No titles."""
     rows = []
@@ -237,7 +233,7 @@ def plot_scatter(pred: pd.DataFrame, out_png: Path):
     fig, axes = plt.subplots(1, 2, figsize=(7.6, 3.6))
     for ax, col, label, color in [
         (axes[0], "naive_nnls_empirical", "NNLS", "#1565c0"),
-        (axes[1], "concert_amortized_v2", "CONCERT", "#c62828"),
+        (axes[1], "concert_amortized", "CONCERT", "#c62828"),
     ]:
         y = pred[col].to_numpy()
         gt = pred.gt_frac_ko.to_numpy()
@@ -262,7 +258,7 @@ def plot_scatter(pred: pd.DataFrame, out_png: Path):
 def plot_winrate(pred: pd.DataFrame, out_png: Path):
     gt = pred.gt_frac_ko.to_numpy()
     err_nnls = np.abs(gt - pred.naive_nnls_empirical.to_numpy())
-    err_am = np.abs(gt - pred.concert_amortized_v2.to_numpy())
+    err_am = np.abs(gt - pred.concert_amortized.to_numpy())
     d = err_nnls - err_am  # >0 => CONCERT better
     fig, ax = plt.subplots(figsize=(4.6, 3.6))
     ax.hist(d, bins=40, color="#c62828", alpha=0.85)
@@ -302,7 +298,7 @@ def _prepare_gene_pies(
         xs.append(float(roles_ix.loc[sid, "x"]))
         ys.append(float(roles_ix.loc[sid, "y"]))
         gt.append(float(r.gt_frac_ko))
-        pr.append(float(r.concert_amortized_v2))
+        pr.append(float(r.concert_amortized))
     xy = np.column_stack([xs, ys])
     gt = np.asarray(gt)
     pr = np.asarray(pr)
@@ -439,7 +435,7 @@ def plot_gt_pred_scatter_row(
     pred: pd.DataFrame,
     genes: list[str],
     out_png: Path,
-    pred_col: str = "concert_amortized_v2",
+    pred_col: str = "concert_amortized",
     seed: int = 42,
 ):
     """1x3 calibration: GT-binned mean+/-IQR of Pred (faint points underneath)."""
@@ -620,15 +616,15 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
     args.ext.mkdir(parents=True, exist_ok=True)
 
-    summ_path = outdir / "summary_v2.json"
-    plot_bars(summ_path, outdir / "v2_bars_mae_pearson.png")
+    summ_path = outdir / "summary.json"
+    plot_bars(summ_path, outdir / "bars_mae_pearson.png")
 
     pred = pd.read_csv(args.pred_csv)
-    per_ko = plot_bars_per_ko(pred, outdir / "v2_bars_mae_pearson_per_ko.png")
+    per_ko = plot_bars_per_ko(pred, outdir / "bars_mae_pearson_per_ko.png")
     per_ko.to_csv(outdir / "per_ko_metrics.csv", index=False)
 
-    plot_scatter(pred, outdir / "v2_scatter_paper_vs_nnls.png")
-    plot_winrate(pred, outdir / "v2_winrate_vs_nnls.png")
+    plot_scatter(pred, outdir / "scatter_paper_vs_nnls.png")
+    plot_winrate(pred, outdir / "winrate_vs_nnls.png")
 
     gene_counts = pred.gene.value_counts()
     print("genes evaluated (n={}):".format(gene_counts.size), flush=True)
@@ -675,10 +671,10 @@ def main():
 
     # overview: keep prior copy if present; rename NNLS labels in copied metric figs
     copies = [
-        ("v2_bars_mae_pearson.png", "task1_spac21_deconv_mae_pearson_bars.png"),
-        ("v2_bars_mae_pearson_per_ko.png", "task1_spac21_deconv_mae_pearson_bars_per_ko.png"),
-        ("v2_scatter_paper_vs_nnls.png", "task1_spac21_deconv_scatter_concert_vs_nnls.png"),
-        ("v2_winrate_vs_nnls.png", "task1_spac21_deconv_winrate_vs_nnls.png"),
+        ("bars_mae_pearson.png", "task1_spac21_deconv_mae_pearson_bars.png"),
+        ("bars_mae_pearson_per_ko.png", "task1_spac21_deconv_mae_pearson_bars_per_ko.png"),
+        ("scatter_paper_vs_nnls.png", "task1_spac21_deconv_scatter_concert_vs_nnls.png"),
+        ("winrate_vs_nnls.png", "task1_spac21_deconv_winrate_vs_nnls.png"),
         ("deconv_paired_ko_frac_dots.png", "task1_spac21_deconv_paired_ko_frac_dots.png"),
         ("slide_raw_vs_deconv_zoom_top3.png", "task1_spac21_slide_raw_vs_deconv_zoom_top3.png"),
         ("slide_raw_vs_deconv_zoom_Icam1.png", "task1_spac21_slide_raw_vs_deconv_zoom_Icam1.png"),

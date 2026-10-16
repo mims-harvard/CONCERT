@@ -2,8 +2,11 @@
 from pathlib import Path
 import numpy as np, pandas as pd
 from scipy.stats import wilcoxon
-# sweep outputs live in the scoring tree, next to the aggregation they are compared against
-D = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval/mean_target_audit"); AGG = D.parent / "v4_aggregate_sampled"
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "benchmark_evaluation"))
+import release_paths as rp  # noqa: E402
+# sweep outputs (run_mean_target_audit.sh) and the reported tables they are compared against
+D = rp.WORKDIR / "mean_target_audit"; AGG = rp.SPACSEQ_RESULTS
 KEY = ["gene", "slide", "niche_key"]
 out = []
 for arm in ("unseen", "seen"):

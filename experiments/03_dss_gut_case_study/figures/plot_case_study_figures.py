@@ -13,6 +13,10 @@ Outputs (RUNDIR/case_study/figures/):
   fig_case_study.png            -- 4-panel summary (trajectories / calibration / heterogeneity / Moran)
   fig_per_mouse_trajectories.png, fig_calibration.png, fig_heterogeneity.png, fig_velocity.png
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import argparse, json
 from pathlib import Path
 import numpy as np
@@ -163,9 +167,9 @@ def fig_trajectories_normalized(outdir, traj):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--rundir", default="/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/"
+    ap.add_argument("--rundir", default=f"{_rp.WORKDIR}/"
                     "outputs/dss_timekernel_markersign_timefield_fixedt")
-    ap.add_argument("--obs_json", default="/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/"
+    ap.add_argument("--obs_json", default=f"{_rp.WORKDIR}/"
                     "outputs/dss_timekernel_markersign_timefield_full/observed_marker_by_day.json")
     args = ap.parse_args()
 

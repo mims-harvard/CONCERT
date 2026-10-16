@@ -1,19 +1,16 @@
 """Shared path resolution and import order for the reproduction scripts.
 
-The four scripts in this directory reproduce one paper result each from a trained
-checkpoint. They read from four roots, and every one of them can be pointed
-somewhere else with an environment variable:
+The four scripts in this directory reproduce one paper result each from a trained checkpoint.
+Every input sits in two downloadable folders, and two environment variables point at them:
 
-| variable                | what it holds                                        |
-|-------------------------|------------------------------------------------------|
-| `CONCERT_DATA_ROOT`     | the measured sections (see `datasets/README.md`)      |
-| `CONCERT_OUTPUT_ROOT`   | the trained checkpoints, one directory per run        |
-| `CONCERT_SCORING_LIB`   | prepared cell sets and the results shipped with the paper |
-| `CONCERT_PAPER_NUMBERS` | the reported per-record tables, used as a cross-check |
-| `CONCERT_WORKDIR`       | where the scripts write (default `<repo>/runs`)       |
+| variable                  | what it holds                                                  |
+|---------------------------|----------------------------------------------------------------|
+| `CONCERT_DATA_DIR`        | the `data/` folder: sections, benchmark assets, shipped results |
+| `CONCERT_CHECKPOINT_ROOT` | the `checkpoints/` folder, one directory per trained model      |
+| `CONCERT_WORKDIR`         | where the scripts write (optional)                             |
 
-The defaults are the paths the results were produced on, so the scripts run as-is
-inside the lab and need five exports elsewhere.
+The defaults are the lab copies of the two folders, so the scripts run as-is inside the lab.
+The layout of `data/` is defined once, in `benchmark_evaluation/release_paths.py`.
 """
 from __future__ import annotations
 
@@ -27,52 +24,20 @@ MODELS = REPO_ROOT / "models"
 EVAL_SRC = REPO_ROOT / "benchmark_evaluation"
 EXPERIMENTS = REPO_ROOT / "experiments"
 
+sys.path.insert(0, str(EVAL_SRC))
+import release_paths as rp  # noqa: E402
 
-def _p(env_var: str, default: str) -> Path:
-    return Path(os.environ.get(env_var, default)).expanduser()
+DATA = rp.DATA
+CHECKPOINT_ROOT = rp.CHECKPOINTS
 
 
-DATA_ROOT = _p(
-    "CONCERT_DATA_ROOT",
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets",
-)
-OUTPUT_ROOT = _p(
-    "CONCERT_OUTPUT_ROOT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs",
-)
-SCORING_LIB = _p(
-    "CONCERT_SCORING_LIB",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/spac_seq_eval",
-)
-PAPER_NUMBERS = _p(
-    "CONCERT_PAPER_NUMBERS",
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/CONCERT/paper_package/numbers",
-)
-# Two metric helpers (eval_utils, spac_edist_align) that spacseq_eval_common imports
-# from an absolute path of its own. It is not put on sys.path here -- the module does
-# that itself -- but the directory has to exist.
-HELPER_LIB = _p(
-    "CONCERT_HELPER_LIB",
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/src/CONCERT-spac",
-)
-# The two case studies read from a separate data tree.
-CASE_STUDY_ROOT = _p(
-    "CONCERT_CASE_STUDY_ROOT",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT",
-)
-DSS_DIR = _p(
-    "CONCERT_DSS_DIR",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/processed/dryad_merfish_dss",
-)
-PMAP_EXP = _p(
-    "CONCERT_PMAP_EXP",
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map",
-)
+def _p(env_var: str, default) -> Path:
+    return Path(os.environ.get(env_var, str(default))).expanduser()
 
 
 def workdir(name: str) -> Path:
     """Where a script writes. Never inside the repository, never on holylfs06."""
-    root = _p("CONCERT_WORKDIR", str(REPO_ROOT.parent / "runs"))
+    root = rp.WORKDIR
     d = root / name
     d.mkdir(parents=True, exist_ok=True)
     return d

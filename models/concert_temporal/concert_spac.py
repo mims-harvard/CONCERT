@@ -488,7 +488,7 @@ class MembershipField(nn.Module):
 
 
 class InflammationField(nn.Module):
-    """Continuous, non-negative spatiotemporal inflammation field (v3).
+    """Continuous, non-negative spatiotemporal inflammation field.
 
     s_i = softplus(MLP([z_niche_i, coords_i, time_emb_i]))  -- a continuous scalar >= 0.
 
@@ -1563,7 +1563,7 @@ class CONCERT(nn.Module):
         niche_id: Optional[torch.Tensor] = None,     # (B,) long -- niche bin id for LFC supervision
         slide_index: Optional[torch.Tensor] = None,   # (B,) long -- per-cell slide id (C2)
         time_t: Optional[torch.Tensor] = None,        # (B,) float -- normalized day tin[0,1]
-        infl_score: Optional[torch.Tensor] = None,    # (B,) float -- observed continuous inflammation gene-score (v3 target)
+        infl_score: Optional[torch.Tensor] = None,    # (B,) float -- observed continuous inflammation gene-score target
         tier1_id: Optional[torch.Tensor] = None,      # (B,) long -- Tier1 lineage code (timekernel)
         arch_desc: Optional[torch.Tensor] = None,     # (B, arch_dim) float -- day-invariant architectural descriptor (timekernel; standardised)
     ) -> Tuple[torch.Tensor, ...]:
@@ -1731,7 +1731,7 @@ class CONCERT(nn.Module):
             else:
                 gp_ce = self._gauss_cross_entropy(gp_p_m, gp_p_v, gp_mu, gp_var).sum()
                 if self.gp_free_bits > 0:
-                    # 9 v5a: per-dim GP free-bits floor (mirror of the Gaussian block).
+                    # Per-dim GP free-bits floor (mirror of the Gaussian block).
                     # the earlier build left the GP block unfloored while the Normal block had a per-dim floor,
                     # so the encoder routed ~no signal into gp_mu and the SVGP smoothed a near-flat
                     # field (gp_latent_std ~1e-3). Decompose gp_KL per GP dim and clamp each to
@@ -2939,7 +2939,7 @@ class CONCERT(nn.Module):
         niche_id: Optional[np.ndarray] = None,    # (N,) int -- niche bin id for LFC supervision (-1 = none)
         sample_id: Optional[np.ndarray] = None,   # (N,) int -- per-cell slide id (C2; None = single-slide)
         time_t: Optional[np.ndarray] = None,      # (N,) float -- normalized day tin[0,1] (temporal case study)
-        infl_score: Optional[np.ndarray] = None,  # (N,) float -- observed continuous inflammation gene-score (v3 target)
+        infl_score: Optional[np.ndarray] = None,  # (N,) float -- observed continuous inflammation gene-score target
         tier1_id: Optional[np.ndarray] = None,    # (N,) int -- Tier1 lineage code (timekernel)
         arch_desc: Optional[np.ndarray] = None,   # (N, arch_dim) float -- standardised day-invariant architectural descriptor (timekernel)
         lr: float = 1e-3,
@@ -3060,7 +3060,7 @@ class CONCERT(nn.Module):
             niche_id_t,         # slot 11: niche bin id (long, -1 = none)
             slide_id_t,         # slot 12: per-cell slide id (long, C2)
             time_t_t,           # slot 13: normalized day tin[0,1] (temporal)
-            infl_score_t,       # slot 14: continuous inflammation gene-score target (v3)
+            infl_score_t,       # slot 14: continuous inflammation gene-score target
             tier1_id_t,         # slot 15: Tier1 lineage code (long)
             arch_desc_t,        # slot 16: standardised architectural descriptor (float, (N, arch_dim))
         )
@@ -3152,7 +3152,7 @@ class CONCERT(nn.Module):
                 ni = ni.to(self.device, dtype=torch.long)   # niche bin id
                 sid_b = sid_b.to(self.device, dtype=torch.long)   # per-cell slide id (C2)
                 tt = tt.to(self.device)   # normalized day tin[0,1]
-                isc = isc.to(self.device)   # continuous inflammation gene-score target (v3)
+                isc = isc.to(self.device)   # continuous inflammation gene-score target
                 t1b = t1b.to(self.device, dtype=torch.long)   # Tier1 lineage code (timekernel)
                 adb = adb.to(self.device)                     # (B, arch_dim) architectural descriptor
 
@@ -3347,7 +3347,7 @@ class CONCERT(nn.Module):
                     ni = ni.to(self.device, dtype=torch.long)
                     sid_b = sid_b.to(self.device, dtype=torch.long)   # per-cell slide id (C2)
                     tt = tt.to(self.device)   # normalized day tin[0,1]
-                    isc = isc.to(self.device)   # continuous inflammation gene-score target (v3)
+                    isc = isc.to(self.device)   # continuous inflammation gene-score target
                     t1b = t1b.to(self.device, dtype=torch.long)   # Tier1 lineage code (timekernel)
                     adb = adb.to(self.device)                    # (B, arch_dim) architectural descriptor
 

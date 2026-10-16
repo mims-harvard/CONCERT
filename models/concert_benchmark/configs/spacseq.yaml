@@ -1,0 +1,37 @@
+# SPAC-seq benchmark (experiment 01): the settings of the reported runs.
+# Every setting that differs from the RunConfig defaults in run_concert_spac.py.
+# Command-line flags override these values; data, output and holdout paths go on the command line.
+
+basal_field: rff
+batch_size: 2048
+beta_warmup_epochs: 20
+clonality_gate: clone_size
+disentangle_radius: 4.0
+dropoutE: 0.1
+dynamicVAE: false
+earlystop_min_delta: 0.05
+fpert_coord_scale: 20.0
+fpert_field: gp_pp
+fpert_ls_max: 0.9
+fpert_ls_min: 0.15
+fpert_svgp_inducing: 16
+fpert_svgp_ls_init: 0.25
+free_bits: 0.5
+gp_free_bits: 1.0
+hvg_max_rank: 2000
+lfc_lambda: 1.0
+ls_prior_lambda: 1.0
+ls_prior_max: 18.0
+maxiter: 1500
+min_cells_per_pert: 25
+moran_lambda: 1.0
+noise: 0.1
+patience: 50
+seed: 42
+slide_guide_shift: true
+spatial_basal_only: true
+use_basal_encoder_only: true
+use_expr_encoder: true
+use_f_pert: true
+use_niche_film: true
+use_pert_gate: true

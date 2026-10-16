@@ -18,6 +18,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+import release_paths as rp  # noqa: E402
+
 import numpy as np
 import torch
 import scanpy as sc
@@ -46,8 +48,8 @@ logging.basicConfig(
 # ---
 # Hard-coded paths and config -- mirrors sub_spac_train_1-1.sh exactly
 # ---
-DATA_FILE  = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/newdata/spac_seq/raw_output_1-1.h5ad"
-MODEL_FILE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/src/CONCERT-spac/outputs/raw_output_1-1/model_spac_1-1_v2.pt"
+DATA_FILE  = str(rp.SPACSEQ_RAW / "raw_output_1-1.h5ad")
+MODEL_FILE = str(rp.CHECKPOINTS / "spacseq_within_niche" / "model.pt")
 
 UNASSIGNED_LABELS  = frozenset(["unassigned", "Unassigned", "No_guide", "no_guide", "unknown"])
 CONTROL_LABELS     = frozenset(["Non_targeting", "non_targeting", "NonTargeting",
@@ -86,7 +88,7 @@ BATCH_SIZE_INFER = 2048
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--outdir",
-                   default="/n/holylabs/mzitnik_lab/Users/xianglin226/CONCERT")
+                   default=str(rp.WORKDIR / "make_umap"))
     p.add_argument("--model_file",  default=MODEL_FILE)
     p.add_argument("--data_file",   default=DATA_FILE)
     p.add_argument("--umap_seed",   type=int,   default=42)

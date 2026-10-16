@@ -5,12 +5,16 @@ Leakage test: if switching these OFF (--target_cell_perturbation __basal__) leav
 genes just as high, the lesion is memorised by the coordinate-only basal RFF field and f_pert
 has nothing left to learn.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 from pathlib import Path
 import numpy as np, h5py
 
-SL = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/stroke3d/slides")
+SL = Path(f"{_rp.WORKDIR}/stroke3d/slides")
 ORDER = ["PT1", "PT2", "PT3", "PT4", "Sham1", "Sham2", "Sham3", "Sham4"]
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara/pert_sets")
+OUT = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara/pert_sets")
 
 off, sel = 0, None
 for s in ORDER:

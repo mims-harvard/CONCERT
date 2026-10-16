@@ -4,6 +4,10 @@ Phase 3-4: impute the SPAC-seq 2-2 masked cells with the trained SpatialScope mo
 - uses Decomposition_imputation.py (patched version)
 - evaluates imputed vs ground truth
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import sys
 import os
 import numpy as np
@@ -12,13 +16,13 @@ import anndata
 import pandas as pd
 import glob
 
-SPATIALSCOPE_SRC = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/src'
+SPATIALSCOPE_SRC = f'{_rp.WORKDIR}/spatial_baselines/concert_baselines/SpatialScope/src'
 sys.path.insert(0, SPATIALSCOPE_SRC)
 
 # Configuration
-CKPT_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2'
+CKPT_DIR = f'{_rp.WORKDIR}/spatial_baselines/concert_baselines/SpatialScope/SpatialScope/Ckpts_scRefs/SPAC_2-2'
 SCREF_PATH = os.path.join(CKPT_DIR, 'Ref_SPAC_2-2.h5ad')
-IMPUTATION_DIR = '/n/netscratch/mzitnik_lab/Lab/zlkong/spatial_baselines/concert_baselines/SpatialScope/test_output/spac_2-2'
+IMPUTATION_DIR = f'{_rp.WORKDIR}/spatial_baselines/concert_baselines/SpatialScope/test_output/spac_2-2'
 GT_PATH = os.path.join(IMPUTATION_DIR, 'ground_truth.h5ad')
 N_REPLICATES = 5
 BATCH_SIZE = 500  # spots per batch to avoid OOM

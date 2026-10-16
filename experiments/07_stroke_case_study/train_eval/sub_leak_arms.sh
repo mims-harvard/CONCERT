@@ -2,29 +2,30 @@
 #SBATCH -J leak_arms
 #SBATCH --mem=64G
 #SBATCH --time 0-00:40
-#SBATCH -p kempner
-#SBATCH --account=kempner_mzitnik_lab
+#SBATCH -p <partition>
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/leak_arms_%j.out
-#SBATCH -e /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/leak_arms_%j.err
+#SBATCH -o leak_arms_%j.out
+#SBATCH -e leak_arms_%j.err
 # Same lesion-ON vs lesion-OFF gate, applied to the arms that were trained WITHOUT paracrine
 # (stroke_2d, stroke_3d). These are the arms behind the KEEP panels, so we need to know whether
 # the inverted f_pert is a 2dpara-only problem or general.
+# Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
+source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
+
 set +u
-source /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/miniconda3_new/etc/profile.d/conda.sh
-conda activate /n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_env
+conda activate concert_env
 set -eo pipefail
 module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
-NS=/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT
+NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 CELLS=${NS}/outputs/stroke_2dpara/pert_sets/real_lesion_PT1.txt
 cd ${NS}/CONCERT-spac-niche
 for ARM in 2d 3d; do
   case "$ARM" in 3d) NZ=4 ;; *) NZ=1 ;; esac
-  OUT=/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_rimtest/leak_${ARM}
+  OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/leak_${ARM}
   COMMON="--config config.yaml --stage eval --multi_sample_files ${FILES} --outdir ${OUT}
     --model_file model.pt --project_index stroke --hvg_max_rank 2000 --seed 42
     --unassigned_label unperturbed --control_label __NONE__ --min_cells_per_pert 25

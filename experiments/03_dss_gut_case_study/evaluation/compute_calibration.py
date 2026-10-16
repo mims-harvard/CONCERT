@@ -27,14 +27,18 @@ stays visible in the figures and is reported as a model limitation.
 Writes calibration.json, read by every plotting script through paper_style.calibration().
 Pure numpy, head-node safe.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import csv
 import json
 import numpy as np
 
-CS = ("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+CS = (f"{_rp.WORKDIR}/outputs/"
       "dss_timekernel_markersign_timefield_fixedt/case_study")
-HERE = "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/case_study"
-DUMP = ("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/"
+HERE = f"{_rp.WORKDIR}/paper/Outputs/case_study"
+DUMP = (f"{_rp.WORKDIR}/outputs/"
         "dss_timekernel_markersign_timefield_fixedt/heldout_eval/percell_dump_sizefactor.npz")
 DAYS = [0, 3, 9, 21]
 

@@ -1,12 +1,12 @@
 # CONCERT sensitivity analysis for the SI (R1) - design
 
 **Date:** 2026-08-17 (designed 2026-08-16, interrupted by the holylfs06 outage)
-**Approved scope:** B (user, 2026-08-16), with a concurrency cap of 12 `kempner_h100` + 12 `kempner`.
+**Approved scope:** B (user, 2026-08-16), with a concurrency cap of 12 jobs on each of the two GPU partitions.
 
 ## Why
 
 Reviewers asked for a sensitivity analysis. One already exists - SI Note 9
-(`/n/holylabs/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/manuscript/SI/SI-notes_R1.tex:205`,
+(`$CONCERT_WORKDIR/paper/manuscript/SI/SI-notes_R1.tex:205`,
 figures at `SI/SI-figures_R1.tex:477,486`) - but it covers the **old architecture** (encoder/decoder
 depth, GP dim, Normal dim, kernel scale, target KL, `loc_range`) and says nothing about any component
 the revision actually argues for: the `f_pert` spatial footprint field, the RFF basal field, the
@@ -18,14 +18,14 @@ This analysis is a **companion** to Note 9, not a replacement.
 
 **Perturb-MAP, 4 slides, `seen` regime, current niche-FiLM architecture.** Not a single slide:
 a full 4-slide Perturb-MAP arm trains in **7-11 min** (measured from
-`/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/logs/pmap_band_*.out`, Aug 4-5) and evaluates
+`$CONCERT_WORKDIR/logs/pmap_band_*.out`, Aug 4-5) and evaluates
 in **2-3 min**, so the multi-slide setting is already cheap. Single-slide would only save time on
 SPAC-seq, where the multi-slide `lsfix` run took 15h52m.
 
 ## Base configuration
 
 The arm the paper reports for Perturb-MAP: `concert_ms_seen`, produced by
-`/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/CONCERT-spac-niche/sub_train_pmap_niche.sh`
+`<repo>/models/concert_spac_niche/sub_train_pmap_niche.sh`
 (checkpoint `outputs/ms_pmap_niche_seen/model.pt`, 2026-07-08; it is the CONCERT entry in
 `spac_seq_eval/plot_pm_benchmark_bars.py:32`).
 
@@ -112,7 +112,7 @@ the five-slide config at 15h52m per arm - roughly two days for a 3-seed band plu
 
 **Recommendation: leave it out.** The SI note already states the analysis was not repeated on
 SPAC-seq. The trained single-slide model is kept at
-`/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/ms_spac1_sens_ss_seen_base/` in case
+`$CONCERT_WORKDIR/outputs/ms_spac1_sens_ss_seen_base/` in case
 the decision changes.
 
 ## Outcome (2026-08-17, all arms COMPLETED)
@@ -139,16 +139,16 @@ changes the objective (`MORAN 0.444` at radius 2 vs `0.189` at radius 4). The pa
 its label was wrong.
 
 Artifacts (all paths absolute):
-- Figures: `/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/Outputs/sensitivity/fig_sens_pmap_{rho,rmse}.{pdf,png}`
+- Figures: `$CONCERT_WORKDIR/paper/Outputs/sensitivity/fig_sens_pmap_{rho,rmse}.{pdf,png}`
 - Numbers of record: `.../Outputs/sensitivity/figure_stats.json`, caption generated from it as
   `.../Outputs/sensitivity/figure_legend_sensitivity.md`
-- Per-arm table: `/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/CONCERT-main/results/sens_pmap_arms.csv`
+- Per-arm table: `$CONCERT_WORKDIR/paper/results/sens_pmap_arms.csv`
 - Manuscript: `manuscript/SI/SI-figures_R1.tex` (`figS: sensi_spatial`, `figS: sensi_spatial_rmse`) and four `\xl{}` paragraphs
   appended to Note 9 in `manuscript/SI/SI-notes_R1.tex`
 - Code: `CONCERT-spac-niche/sub_sens_pmap_arm.sh`, `CONCERT-spac-niche/launch_sens_pmap.sh`,
   `spac_seq_eval/agg_sens_pmap.py`, `spac_seq_eval/plot_sens_pmap.py`
 
-**Open decision for Xianglin:** the main text reports the seed-42 Perturb-MAP run (rho 0.566)
+**Open decision for the author:** the main text reports the seed-42 Perturb-MAP run (rho 0.566)
 while the five-seed mean is 0.507. The SI note states this plainly. Either leave the main text as
 a single reported run, or switch the Perturb-MAP numbers to seed-averaged mean +/- SD.
 
@@ -159,7 +159,7 @@ a single reported run, or switch the Perturb-MAP numbers to seed-averaged mean +
 - The `seen` regime only.
 
 
-## Revision (2026-08-17, after Xianglin's review)
+## Revision (2026-08-17, after the author's review)
 
 Five changes, all applied:
 
@@ -170,7 +170,7 @@ Five changes, all applied:
    when the footprint field is `rff`; the reported config uses `gp_pp` (`concert_spac.py:159-172`),
    so those panels would have been pure noise.
 2. **Metrics switched to the benchmark pair** - LFC rank correlation and LFC RMSE (`lfc_dist`,
-   `rescore_pm_lfc_distance.py:2`), replacing energy distance. Already present in every arm's
+   `perturbmap_harness_rescore.py:2`), replacing energy distance. Already present in every arm's
    `lfc_agg.json`, so no re-runs were needed.
 3. **Error bars are now standard error** across the three seeds (was SD).
 4. **Y-axis headroom** widened to 1.9x the data span (rho clipped to [0,1]) so an insensitive
@@ -222,14 +222,14 @@ regenerate with `scratchpad/regress_eval.sh` if needed.
 
 The "recommend dropping" call above was overturned. The sweep was run on the configuration the
 paper actually reports for SPAC-seq - the **five-slide** model - in the **seen regime only**
-(the regime is fixed at train time by `--holdout_v3_file`, `sub_sens_spac_arm.sh:79`, so an
-unseen sweep is 65 fresh trainings, not a re-scoring; Xianglin decided seen-only 2026-08-21).
+(the regime is fixed at train time by `--holdout_file`, `sub_sens_spac_arm.sh:79`, so an
+unseen sweep is 65 fresh trainings, not a re-scoring; the author decided seen-only 2026-08-21).
 
 Design: 65 arms = 5 base seeds + 10 factors x 2 off-base levels x 3 seeds (42, 1, 2). Every arm
 scores the identical panel of 5 slides x 100 (level L2, perturbation) cells - verified, zero
 panel drift. Results straddle two roots because the sweep moved mid-flight:
-`spac_seq_eval/multi_1-5_ho_v3/concert_sens/seen_<tag>/patch/slide_*/` (wave 1) and
-`/n/netscratch/mzitnik_lab/Lab/xiang/CONCERT_sens/results/seen_<tag>/patch/slide_*/` (relaunches).
+`spac_seq_eval/sensitivity_spacseq/seen_<tag>/patch/slide_*/` (wave 1) and
+`$CONCERT_WORKDIR/scratch/CONCERT_sens/results/seen_<tag>/patch/slide_*/` (relaunches).
 
 **The seed band is ~20x TIGHTER than Perturb-MAP's**: rho 0.3988-0.4053 (base seed 42 = 0.4013,
 mid-band, not the best draw) and RMSE 3.769-3.788. So unlike Perturb-MAP, real hyper-parameter
@@ -257,8 +257,4 @@ Two infrastructure lessons worth keeping:
   the `concert_env` torch build ships no sm_120 cubin, and the RTX PRO 6000 Blackwell nodes are
   the only ones carrying the `rtx6000pro` feature. `relaunch_sens_spac_failed.sh` computes that
   node list live from `sinfo` and passes it to `sbatch -x`.
-- **`kempner` and `kempner_h100` share `QoS=kempner_base`**, which caps the *account* at 96 GPUs
-  (`MaxTRESPA gres/gpu=96`). When the lab is over that cap, moving a job between those two
-  partitions is a no-op - both report `MaxGRESPerAccount`. `kempner_requeue` has `QoS=N/A` and is
-  not subject to it. `relaunch_sens_spac_failed.sh:53` picks the partition by counting the user's
-  own jobs (`< 12`), which is the wrong cap and parks jobs behind that wall.
+- **The two GPU partitions share one account-level QoS cap**, so spreading jobs across them does not raise the account limit; the preemptible partition is outside that cap.

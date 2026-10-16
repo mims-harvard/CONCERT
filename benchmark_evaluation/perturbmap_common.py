@@ -27,6 +27,8 @@ import json
 import logging
 from pathlib import Path
 
+import release_paths as rp  # noqa: E402
+
 import anndata as ad
 import numpy as np
 import scipy.sparse as sp
@@ -40,20 +42,12 @@ log = logging.getLogger(__name__)
 # --------------------------------------------------------------------------- #
 # Constants
 # --------------------------------------------------------------------------- #
-PM_H5 = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturb_map_data_all.h5"
-)
+PM_H5 = rp.PERTURBMAP_RAW / "perturb_map_data_all.h5"
 # Whole-transcriptome build (GSE193460) row-aligned to PM_H5; contains the KO
 # target genes plus HVG/KO flags in .var (built by pm_build_fullgene.py).
-PM_FULL_H5AD = Path(
-    "/n/holylabs/LABS/mzitnik_lab/Users/xianglin226/spaVAE/datasets/perturb_map_data_all_fullgene.h5ad"
-)
-PM_PATCH_DIR = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map/patches"
-)
-DEFAULT_PREPARED = Path(
-    "/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/concert_data/exp/perturb_map/prepared_panel1053ko"
-)
+PM_FULL_H5AD = rp.PERTURBMAP_RAW / "perturb_map_data_all_fullgene.h5ad"
+PM_PATCH_DIR = rp.PERTURBMAP_PATCHES
+DEFAULT_PREPARED = rp.PERTURBMAP_PREPARED
 
 DEFAULT_SLIDES = ["0", "1", "2", "3"]
 LOC_RANGE = 20.0

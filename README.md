@@ -2,7 +2,7 @@
 
 [![ProjectPage](https://img.shields.io/badge/Project-CONCERT-red)](https://zitniklab.hms.harvard.edu/projects/CONCERT/) [![PaperPage](https://img.shields.io/badge/Paper-bioRxiv-orange)](https://www.biorxiv.org/content/early/2025/11/10/2025.11.08.686890) [![CodePage](https://img.shields.io/badge/Code-GitHub-green)](https://github.com/mims-harvard/CONCERT/) [![Data](https://img.shields.io/badge/Data-Links-purple)](./datasets/) [![Tutorials](https://img.shields.io/badge/Tutorials-Notebooks-yellow)](./notebooks/) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-[Xiang Lin](https://xianglin226.github.io/), [Zhenglun Kong](https://scholar.google.com/citations?hl=en&user=XYa4NVYAAAAJ), [Soumya Ghosh](https://scholar.google.com/citations?user=GEYQenQAAAAJ&hl=en), [Manolis Kellis](https://scholar.google.com/citations?user=lsYXBx8AAAAJ&hl=en), [Marinka Zitnik](https://scholar.google.com/citations?user=YtUDgPIAAAAJ&hl=en)
+Xiang Lin, [Zhenglun Kong](https://scholar.google.com/citations?hl=en&user=XYa4NVYAAAAJ), [Soumya Ghosh](https://scholar.google.com/citations?user=GEYQenQAAAAJ&hl=en), [Manolis Kellis](https://scholar.google.com/citations?user=lsYXBx8AAAAJ&hl=en), [Marinka Zitnik](https://scholar.google.com/citations?user=YtUDgPIAAAAJ&hl=en)
 
 Spatial perturbation transcriptomics measures how genetic or chemical edits alter gene
 expression while preserving tissue context. Perturbation outcomes depend on a cell's intrinsic
@@ -106,16 +106,20 @@ an A100.
 ### Getting started
 
 1. Create the environment from `env_requirements.txt`.
-2. Point the code at your data. Both the scripts and the SLURM runners read the same roots:
+2. Download the two input folders, `data/` and `checkpoints/` (link to be added), and place both
+   in the repository root:
 
-   ```bash
-   export CONCERT_DATA_ROOT=/path/to/datasets      # the measured sections
-   export CONCERT_OUTPUT_ROOT=/path/to/outputs     # where checkpoints are written
-   export CONCERT_WORKDIR=/path/to/scratch         # where the scripts write results
+   ```
+   CONCERT/
+     data/           sections, benchmark assets, shipped results
+     checkpoints/    one directory per trained model
+     runs/           created on first use: where reruns write
    ```
 
-   `config/paths.sh` carries the same values for the `sbatch` scripts under `experiments/`, and
-   is the only file that needs editing when the code moves to another machine.
+   Every notebook, script and SLURM runner finds them there. To keep them elsewhere, set
+   `CONCERT_DATA_DIR`, `CONCERT_CHECKPOINT_ROOT` and `CONCERT_WORKDIR`.
+   [`datasets/README.md`](./datasets/README.md) describes both folders; `data/README.md` lists
+   every file and the notebook or script that reads it.
 3. Check the wiring. Every script prints an existence table for each input it needs and stops
    on the first missing one:
 
@@ -125,32 +129,23 @@ an A100.
 
 ### Example 1 - train on a spatial perturbation dataset
 
+Each dataset has one configuration file with every model setting of the reported runs:
+`models/concert_benchmark/configs/{spacseq,perturbmap}.yaml` and
+`models/concert_temporal/configs/dss.yaml`. A run names the data and the output directory:
+
 ```bash
 cd models/concert_benchmark
-python run_concert_spac.py \
-  --config config.yaml --stage train \
-  --sample perturbmap --project_index map \
-  --data_file $CONCERT_DATA_ROOT/perturbmap_s0_spacfmt.h5ad \
-  --outdir $CONCERT_OUTPUT_ROOT/perturbmap_s0 --model_file model.pt \
-  --hvg_max_rank 2000 --seed 42 \
-  --multi_kernel_mode True --loc_range 20.0 --inducing_point_steps 4 \
-  --use_expr_encoder True --expr_hidden_dims 512 256 --use_basal_encoder_only True \
-  --basal_field rff --basal_bayes True --spatial_basal_only True \
-  --fpert_field gp_pp --fpert_coord_scale 70.0 \
-  --fpert_svgp_inducing 64 --fpert_ls_min 0.01 --fpert_ls_max 0.60 \
-  --use_niche_film True --niche_film_dim 8 --niche_film_k 25 --niche_film_gcap 3.0
+python run_concert_spac.py --config configs/perturbmap.yaml --stage train \
+  --data_file $CONCERT_DATA_DIR/perturbmap/raw/perturbmap_s0_spacfmt.h5ad \
+  --outdir $CONCERT_WORKDIR/perturbmap_s0
 ```
 
-Training writes `model.pt` **and** `pert_map.json` into `--outdir`. Both are needed later: the
-perturbation vocabulary is read from `pert_map.json` rather than rebuilt, so that the integer
-code of every perturbation matches the one the weights were trained with.
+Training writes `model.pt` **and** `pert_map.json` into `--outdir`; the perturbation vocabulary
+is read from `pert_map.json` at evaluation, so the integer code of every perturbation matches the
+one the weights were trained with. Any flag on the command line overrides the file.
 
-The lengthscale band (`--fpert_ls_min` / `--fpert_ls_max`) is a plain attribute of the spatial
-field, not a saved weight. **It has to be passed at evaluation exactly as at training** - leave
-it out and the same weights render a different spatial field, and the run completes with
-plausible, wrong numbers.
-
-The reported runs used `experiments/*/train/*.sh`, which pass the full settings:
+The reported runs used `experiments/*/train/*.sh`, which call the same configuration files on all
+sections of a dataset:
 
 ```bash
 sbatch experiments/01_spac_seq_benchmark/train/train_spac_seq.sh seen
@@ -166,16 +161,14 @@ Spots can be selected interactively with the Shiny app in
 
 ```bash
 cd models/concert_benchmark
-python run_concert_spac.py \
-  --config config.yaml --stage eval \
-  --sample perturbmap --project_index map \
-  --data_file $CONCERT_DATA_ROOT/perturbmap_s0_spacfmt.h5ad \
-  --outdir $CONCERT_OUTPUT_ROOT/perturbmap_s0 --model_file model.pt \
-  --pert_cells spots.txt \
-  --target_cell_tissue tumor --target_cell_perturbation Jak2 \
-  --fpert_field gp_pp --fpert_coord_scale 70.0 \
-  --fpert_ls_min 0.01 --fpert_ls_max 0.60          # same band as training
+python run_concert_spac.py --config configs/perturbmap.yaml --stage eval \
+  --data_file $CONCERT_DATA_DIR/perturbmap/raw/perturbmap_s0_spacfmt.h5ad \
+  --outdir $CONCERT_WORKDIR/perturbmap_s0 \
+  --pert_cells spots.txt --target_cell_tissue tumor --target_cell_perturbation Jak2
 ```
+
+Use the configuration file the model was trained with: it carries the lengthscale band of the
+spatial field, which is a plain attribute rather than a saved weight.
 
 The decoder is
 
@@ -188,6 +181,10 @@ perturbation terms - the basal reconstruction cancels. Every reported score is c
 difference of two decodes, not on one decode alone.
 
 ### Example 3 - reproduce a paper result from a trained checkpoint
+
+The repository ships a single benchmark protocol, the one reported in the paper. `scripts/` and
+`notebooks/` are the entry points for reproducing each result; `experiments/` is the full record of
+the pipeline that produced them (data preparation, training, scoring and aggregation).
 
 Four scripts, one per result. They print the numbers and write the tables and figures; the
 steps that predict are opt-in, so a first pass reads the shipped results and still reproduces
@@ -247,14 +244,6 @@ execute a script directly with `bash` - nothing outside the headers depends on S
 SPAC-seq evaluation, which reads `SLURM_ARRAY_TASK_ID` to pick a slide and can be given that
 variable by hand.
 
-### A note on paths
-
-`scripts/`, `notebooks/` and `config/paths.sh` resolve every root from an environment variable
-and need nothing edited beyond the exports above. The pipeline scripts under `experiments/`
-are the record of the runs that produced the reported results, and many of them carry the
-absolute paths those runs used inline rather than through `config/paths.sh`. They are kept as
-they ran; edit the paths at the top of a script before submitting it on another machine.
-
 ### Naming
 
 The code paths, output directories and CSV columns use `seen` and `unseen`. In the manuscript
@@ -273,7 +262,9 @@ code reads, in [`datasets/README.md`](./datasets/README.md).
 | [Colon inflammation](https://www.nature.com/articles/s41586-024-08216-z) | [Broad SCP2771](https://singlecell.broadinstitute.org/single_cell?type=study&page=1&terms=SCP2771) | [Figshare](https://figshare.com/articles/dataset/Mouse_gut_inflammation_dataset/29882873) |
 | [Brain stroke](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
 
-Trained checkpoints are not included; every result can be regenerated from the scripts.
+The trained checkpoints are one downloadable folder, `checkpoints/`, with one subdirectory per
+model; [`datasets/README.md`](./datasets/README.md#trained-checkpoints) lists them and gives the
+download command. Every result can also be regenerated from the scripts.
 
 ## ⚖️ License
 
@@ -296,5 +287,5 @@ The code in this package is licensed under the MIT License. See [`LICENSE`](./LI
 
 ## 💬 Questions
 
-Please leave a GitHub issue or contact [Xiang Lin](mailto:xianglin226@gmail.com) or
+Please leave a GitHub issue or contact Xiang Lin or
 [Marinka Zitnik](mailto:marinka@zitnik.si).

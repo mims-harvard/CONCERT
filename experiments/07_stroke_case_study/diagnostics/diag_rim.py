@@ -10,11 +10,15 @@ Measures, for each size condition, the radial profile of
 binned on signed distance to the lesion boundary, plus the same for the raw model mean mu
 (no CPM) so we can tell the normalisation apart from the model.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p / "benchmark_evaluation" / "release_paths.py").is_file()) / "benchmark_evaluation"))
+import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json, sys
 from pathlib import Path
 import numpy as np, anndata as ad, h5py
 
-OUT = Path("/n/holylfs06/LABS/mzitnik_lab/Lab/xianglin226/CONCERT/outputs/stroke_2dpara")
+OUT = Path(f"{_rp.WORKDIR}/outputs/stroke_2dpara")
 GENE = "Scgb1a1"
 
 man = json.loads((OUT / "pert_sets" / "manifest.json").read_text())
