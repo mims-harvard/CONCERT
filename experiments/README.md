@@ -36,11 +36,11 @@ models of slides 2-1 and 2-2 for Figs. 9 and 11.
 ## Reproducing a result without rerunning the pipeline
 
 Four of these experiments have a tutorial that starts from the trained checkpoint instead:
-`../scripts/` as command-line scripts, `../notebooks/` as step-by-step notebooks.
+`../reproduction/` as command-line scripts, `../notebooks/` as step-by-step notebooks.
 
 | Experiment | Script | Notebook |
 |---|---|---|
-| `01_spac_seq_benchmark` | `../scripts/01_spac_seq_benchmark.py` | `../notebooks/01_spac_seq_benchmark.ipynb` |
-| `02_perturb_seq_benchmark` | `../scripts/02_perturb_map_benchmark.py` | `../notebooks/02_perturb_map_benchmark.ipynb` |
-| `03_dss_gut_case_study` | `../scripts/03_dss_colitis_marker_trend.py` | `../notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb` |
-| `07_stroke_case_study` | `../scripts/04_stroke_2d_3d_prediction.py` | `../notebooks/04_stroke_2d_and_3d_prediction.ipynb` |
+| `01_spac_seq_benchmark` | `../reproduction/01_spac_seq_benchmark.py` | `../notebooks/01_spac_seq_benchmark.ipynb` |
+| `02_perturb_seq_benchmark` | `../reproduction/02_perturb_map_benchmark.py` | `../notebooks/02_perturb_map_benchmark.ipynb` |
+| `03_dss_gut_case_study` | `../reproduction/03_dss_colitis_marker_trend.py` | `../notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb` |
+| `07_stroke_case_study` | `../reproduction/04_stroke_2d_3d_prediction.py` | `../notebooks/04_stroke_2d_and_3d_prediction.ipynb` |
