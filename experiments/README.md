@@ -20,8 +20,8 @@ code lives in `../models/`, shared scoring code in `../benchmark_evaluation/`.
 Every run script sources `../../config/paths.sh` and takes its arguments on the command line,
 so from inside an experiment directory:
 
-    sbatch train/train_spac_seq.sh seen
-    sbatch --array=1-5 evaluation/eval_spac_seq_benchmark.sh seen
+    sbatch train/train.sh seen
+    sbatch --array=1-5 evaluation/evaluate.sh seen
 
 Scripts read from the `data/` and `checkpoints/` folders and write under `CONCERT_WORKDIR` from `config/paths.sh` and never write back into this
 repository. Run data preparation before training: the training scripts fail immediately with a

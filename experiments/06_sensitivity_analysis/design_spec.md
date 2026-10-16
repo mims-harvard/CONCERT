@@ -145,8 +145,8 @@ Artifacts (all paths absolute):
 - Per-arm table: `$CONCERT_WORKDIR/paper/results/sens_pmap_arms.csv`
 - Manuscript: `manuscript/SI/SI-figures_R1.tex` (`figS: sensi_spatial`, `figS: sensi_spatial_rmse`) and four `\xl{}` paragraphs
   appended to Note 9 in `manuscript/SI/SI-notes_R1.tex`
-- Code: `CONCERT-spac-niche/sub_sens_pmap_arm.sh`, `CONCERT-spac-niche/launch_sens_pmap.sh`,
-  `spac_seq_eval/agg_sens_pmap.py`, `spac_seq_eval/plot_sens_pmap.py`
+- Code: `CONCERT-spac-niche/run_perturbmap_arm.sh`, `CONCERT-spac-niche/submit_perturbmap_sweep.sh`,
+  `spac_seq_eval/aggregate_perturbmap.py`, `spac_seq_eval/plot_perturbmap.py`
 
 **Open decision for the author:** the main text reports the seed-42 Perturb-MAP run (rho 0.566)
 while the five-seed mean is 0.507. The SI note states this plainly. Either leave the main text as
@@ -170,7 +170,7 @@ Five changes, all applied:
    when the footprint field is `rff`; the reported config uses `gp_pp` (`concert_spac.py:159-172`),
    so those panels would have been pure noise.
 2. **Metrics switched to the benchmark pair** - LFC rank correlation and LFC RMSE (`lfc_dist`,
-   `perturbmap_harness_rescore.py:2`), replacing energy distance. Already present in every arm's
+   `perturbmap_methods.py:2`), replacing energy distance. Already present in every arm's
    `lfc_agg.json`, so no re-runs were needed.
 3. **Error bars are now standard error** across the three seeds (was SD).
 4. **Y-axis headroom** widened to 1.9x the data span (rho clipped to [0,1]) so an insensitive
@@ -179,7 +179,7 @@ Five changes, all applied:
 
 Two evaluator bugs this surfaced, both fixed:
 
-- `niche_film_k` was **hard-coded to 25** at eval (`spac_seq_eval/run_concert_pm_niche.py:180`),
+- `niche_film_k` was **hard-coded to 25** at eval (`spac_seq_eval/evaluate_concert_perturbmap.py:180`),
   with a comment saying it must match training or gamma renders differently. Sweeping it without a
   flag would have silently evaluated every arm at k=25. Added `--niche_film_k`, default 25, so
   every existing checkpoint is unaffected.
@@ -207,7 +207,7 @@ result, with a second identical run (job 40011700) as the stochasticity control.
 
 Identical code differs by the same amount, so the patches are no-ops for default checkpoints.
 
-**Incidental finding: `run_concert_pm_niche.py` never sets a random seed** and draws
+**Incidental finding: `evaluate_concert_perturbmap.py` never sets a random seed** and draws
 `--n_samples 10` posterior samples plus 10 bootstrap replicates, so every score it produces -
 including the numbers in the benchmark figures - carries roughly 0.003 rank correlation of
 run-to-run jitter. That is ~40x smaller than the five-seed training band (0.123), so no conclusion
@@ -222,7 +222,7 @@ regenerate with `scratchpad/regress_eval.sh` if needed.
 
 The "recommend dropping" call above was overturned. The sweep was run on the configuration the
 paper actually reports for SPAC-seq - the **five-slide** model - in the **seen regime only**
-(the regime is fixed at train time by `--holdout_file`, `sub_sens_spac_arm.sh:79`, so an
+(the regime is fixed at train time by `--holdout_file`, `run_spacseq_arm.sh:79`, so an
 unseen sweep is 65 fresh trainings, not a re-scoring; the author decided seen-only 2026-08-21).
 
 Design: 65 arms = 5 base seeds + 10 factors x 2 off-base levels x 3 seeds (42, 1, 2). Every arm
@@ -242,12 +242,12 @@ effects are resolvable, and three leave the band:
 | `niche_film_k` | 50 | 0.3732 | -0.027 |
 
 `moran_lambda=0` (0.3868) and `niche_film_k=10` (0.3866) sit at the lower edge but do not clear
-the conservative mean+SEM test the plot script applies (`plot_sens_spac.py:194`). The remaining
+the conservative mean+SEM test the plot script applies (`plot_spacseq.py:194`). The remaining
 seven factors are flat to <=0.005 rho. Both metrics agree on the ranking.
 
-Code (mirrors the pmap pair): `CONCERT-spac-niche/sub_sens_spac_arm.sh` (env knobs),
-`launch_sens_spac.sh`, `relaunch_sens_spac_failed.sh`, `spac_seq_eval/agg_sens_spac.py` ->
-`CONCERT-main/results/sens_spac_arms.csv`, `spac_seq_eval/plot_sens_spac.py` ->
+Code (mirrors the pmap pair): `CONCERT-spac-niche/run_spacseq_arm.sh` (env knobs),
+`submit_spacseq_sweep.sh`, `spac_seq_eval/aggregate_spacseq.py` ->
+`CONCERT-main/results/sens_spac_arms.csv`, `spac_seq_eval/plot_spacseq.py` ->
 `CONCERT-main/Outputs/sensitivity/fig_sens_spac_{rho,rmse}.{pdf,png}` + `figure_stats_spac.json`
 + `figure_legend_sensitivity_spac.md`.
 
@@ -255,6 +255,6 @@ Two infrastructure lessons worth keeping:
 
 - **22 of 65 arms died ~1 min in** with `nvrtc: error: invalid value for --gpu-architecture`:
   the `concert_env` torch build ships no sm_120 cubin, and the RTX PRO 6000 Blackwell nodes are
-  the only ones carrying the `rtx6000pro` feature. `relaunch_sens_spac_failed.sh` computes that
-  node list live from `sinfo` and passes it to `sbatch -x`.
+  the only ones carrying the `rtx6000pro` feature. Resubmit with `sbatch -x` and that node list,
+  read live from `sinfo`.
 - **The two GPU partitions share one account-level QoS cap**, so spreading jobs across them does not raise the account limit; the preemptible partition is outside that cap.

@@ -2,7 +2,7 @@
 """Per-mouse OBSERVED DSS-marker score (mean log1p over the 17 core markers) for the
 15 case-study mice, computed directly from the raw MERFISH slices -- NO model, NO GPU.
 
-Matches the eval's obs_score = log1p(Y_expr[:, marker]).mean(1) (composition_eval_dss.py
+Matches the eval's obs_score = log1p(Y_expr[:, marker]).mean(1) (case_study_eval.py
 L473) so the per-day pooled mean reproduces the committed obs_by_day, and the per-mouse
 values give a real replicate-mouse variance band in the SAME scale as the predicted curve.
 """

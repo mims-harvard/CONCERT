@@ -1,7 +1,7 @@
 """Perturb-map (4-slide) benchmark: data prep + counterfactual evaluation.
 
 Adapts the SPAC-seq multi-slide protocol to the perturb-map dataset. Key
-differences vs ``spacseq_multi_common``:
+differences vs ``spacseq_slides``:
 
 * Source cells for the in-silico KO are the **control (KP-tumor)** patch cells
   (``role == 1``), not unassigned cells.
@@ -33,9 +33,9 @@ import anndata as ad
 import numpy as np
 import scipy.sparse as sp
 
-import spacseq_eval_common as sec
-from method_input_lib import normalize_pred_cache
-from spacseq_eval_common import to_dense
+import spacseq_common as sec
+from method_inputs import normalize_pred_cache
+from spacseq_common import to_dense
 
 log = logging.getLogger(__name__)
 

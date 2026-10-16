@@ -39,34 +39,28 @@ panel of pure noise.
 
 ## Order
 
-1. **Train and score the arms.** `launch_sens_pmap.sh` and `launch_sens_spac.sh` expand the table
+1. **Train and score the arms.** `submit_perturbmap_sweep.sh` and `submit_spacseq_sweep.sh` expand the table
    above into one job per arm and submit them, spreading across partitions and respecting the
    running-job caps. Each arm is one `sub_sens_{pmap,spac}_arm.sh` job that trains *and* scores in
    a single allocation - a train/eval dependency pair would hold two slots for the same arm. Arms
    are identified by tag; `_s1` / `_s2` suffixes are the seed replicates. Every arm writes an
    `arm.json` manifest beside its checkpoint, because the checkpoints themselves are bare state
    dicts with no record of the configuration that produced them.
-2. **Aggregate.** `agg_sens_pmap.py` / `agg_sens_spac.py` walk the result trees and emit one tidy
+2. **Aggregate.** `aggregate_perturbmap.py` / `aggregate_spacseq.py` walk the result trees and emit one tidy
    row per arm x slide x perturbation. The SPAC-seq sweep straddles two storage roots because it
    was moved mid-flight; the aggregator scans both and the first root holding a *complete* arm
    wins, so a half-written duplicate never shadows a finished one.
-3. **Plot.** `plot_sens_pmap.py` / `plot_sens_spac.py` write one figure per metric, plus a
+3. **Plot.** `plot_perturbmap.py` / `plot_spacseq.py` write one figure per metric, plus a
    `figure_stats*.json` holding every number in the panels and a generated caption drawn from that
    same JSON - the caption cannot drift from the figure. The SPAC plotter also flags any point
    that rests on a single seed.
 
-`sub_agg_plot_spac.sh` runs steps 2 and 3 for SPAC-seq as a batch job and copies the two PDFs into
+`aggregate_and_plot_spacseq.sh` runs steps 2 and 3 for SPAC-seq as a batch job and copies the two PDFs into
 the manuscript figure directory.
 
-## Two helpers that are not part of the sweep
+## Timing probe
 
-- `relaunch_sens_spac_failed.sh` restarts arms from their checkpoints. Two arms died at epoch ~410
-  within nine minutes of each other with no traceback - a node or filesystem event, not a bug in
-  the arm.
-- `move_sens_spac_to_requeue.sh` moves queued arms onto the preemptible partition. Note that the
-  main launcher deliberately avoids that partition: a preempted sixteen-hour arm restarts from
-  scratch. Use it only for arms that resume from a checkpoint.
-- `sub_sens_spac_ss.sh` is a **timing probe, not an arm** - the published recipe on a single
+- `time_spacseq_single_slide.sh` is a **timing probe, not an arm** - the published recipe on a single
   section, used to measure how long one SPAC-seq arm would take before committing to the sweep.
 
 ## What it finds

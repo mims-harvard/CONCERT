@@ -55,8 +55,8 @@ The trained checkpoints form one folder, `checkpoints/`, with one subdirectory p
 | `perturbmap_within_niche` | `concert_benchmark` | Perturb-map within-niche benchmark (experiment 02) | `02_perturb_map_benchmark` |
 | `perturbmap_cross_slide` | `concert_benchmark` | Perturb-map cross-slide benchmark (experiment 02) | `02_perturb_map_benchmark` |
 | `dss_colitis` | `concert_temporal` | DSS colitis time course (experiment 03) | `03_dss_colitis_per_mouse_marker_trend` |
-| `perturbfish` | `concert_benchmark` | Perturb-FISH repetition of the interpretability readout (experiment 04) | `experiments/04_kernel_interpretability/run_perturbfish_interp.sh` (step 3) |
-| `spacseq_kernel_analysis` | `concert_benchmark` | SPAC-seq kernel-parameter readout (experiment 04) | `experiments/04_kernel_interpretability/analyze_kernel_params_spac.py` |
+| `perturbfish` | `concert_benchmark` | Perturb-FISH repetition of the interpretability readout (experiment 04) | `experiments/04_kernel_interpretability/perturbfish_train_and_extract.sh` (step 3) |
+| `spacseq_kernel_analysis` | `concert_benchmark` | SPAC-seq kernel-parameter readout (experiment 04) | `experiments/04_kernel_interpretability/01_extract_kernel_params.py` |
 | `stroke_2d_core_rim` | `concert_spac_niche` | Stroke case study, 2D arm (experiment 07) | `04_stroke_2d_and_3d_prediction` |
 | `stroke_3d_core_rim` | `concert_spac_niche` | Stroke case study, 3D arm (experiment 07) | `04_stroke_2d_and_3d_prediction` |
 

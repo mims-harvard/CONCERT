@@ -1949,14 +1949,15 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
                 sample=cfg.sample,
                 project_index=cfg.project_index,
             )
-            # Timekernel: persist the training Tier1/niche string->code maps so any
-            # downstream inference (e.g. the field-trajectory harness) can map its
-            # per-cell labels to the SAME integer codes the trained embeddings use.
+            # Timekernel: persist the training Tier1 string->code map so any downstream
+            # inference (e.g. the field-trajectory harness) can map its per-cell labels to
+            # the SAME integer codes the trained embeddings use. The niche descriptor is a
+            # per-cell vector with no vocabulary, so Tier1 is the only map.
             if getattr(cfg, "use_timekernel", False):
                 try:
                     lm_path = outdir / "label_maps.json"
                     with open(lm_path, "w") as _fh:
-                        json.dump({"tier1": tier1_map, "niche": niche_map}, _fh, indent=2)
+                        json.dump({"tier1": tier1_map}, _fh, indent=2)
                     logging.info("[timekernel] Saved label maps to %s", lm_path)
                 except Exception as e:
                     logging.warning("[timekernel] Failed to save label_maps.json (%s).", e)
@@ -1983,7 +1984,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             raise ValueError("stage=loto_eval requires --loto_holdout_files (held-out day h5ads)")
         holdout = [p.strip() for p in cfg.loto_holdout_files.split(",") if p.strip()]
         cfg.loto_holdout_files = holdout   # module expects a list
-        from loto_eval_dss import run_loto_eval
+        from evaluate_left_out_day9 import run_loto_eval
         run_loto_eval(
             model=model, adata=adata, cell_atts=cell_atts, pos_batched=pos_batched,
             sample_indices=sample_indices, sample_id_all=sample_id_all,
@@ -2004,7 +2005,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         _remap_slide_bias(model, str(outdir / cfg.model_file), multi_paths, cfg)
         if getattr(cfg, "heldout_mouse_eval", False):
             # Deliverable 2: LOMO ground-truth reconstruction on the held-out mice's slices.
-            from composition_eval_dss import run_heldout_mouse_eval
+            from case_study_eval import run_heldout_mouse_eval
             run_heldout_mouse_eval(
                 model=model, adata=adata, cell_atts=cell_atts, pos_batched=pos_batched,
                 sample_indices=sample_indices, sample_id_all=sample_id_all,
@@ -2016,7 +2017,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
         if getattr(cfg, "case_study_deliverables", False):
             # Descriptive case-study deliverables C1-C3 (pure inference on the final ckpt).
             # Same leakage-free re-decode + code-threading contract as the gate below.
-            from composition_eval_dss import run_case_study_deliverables
+            from case_study_eval import run_case_study_deliverables
             run_case_study_deliverables(
                 model=model, adata=adata, cell_atts=cell_atts, pos_batched=pos_batched,
                 sample_indices=sample_indices, sample_id_all=sample_id_all,
@@ -2030,7 +2031,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
             # (timekernel forces use_inflammation_field=False but still needs the codes-aware
             #  trajectory path -- falling to run_composition_eval, which passes no tier1/niche
             #  codes, would crash the shared-basal decoder.)
-            from composition_eval_dss import run_field_trajectory_test
+            from case_study_eval import run_field_trajectory_test
             run_field_trajectory_test(
                 model=model, adata=adata, cell_atts=cell_atts, pos_batched=pos_batched,
                 sample_indices=sample_indices, sample_id_all=sample_id_all,
@@ -2047,7 +2048,7 @@ def run(cfg: RunConfig, rank: int = 0, world_size: int = 1) -> None:
                 infl_score_all=_compute_inflammation_score(adata),
             )
         else:
-            from composition_eval_dss import run_composition_eval
+            from case_study_eval import run_composition_eval
             run_composition_eval(
                 model=model, adata=adata, cell_atts=cell_atts, pos_batched=pos_batched,
                 sample_indices=sample_indices, sample_id_all=sample_id_all,

@@ -15,7 +15,7 @@ the knockout cells of the niche against the control cells of the niche outside e
 patch (patch role 0; the slide's role-0 controls when the niche has fewer than 5). The held-out
 source spots are themselves labelled control on this assay, so the harness reference (every
 control cell of the niche) can contain the cells being predicted. The rescore applies the
-disjoint reference to the stored predicted LFCs of every method; nothing is re-run (benchmark_evaluation/rescore_perturbmap.py, tables in data/benchmark_assets/results/perturbmap_results/).
+disjoint reference to the stored predicted LFCs of every method; nothing is re-run (benchmark_evaluation/score_perturbmap.py, tables in data/benchmark_assets/results/perturbmap_results/).
 
 The method comparison rule is also the opposite of the SPAC-seq one: here the methods overlap
 enough that the reported comparison is the intersection of the records **all** methods cover
@@ -229,7 +229,7 @@ def step_section(env, out):
 
 
 def concert_rescored_records(env, result_root):
-    """Rescore CONCERT's stored predicted LFCs with the disjoint reference (rescore_perturbmap.model_rows)."""
+    """Rescore CONCERT's stored predicted LFCs with the disjoint reference (score_perturbmap.model_rows)."""
     import anndata as ad
     import pandas as pd
 
@@ -415,7 +415,7 @@ def main():
     cp.section("0. Inputs")
     cp.check([
         ("model source", MODEL_SRC / "concert_spac.py"),
-        ("scoring code", cp.EVAL_SRC / "run_concert_pm_niche.py"),
+        ("scoring code", cp.EVAL_SRC / "evaluate_concert_perturbmap.py"),
         ("section s0", cp.rp.PERTURBMAP_RAW / "perturbmap_s0_spacfmt.h5ad"),
         ("niche patches", PATCH_DIR / "slide0.npz"),
         ("eval panel", PM_PREP / "benchmark" / "eval_panel.json"),
@@ -430,12 +430,12 @@ def main():
 
     cp.prepend_src(MODEL_SRC, cp.EVAL_SRC)
     import eval_spatial_counterfactual as ecf
-    import spacseq_eval_common as sec
+    import spacseq_common as sec
     import perturbmap_common as pm
-    import run_concert_pm_niche as pmeval
+    import evaluate_concert_perturbmap as pmeval
     import perturbmap_reference as pmref
-    import perturbmap_harness_rescore as rpm
-    import rescore_perturbmap as rpmap
+    import perturbmap_methods as rpm
+    import score_perturbmap as rpmap
     eu, _sa = sec.import_eval_utils()
     for m in (ecf, sec, pm, pmeval, pmref, rpm, rpmap):
         assert Path(m.__file__).resolve().is_relative_to(cp.REPO_ROOT.resolve()), \

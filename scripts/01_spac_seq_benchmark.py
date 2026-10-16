@@ -71,7 +71,7 @@ def spac_args(bench, regime, outdir, target_slide=None, units=None):
     """Evaluation configuration for one SPAC-seq run, parsed by the entry point itself.
 
     The flags are the ones experiments/01_spac_seq_benchmark/evaluation/
-    eval_spac_seq_benchmark.sh passes, so this script and the SLURM job cannot drift apart.
+    evaluate.sh passes, so this script and the SLURM job cannot drift apart.
 
     Three of them fail silently rather than loudly when they are wrong:
       fpert_ls_min / fpert_ls_max  the footprint lengthscale band. It is a plain float
@@ -83,7 +83,7 @@ def spac_args(bench, regime, outdir, target_slide=None, units=None):
     """
     import sys
 
-    argv = ["run_concert_benchmark_eval.py", "--regime", regime,
+    argv = ["evaluate_concert_spacseq.py", "--regime", regime,
             "--prepared_dir", str(PREPARED), "--model_file", str(CKPT[regime]),
             "--outdir", str(outdir), "--n_boot", "10", "--min_g_cells", "20",
             "--ls_prior_min", "3", "--ls_prior_max", "18",
@@ -278,7 +278,7 @@ def step_slide(env, out):
     """Score one slide with the shipped harness -- the slow step (15-40 min on one H100).
 
     eval_seen_slide is exactly what experiments/01_spac_seq_benchmark/evaluation/
-    eval_spac_seq_benchmark.sh runs, one slide per array task: it finds the niches of the
+    evaluate.sh runs, one slide per array task: it finds the niches of the
     held-out patch and the perturbation dominating each, decodes every source cell to every
     perturbation in the panel and draws counts at depth, scores each (niche, perturbation)
     record against the measured cells, and bootstraps the source cells within each niche.
@@ -478,7 +478,7 @@ def main():
     cp.section("0. Inputs")
     cp.check([
         ("model source", MODEL_SRC / "concert_spac.py"),
-        ("scoring code", cp.EVAL_SRC / "run_concert_benchmark_eval.py"),
+        ("scoring code", cp.EVAL_SRC / "evaluate_concert_spacseq.py"),
         ("metric helpers", cp.EVAL_SRC / "scoring_helpers" / "spac_edist_align.py"),
         ("raw section 1-1", SPAC_RAW / "raw_output_1-1.h5ad"),
         ("prepared cell sets", PREPARED / "slide_1-1.h5ad"),
@@ -496,11 +496,11 @@ def main():
     # The released code has to win over the working trees; see concert_paths.prepend_src.
     cp.prepend_src(MODEL_SRC, cp.EVAL_SRC)
     import eval_spatial_counterfactual as ecf     # binds the released model copy first
-    import spacseq_eval_common as sec
-    import spacseq_multi_common as smc
-    import spacseq_unseen_eval_lib as suel
+    import spacseq_common as sec
+    import spacseq_slides as smc
+    import spacseq_cross_slide_scoring as suel
     import shared_gene_rule
-    import run_concert_benchmark_eval as bench
+    import evaluate_concert_spacseq as bench
     eu, _sa = sec.import_eval_utils()
     for m in (ecf, sec, smc, suel, shared_gene_rule, bench):
         assert Path(m.__file__).resolve().is_relative_to(cp.REPO_ROOT.resolve()), \

@@ -206,8 +206,8 @@ def observed_lfc_seen_patch_niche(
     target_gene_names: np.ndarray | None = None,
 ) -> np.ndarray | None:
     """SPAC-seq seen patch-holdout GT: dominant KO vs unassigned in niche."""
-    from spacseq_eval_common import UNASSIGNED_LABELS
-    from spacseq_multi_common import load_patch_roles
+    from spacseq_common import UNASSIGNED_LABELS
+    from spacseq_slides import load_patch_roles
 
     canon = adata.obs["perturbation_canon"].astype(str).to_numpy()
     bin_id = adata.obs["bin_id"].to_numpy().astype(int)

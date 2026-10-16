@@ -41,8 +41,8 @@ from lfc_scoring import (  # noqa: E402
     score_lfc_agreement,
     to_dense,
 )
-from spacseq_eval_common import UNASSIGNED_LABELS  # noqa: E402
-from spacseq_multi_common import load_patch_roles  # noqa: E402
+from spacseq_common import UNASSIGNED_LABELS  # noqa: E402
+from spacseq_slides import load_patch_roles  # noqa: E402
 
 PREP_SPAC = rp.SPACSEQ_PREPARED
 # Per-slide HVG lists of the reference CONCERT run; the kNN and PCA features use these columns.
@@ -392,7 +392,7 @@ def run_spac(methods: set[str], slides: set[str] | None = None) -> list[dict]:
                 lib = src_lib_sizes(adata, src_s)
                 seed = unit_seed(SAMPLED_SEED_BASE, gene)
 
-                def score_full(pred_full):
+                def score_full(pred_full, src_X_full=src_X_full):
                     pred_full = poisson_at_observed_depth(pred_full, lib, seed)
                     m = pseudobulk_lfc(pred_full, src_X_full)
                     return score_lfc_agreement(m[keep], o[keep])

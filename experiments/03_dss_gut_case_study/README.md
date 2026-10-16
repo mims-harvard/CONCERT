@@ -13,23 +13,23 @@ over the whole course, then asked about a timepoint that was removed from traini
   run scripts read animal and timepoint from this file to build training and holdout lists, so
   its column order matters: filename first, animal third, timepoint fourth;
 - a sibling directory `<DSS_DIR>_arch` holding the per-cell architecture descriptors, written
-  by `data_preparation/preprocess_spac_timeseries.py`.
+  by `data_preparation/convert_sections.py`.
 
 ## Order
 
-1. **Prepare the sections.** `data_preparation/preprocess_spac_timeseries.py` normalizes each
+1. **Prepare the sections.** `data_preparation/convert_sections.py` normalizes each
    section, writes the day column the model conditions on, and computes the architecture
-   descriptors. `data_preparation/build_reactome_inflammation_sets.py` writes the pathway gene
+   descriptors. `data_preparation/build_pathway_gene_sets.py` writes the pathway gene
    sets used by the figures.
-2. **Train.** `sbatch train/train_dss.sh <tag>`. Setting `HOLDOUT_MICE="m1,m2"` excludes every
+2. **Train.** `sbatch train/train.sh <tag>`. Setting `HOLDOUT_MICE="m1,m2"` excludes every
    section of those animals, giving a leave-one-animal-out checkpoint. To hold out a timepoint
    instead, train on a manifest subset that omits it.
-3. **Evaluate.** `sbatch evaluation/eval_dss_timepoint.sh DSS9 <tag>` predicts the held-out
+3. **Evaluate.** `sbatch evaluation/evaluate_left_out_timepoint.sh DSS9 <tag>` predicts the held-out
    timepoint and scores it against the measured sections for that day, alongside a linear
-   interpolation between the flanking timepoints. `evaluation/composition_eval_dss.py` scores
-   cell-type composition and spatial structure; `evaluation/loto_eval_dss.py` holds the
+   interpolation between the flanking timepoints. `evaluation/case_study_eval.py` scores
+   cell-type composition and spatial structure; `evaluation/evaluate_left_out_day9.py` holds the
    held-out-timepoint machinery it builds on.
-4. **Calibrate.** `evaluation/compute_calibration.py` and `evaluation/calibrate_heldout.py`
+4. **Calibrate.** `evaluation/compute_calibration.py` and `evaluation/evaluate_calibration.py`
    fit the scale factor that puts predictions on the observed scale.
    `evaluation/compute_observed_per_mouse.py` and `evaluation/compute_pathway_trajectories.py`
    write the per-animal and per-pathway trajectories the figures read.

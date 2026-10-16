@@ -9,10 +9,10 @@ files here are its libraries; they are run through the entry points below.
 | Goal | Entry point |
 |---|---|
 | Reproduce a reported number, step by step | `scripts/01_spac_seq_benchmark.py`, `scripts/02_perturb_map_benchmark.py`, or notebooks 01 and 02 |
-| Score a checkpoint on the SPAC-seq benchmark | `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark.sh` |
-| Rebuild the SPAC-seq tables, tests and figures | `experiments/01_spac_seq_benchmark/evaluation/aggregate_spac_seq_benchmark.sh` |
-| Score a checkpoint on the Perturb-map benchmark | `experiments/02_perturb_seq_benchmark/evaluation/eval_perturb_seq.sh` |
-| Rebuild the Perturb-map tables, tests and Fig. 4j | `experiments/02_perturb_seq_benchmark/evaluation/rescore_perturb_seq.sh` |
+| Score a checkpoint on the SPAC-seq benchmark | `experiments/01_spac_seq_benchmark/evaluation/evaluate.sh` |
+| Rebuild the SPAC-seq tables, tests and figures | `experiments/01_spac_seq_benchmark/evaluation/aggregate.sh` |
+| Score a checkpoint on the Perturb-map benchmark | `experiments/02_perturb_seq_benchmark/evaluation/evaluate.sh` |
+| Rebuild the Perturb-map tables, tests and Fig. 4j | `experiments/02_perturb_seq_benchmark/evaluation/aggregate.sh` |
 
 Every input path comes from `release_paths.py`, which reads `CONCERT_DATA_DIR` and
 `CONCERT_CHECKPOINT_ROOT` (the downloadable `data/` and `checkpoints/` folders).
@@ -32,11 +32,11 @@ reported spread.
 
 ## The scoring rule
 
-`run_concert_benchmark_eval.py` scores one checkpoint on the SPAC-seq benchmark: one slide of
+`evaluate_concert_spacseq.py` scores one checkpoint on the SPAC-seq benchmark: one slide of
 the seen setting per call, or every cross-slide unit in one call. It runs through
 `shared_gene_rule.py` with `--cf_output poisson_depth --cf_seen_ref observed`, so the prediction is
 one Poisson draw at the measured library size and the LFC reference is the measured source spots
-in both settings. `experiments/01_spac_seq_benchmark/evaluation/eval_spac_seq_benchmark.sh`
+in both settings. `experiments/01_spac_seq_benchmark/evaluation/evaluate.sh`
 carries the full flag list. The default output flags (predicted mean, LFC against CONCERT's own
 basal prediction) are the ones the SI sensitivity sweep uses.
 
@@ -49,48 +49,48 @@ converted to counts at each source cell's observed library size, drawn once from
 returned to log-CP10K before the LFC is taken, so a prediction carries the count sparsity of the
 measurement it is scored against. The reference stays the measured source cells for every method.
 
-`diagnose_cross_slide_errors.py` reads the predicted LFC each method wrote for the cross-slide
+`cross_slide_error_breakdown.py` reads the predicted LFC each method wrote for the cross-slide
 units and reports, beside the benchmark metrics, the RMSE of predicting no change, the predicted
 response magnitude relative to the observed one, the share of genes whose predicted LFC sits at the
 epsilon floor, and how much of a prediction is shared between different knockouts on one slide.
 
 The reported tables and figures are written by
-`experiments/01_spac_seq_benchmark/evaluation/aggregate_spac_seq_benchmark.sh`, which chains the
+`experiments/01_spac_seq_benchmark/evaluation/aggregate.sh`, which chains the
 rescoring, the 50-cell Mean target, the significance tables and the plotting modules listed below.
 
 ### Perturb-map
 
-`run_concert_pm_niche.py` is the Perturb-map evaluation harness. The reported within-niche numbers
+`evaluate_concert_perturbmap.py` is the Perturb-map evaluation harness. The reported within-niche numbers
 rescore the stored predicted LFCs of every method against a reference built from the niche's
 control cells outside every held-out patch (`perturbmap_reference.py`), so reference and
-prediction share no cells. `experiments/02_perturb_seq_benchmark/evaluation/rescore_perturb_seq.sh`
-runs `rescore_perturbmap.py` and then `analyze_perturbmap.py`.
+prediction share no cells. `experiments/02_perturb_seq_benchmark/evaluation/aggregate.sh`
+runs `score_perturbmap.py` and then `perturbmap_tables.py`.
 
 ## Modules
 
 | File | Role |
 |---|---|
 | `release_paths.py` | The layout of `data/` and `checkpoints/`; every path below derives from it |
-| `run_concert_benchmark_eval.py` | SPAC-seq scorer of one CONCERT checkpoint: one slide of the seen setting, or every cross-slide unit |
+| `evaluate_concert_spacseq.py` | SPAC-seq scorer of one CONCERT checkpoint: one slide of the seen setting, or every cross-slide unit |
 | `shared_gene_rule.py` | Runs a scorer under the shared gene rule (slide HVGs inside the CONCERT panel, minus the knockout) |
-| `run_concert_pm_niche.py` | Perturb-map scorer of one CONCERT checkpoint (the evaluation harness) |
+| `evaluate_concert_perturbmap.py` | Perturb-map scorer of one CONCERT checkpoint (the evaluation harness) |
 | `eval_spatial_counterfactual.py`, `make_umap.py` | Load a checkpoint and decode counterfactual predictions |
-| `benchmark_lib.py` | Evaluation panels, knockout holdouts and training manifests (both datasets) |
-| `spacseq_unseen_panel_lib.py`, `spacseq_unseen_eval_lib.py` | SPAC-seq cross-slide panel, shared source cells and cross-slide scoring |
-| `build_source_cells.py` | The 5,000 shared source spots per target slide every cross-slide scorer predicts from |
+| `benchmark_holdouts.py` | Evaluation panels, knockout holdouts and training manifests (both datasets) |
+| `spacseq_cross_slide_panel.py`, `spacseq_cross_slide_scoring.py` | SPAC-seq cross-slide panel, shared source cells and cross-slide scoring |
+| `make_source_cells.py` | The 5,000 shared source spots per target slide every cross-slide scorer predicts from |
 | `lfc_scoring.py` | Observed log fold changes, scored-gene masks and the agreement metrics, from stored predictions |
-| `rescore_spac_lfc_distance.py` | Every method's per-record SPAC-seq rank correlation and RMSE |
-| `attach_concert_unseen_gene_boot.py` | Gives CONCERT's cross-slide records the same gene-bootstrap error as every other method |
+| `score_spacseq.py` | Every method's per-record SPAC-seq rank correlation and RMSE |
+| `add_cross_slide_error.py` | Gives CONCERT's cross-slide records the same gene-bootstrap error as every other method |
 | `reference_strategies.py`, `reference_strategies_seen.py`, `reference_strategies_unseen.py` | The four reference strategies (Mean target, Mean niche, Local kNN, GEX kNN): shared code, seen setting, cross-slide setting |
-| `rescore_mean_target_capped.py` | Mean target from 50 knockout cells per unit, the reported rule |
+| `score_mean_target.py` | Mean target from 50 knockout cells per unit, the reported rule |
 | `score_state_predictions.py` | STATE's delivered predictions scored under the shared rule |
-| `build_significance_tables.py`, `summarize_methods.py`, `panel_numbers.py` | Paired Wilcoxon tests with Benjamini-Hochberg adjustment and the supplementary workbook; method summary; per-knockout panel numbers |
-| `plot_spac_benchmark.py`, `plot_spac_benchmark_bars.py`, `plot_spac_concert_vs_competitor_dots.py` | Per-knockout bar and paired-dot panels |
-| `plot_spac_overall_rank.py`, `plot_spac_condition_summary.py`, `plot_spac_rho_vs_rmse.py` | Overall rank, per-condition summary and rho-versus-RMSE figures |
-| `diagnose_cross_slide_errors.py` | Decomposes each method's cross-slide error against the do-nothing prediction |
-| `perturbmap_harness_rescore.py` | Registry of every method's stored Perturb-map predictions and the harness-reference rescore |
-| `perturbmap_reference.py`, `rescore_perturbmap.py`, `analyze_perturbmap.py`, `plot_pmap_benchmark_panel.py` | Perturb-map: the disjoint reference, the rescore of every method, the tables and tests, and the Fig. 4j panel |
-| `spacseq_eval_common.py`, `spacseq_multi_common.py`, `perturbmap_common.py` | Data loading, slide handling and matching for each assay |
-| `method_input_lib.py`, `train_manifest_lib.py` | Assemble the inputs and manifests an evaluation run needs |
+| `significance_tables.py`, `method_summary.py`, `figure_panel_numbers.py` | Paired Wilcoxon tests with Benjamini-Hochberg adjustment and the supplementary workbook; method summary; per-knockout panel numbers |
+| `plot_spacseq_benchmark.py`, `plot_spacseq_bars.py`, `plot_spacseq_paired_dots.py` | Per-knockout bar and paired-dot panels |
+| `plot_spacseq_rank.py`, `plot_spacseq_condition_summary.py`, `plot_spacseq_rho_vs_rmse.py` | Overall rank, per-condition summary and rho-versus-RMSE figures |
+| `cross_slide_error_breakdown.py` | Decomposes each method's cross-slide error against the do-nothing prediction |
+| `perturbmap_methods.py` | Registry of every method's stored Perturb-map predictions and the harness-reference rescore |
+| `perturbmap_reference.py`, `score_perturbmap.py`, `perturbmap_tables.py`, `plot_perturbmap_panel.py` | Perturb-map: the disjoint reference, the rescore of every method, the tables and tests, and the Fig. 4j panel |
+| `spacseq_common.py`, `spacseq_slides.py`, `perturbmap_common.py` | Data loading, slide handling and matching for each assay |
+| `method_inputs.py`, `train_manifests.py` | Assemble the inputs and manifests an evaluation run needs |
 | `eval_utils.py` | Metric helpers of the counterfactual decoder |
 | `scoring_helpers/` | The two metric modules every scorer imports (`eval_utils.py`, `spac_edist_align.py`) |

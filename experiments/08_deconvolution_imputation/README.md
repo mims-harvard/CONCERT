@@ -18,18 +18,18 @@ of the mixed spots: NNLS and a learned unmixing head, each run once with empiric
 
 Run order:
 
-1. `spot_aggregate_plots.py --mode plot1` partitions slide 2-1 into spots with a greedy
+1. `plot_spot_aggregation.py --mode plot1` partitions slide 2-1 into spots with a greedy
    non-overlapping kNN partition and writes `spot_plots/pseudobulk_2-1_wholeslide.h5ad` and
    `spot_plots/spot_composition_2-1_wholeslide.csv`.
-2. `build_spot_only_assets.py --outdir spot_only_2-1` splits those spots into pure and mixture
+2. `build_spot_assets.py --outdir spot_only_2-1` splits those spots into pure and mixture
    spots and writes `pure_spots.h5ad`, `mixture_spots.h5ad`, `spot_roles.csv`,
    `membership.npz` and `manifest.json`.
-3. `concert_deconv_methods.py --assets spot_only_2-1 --concert_npz <CONCERT signatures>`
+3. `deconvolve_spots.py --assets spot_only_2-1 --concert_npz <CONCERT signatures>`
    runs the four estimators on the mixture spots and writes `per_spot.csv`,
    `summary.json` and `run_meta.json` (shipped in `data/deconvolution/spacseq_2-1/`).
-4. `replot_task1_paper_figs.py` draws the bar, win-rate, calibration and slide panels from
+4. `plot_deconvolution.py` draws the bar, win-rate, calibration and slide panels from
    `per_spot.csv` and `summary.json`, and copies them to `Outputs/ext_exp`.
-5. `replot_task1_paper_figs_4arm.py` rebuilds panel b with the four estimators side by side and
+5. `plot_deconvolution_four_methods.py` rebuilds panel b with the four estimators side by side and
    writes `resp_deconv_spacseq.png`, `resp_deconv_spacseq.pdf` and
    `resp_deconv_spacseq_stats.json`.
 
@@ -43,20 +43,20 @@ the observed profiles of nearby spots of the same type.
 
 Run order (checkpoint: the alternative Perturb-map within-niche model, whose results ship as `data/benchmark_assets/results/perturbmap_concert/within_niche_alternative`):
 
-1. `sub_pmap_s0_jak2_concert_amortized.sh` runs `run_pmap_s0_jak2_concert_amortized.py`, which
+1. `deconvolve_perturbmap_jak2.sh` runs `deconvolve_perturbmap_jak2.py`, which
    queries the checkpoint for the location-matched signatures, trains the unmixing head on
    synthetic mixtures and writes `location_signatures.npz`, `amortized_head.pt` and
    `summary.json` into `Outputs/spac_seq/pmap_s0_jak2_concert_amortized`.
-2. `sub_cache_task3_concert_states.sh` runs `cache_task3_concert_state_signatures.py`, which
+2. `cache_perturbmap_signatures.sh` runs `cache_perturbmap_signatures.py`, which
    adds the normal-tissue profile `mu_normal` for every periphery spot to
    `location_signatures.npz`, and then the three figure scripts in order:
-   - `replot_task3_deconv_impute_subspots.py` writes `peri_deconv_impute_scores.csv`,
+   - `plot_perturbmap_subspots.py` writes `peri_deconv_impute_scores.csv`,
      `jak2_niche_subspots.csv`, `summary_deconv_impute.json`, the bar panel and the slide of
      sub-spots;
-   - `replot_task3_umap_pure_vs_peri.py` writes the UMAP of observed spots, periphery spots and
+   - `plot_perturbmap_umap.py` writes the UMAP of observed spots, periphery spots and
      imputed sub-spot profiles;
-   - `replot_task3_marker_slide.py --gene Fn1` and `--gene Spp1` write the marker slides.
-3. `replot_task3_deconv_impute_subspots_panelc.py` recomputes panel c from
+   - `plot_perturbmap_marker_slide.py --gene Fn1` and `--gene Spp1` write the marker slides.
+3. `plot_perturbmap_subspots_panel_c.py` recomputes panel c from
    `peri_deconv_impute_scores.csv`, checks the means against `summary_deconv_impute.json`, and
    writes `resp_deconv_perturbmap.png`, `resp_deconv_perturbmap.pdf` and
    `resp_deconv_perturbmap_stats.json`.
@@ -71,29 +71,29 @@ alike.
 
 Run order:
 
-1. `spot_aggregate_plots.py --mode plot2` selects the patches and writes
+1. `plot_spot_aggregation.py --mode plot2` selects the patches and writes
    `spot_plots/patch_removal_2-2_top5_cellindex.npz` (cell index, knockout group and role of
    every experiment cell). All methods read this one mask.
-2. `rebuild_masked_2-2_eval5.py` writes the CONCERT training file
+2. `build_masked_slide.py` writes the CONCERT training file
    `data_mask/raw_output_2-2_masked_eval5.h5ad`, which keeps the unassigned cells and the five
    knockouts and holds out the masked patches.
 3. CONCERT is trained on that file and run with `--stage impute_patch --mask_index_file
    patch_removal_2-2_top5_cellindex.npz`, writing `task2_2-2_eval5_tune_lfc10/impute_results.npz`.
 4. The three baselines, in `baselines/`, run from the same mask:
-   - `prepare_spac_reference.py` builds the single-cell reference `Ref_SPAC_2-2.h5ad`, the masked
+   - `prepare_spatialscope_reference.py` builds the single-cell reference `Ref_SPAC_2-2.h5ad`, the masked
      input `sp_adata.h5ad`, `ground_truth.h5ad` and `mask_info.npz`;
    - `build_context_pool.py` writes `context_pool.h5ad`, the retained unassigned tissue shared by
      the Tangram and SpaIM neighbour pools;
    - SpatialScope: `Train_scRef.py` from the SpatialScope package trains the score model on
-     `Ref_SPAC_2-2.h5ad`, then `run_spac_imputation.py` samples the masked cells;
+     `Ref_SPAC_2-2.h5ad`, then `run_spatialscope_imputation.py` samples the masked cells;
    - Tangram: `run_tangram_imputation.py --use_ref --device cuda:0 --n_context 0`;
    - SpaIM: `run_spaim_imputation.py --device cuda:0 --epochs 300 --n_context 0`;
    - `compute_full_metrics.py --method <tangram|spaim>` recomputes the extended metrics with
      `perturbation_metrics.py`.
-5. `make_task2_paper_figs.py` draws the patch-removal map (panel a) and the gene panels.
-   `make_task2_paper_figs_sharedref.py` recomputes the true-versus-predicted log-fold changes with
+5. `plot_imputation.py` draws the patch-removal map (panel a) and the gene panels.
+   `plot_imputation_shared_reference.py` recomputes the true-versus-predicted log-fold changes with
    the shared reference and writes `task2_spac22_eval5_lfc10_lfc_scatter_sharedref_points.npz`.
-6. `compose_resp_imputation_patch_sharedref.py` draws panel b from
+6. `compose_imputation_figure.py` draws panel b from
    `task2_spac22_impute_rescored_our_rule.csv` (per-cell Spearman and log-fold-change Spearman for
    all four methods under the shared rule, error bars as s.e.m. across the five knockouts) and
    panel c from the scatter points, and writes `resp_imputation_patch.png`,

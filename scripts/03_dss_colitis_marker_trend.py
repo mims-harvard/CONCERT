@@ -350,7 +350,7 @@ def main():
     cp.section("0. Inputs")
     cp.check([
         ("temporal model source", MODEL_SRC / "concert_spac.py"),
-        ("case-study evaluation", EXP / "evaluation" / "composition_eval_dss.py"),
+        ("case-study evaluation", EXP / "evaluation" / "case_study_eval.py"),
         ("figure style", EXP / "figures" / "paper_style.py"),
         ("section manifest", MANIFEST),
         ("architecture codes", ARCH_DIR),

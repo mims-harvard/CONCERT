@@ -3,7 +3,7 @@
 
 Scoring rule is the model evaluation rule: units = benchmark/eval_panel.json (niche_key -1); observed LFC =
 masked KO on the target slide vs unassigned cells outside patch roles 1/2
-(spacseq_unseen_eval_lib.unseen_reference_idx); genes = slide HVG rank mask (2000) minus the KO gene;
+(spacseq_cross_slide_scoring.unseen_reference_idx); genes = slide HVG rank mask (2000) minus the KO gene;
 m_lfc = log mean(pred) - log mean(source); Spearman + RMSE via lfc_scoring.score_lfc_agreement.
 
 Information available to each estimator (same information the models are trained on):
@@ -38,8 +38,8 @@ from sklearn.decomposition import PCA
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import reference_strategies as nb  # noqa: E402
-import spacseq_eval_common as sec  # noqa: E402
-from spacseq_unseen_eval_lib import (  # noqa: E402
+import spacseq_common as sec  # noqa: E402
+from spacseq_cross_slide_scoring import (  # noqa: E402
     filter_units,
     ko_holdout_indices,
     load_eval_panel,
@@ -62,7 +62,7 @@ def poisson_at_observed_depth(pred_logcp10k: np.ndarray, lib_sizes: np.ndarray, 
     poisson_at_observed_depth_scoring_space) with the scoring-space conversion skipped, because the
     reference-strategy predictions are means of adata.X and are already in log-CP10K.
     """
-    from method_input_lib import LOG_CP10K_CLIP, raw_counts_to_logcp10k
+    from method_inputs import LOG_CP10K_CLIP, raw_counts_to_logcp10k
 
     rel = np.expm1(np.clip(np.asarray(pred_logcp10k, dtype=np.float64), 0.0, LOG_CP10K_CLIP))
     rel = rel / np.maximum(rel.sum(1, keepdims=True), 1e-12)
@@ -211,7 +211,7 @@ def main():
 
             seed = unit_seed(args.sampled_seed_base, gene)
 
-            def score_full(pred_full):
+            def score_full(pred_full, src_X_full=src_X_full):
                 """Score a full-gene prediction matrix against the source cells."""
                 if args.sampled_output:
                     pred_full = poisson_at_observed_depth(pred_full, lib, seed)

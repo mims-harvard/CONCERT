@@ -461,7 +461,7 @@ def main():
 
     cp.section("0. Inputs")
     checks = [("model source", MODEL_SRC / "run_concert_spac.py"),
-              ("figure code", EXP / "figures" / "fig_cr_patch.py"),
+              ("figure code", EXP / "figures" / "plot_core_rim_patch.py"),
               ("slides (sham 1)", SLIDES / "stroke_paste2_Sham1.h5ad"),
               ("slides (stroke 1)", SLIDES / "stroke_paste2_PT1.h5ad"),
               ("region labels", REGION_H5)]

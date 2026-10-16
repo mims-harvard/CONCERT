@@ -6,8 +6,8 @@ Shared gene rule (identical for every method): a gene is scored for a unit when
 CONCERT's model gene list is the 2000-gene list saved at training
 (checkpoints/spacseq_{cross_slide,within_niche}/hvg_gene_names.txt; the two files are identical).
 
-Mechanism: spacseq_eval_common.select_hvgs is wrapped so the HVG mask it returns is ANDed with the CONCERT
-gene list. Every model eval script (run_concert_benchmark_eval.py, the competitor unseen evaluator,
+Mechanism: spacseq_common.select_hvgs is wrapped so the HVG mask it returns is ANDed with the CONCERT
+gene list. Every model eval script (evaluate_concert_spacseq.py, the competitor unseen evaluator,
 run_multi_seen_eval.py) uses that mask only to build the scored-gene mask `keep` (LFC, e-dist and the
 source-cell bootstrap) and hvg_info.json, so predictions, source cells, reference cells, panel and
 bootstrap settings are untouched. The KO gene is removed by the scripts themselves.
@@ -76,13 +76,13 @@ def main():
 
     ecf = None
     if ctx_check:
-        # Mirror run_concert_benchmark_eval.py import order (model code, then this directory, on
-        # sys.path; eval_spatial_counterfactual imported before spacseq_eval_common.import_eval_utils).
+        # Mirror evaluate_concert_spacseq.py import order (model code, then this directory, on
+        # sys.path; eval_spatial_counterfactual imported before spacseq_common.import_eval_utils).
         sys.path.insert(0, str(EVAL_DIR.parent / "models" / "concert_benchmark"))
         sys.path.insert(0, str(EVAL_DIR))
         import eval_spatial_counterfactual as ecf
 
-    import spacseq_eval_common as sec
+    import spacseq_common as sec
 
     eu, sa = sec.import_eval_utils()
     import inspect
@@ -124,8 +124,8 @@ def main():
         ecf.load_eval_context_multi = ctx_checked
 
     if bin_slides:
-        import spacseq_unseen_eval_lib as suel
-        import spacseq_multi_common as smc
+        import spacseq_cross_slide_scoring as suel
+        import spacseq_slides as smc
 
         orig_unseen = suel.unseen_spac
 
@@ -159,7 +159,7 @@ def main():
         suel.unseen_spac = unseen_with_bins
 
     if seen_bin_slides:
-        import spacseq_multi_common as smc
+        import spacseq_slides as smc
 
         orig_patch_loop = smc.niche_lfc_patch_holdout_loop
 

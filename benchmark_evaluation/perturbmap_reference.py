@@ -8,7 +8,7 @@ when the bin has fewer than min_g_cells.
 
 The evaluation harness (lfc_scoring.observed_lfc_pm_niche) scores against all control
 cells of the niche bin. The role-1 source patch cells carry the "control" label on this assay, so
-the rescore in rescore_perturbmap.py replaces that reference with the one defined here.
+the rescore in score_perturbmap.py replaces that reference with the one defined here.
 
 Predicted LFCs are never touched here: callers pass the stored vectors unchanged.
 """
