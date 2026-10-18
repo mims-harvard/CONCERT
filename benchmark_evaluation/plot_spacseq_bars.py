@@ -105,20 +105,18 @@ def _safe_json_l2(path: Path) -> dict:
         return {}
 
 
-def _gene_records(path: Path, gene: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _gene_records(path: Path, gene: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     if not path.is_file():
-        return np.array([]), np.array([]), np.array([]), np.array([]), np.array([])
+        return np.array([]), np.array([]), np.array([])
     data = _safe_json_l2(path).get(gene, [])
-    lfc, edist, lfc_boot, edist_boot = [], [], [], []
+    lfc, lfc_boot = [], []
     dist = []
     for rec in data:
         lfc.append(float(rec["spearman"]))
-        edist.append(float(rec.get("e_dist", np.nan)))
         if "lfc_dist" in rec:
             dist.append(float(rec["lfc_dist"]))
         lfc_boot.append(float(rec.get("spearman_boot_std", np.nan)))
-        edist_boot.append(float(rec.get("e_dist_boot_std", np.nan)))
-    return map(np.asarray, (lfc, edist, lfc_boot, edist_boot, np.asarray(dist)))
+    return map(np.asarray, (lfc, lfc_boot, np.asarray(dist)))
 
 
 def summarize(values: np.ndarray, boot_stds: np.ndarray | None = None) -> tuple[float, float, int]:
@@ -223,7 +221,7 @@ def load_concert_by_gene(concert_root: Path | None = None, task: str = "seen", e
     if task == "unseen" and eval_units:
         for gene, slide in eval_units:
             path = root / "unseen" / "unseen_pert" / f"{gene}__slide_{slide}" / "lfc_scores.json"
-            lfc, _, lb, _, ld = _gene_records(path, gene)
+            lfc, lb, ld = _gene_records(path, gene)
             if len(lfc):
                 _add(gene, lfc, ld, lb)
     else:
@@ -233,7 +231,7 @@ def load_concert_by_gene(concert_root: Path | None = None, task: str = "seen", e
                 continue
             data = _safe_json_l2(path)
             for gene in data:
-                lfc, _, lb, _, ld = _gene_records(path, gene)
+                lfc, lb, ld = _gene_records(path, gene)
                 if len(lfc):
                     _add(gene, lfc, ld, lb)
 
@@ -320,16 +318,14 @@ def collect_lfc_stats(genes: list[str], concert: dict[str, dict]) -> dict:
             stats[gene]["CONCERT"] = {"can_predict": False, "lfc_rho": (float("nan"), 0.0, 0),
                                       "lfc_dist": (float("nan"), 0.0, 0), "lfc_dist_rescore": False}
         for label, root, subdir in METHOD_SOURCES:
-            parts_lfc, parts_ed, parts_lb, parts_eb, parts_ld = [], [], [], [], []
+            parts_lfc, parts_lb, parts_ld = [], [], []
             for slide in SPAC_SEEN_SLIDES:
                 path = root / subdir / "seen" / "patch" / f"slide_{slide}" / "lfc_scores.json"
-                lfc, ed, lb, eb, ld = _gene_records(path, gene)
+                lfc, lb, ld = _gene_records(path, gene)
                 parts_lfc.extend(lfc.tolist())
-                parts_ed.extend(ed.tolist())
                 parts_lb.extend(lb.tolist())
-                parts_eb.extend(eb.tolist())
                 parts_ld.extend(ld.tolist())
-            lfc_a, ed_a, lb_a, eb_a, ld_a = map(np.asarray, (parts_lfc, parts_ed, parts_lb, parts_eb, parts_ld))
+            lfc_a, lb_a, ld_a = map(np.asarray, (parts_lfc, parts_lb, parts_ld))
             can = method_can_predict_seen(root, subdir, gene)
             ld_fin = ld_a[np.isfinite(ld_a)]
             has_ld = len(ld_fin) > 0
@@ -360,7 +356,7 @@ def collect_lfc_stats_unseen(genes: list[str], eval_units: list[tuple[str, str]]
                 stats[gene][label] = {"can_predict": False, "lfc_rho": (float("nan"), 0.0, 0),
                                       "lfc_dist": (float("nan"), 0.0, 0)}
                 continue
-            lfc, ed, lb, eb, ld = _gene_records(path, gene)
+            lfc, lb, ld = _gene_records(path, gene)
             can = method_can_predict_unseen(root, subdir, gene, target or "")
             ld_fin = ld[np.isfinite(ld)]
             has_ld = len(ld_fin) > 0

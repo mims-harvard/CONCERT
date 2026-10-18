@@ -513,9 +513,8 @@ def eval_unseen_all(args) -> None:
             },
         )
         log.info(
-            "%s @ %s: spearman=%.3f e_dist=%.3f n_ko_gt=%d",
-            gene, slide_id, score.get("spearman", float("nan")),
-            score.get("e_dist", float("nan")), len(ko_idx),
+            "%s @ %s: spearman=%.3f n_ko_gt=%d",
+            gene, slide_id, score.get("spearman", float("nan")), len(ko_idx),
         )
 
     aggregate_unseen(args.outdir, panel)

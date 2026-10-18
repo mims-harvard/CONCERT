@@ -23,7 +23,7 @@ BIOLORD_TRAIN_OUTPUT = Path(
     f"{_rp.WORKDIR}/"
     "biolord/biolord/exp_spacseq/outputs"
 )
-# The two metric helpers (eval_utils, spac_edist_align) every scorer imports.
+# The two metric helpers (eval_utils, gene_align) every scorer imports.
 EVAL_UTILS_DIR = Path(__file__).resolve().parent / "scoring_helpers"
 
 UNASSIGNED_LABELS = frozenset([
@@ -40,7 +40,7 @@ def import_eval_utils():
 
     sys.path.insert(0, str(EVAL_UTILS_DIR))
     import eval_utils as eu
-    import spac_edist_align as sa
+    import gene_align as sa
 
     return eu, sa
 
@@ -116,11 +116,8 @@ def score_with_patch_boot(
     pred_g: np.ndarray,
     src_expr: np.ndarray,
     obs_lfc: np.ndarray,
-    obs_ko_raw: np.ndarray,
-    lib_sizes: np.ndarray,
     keep: np.ndarray,
     eu,
-    sa,
     pick_rows,
     n_patch_boot: int,
     seed: int,
@@ -133,10 +130,9 @@ def score_with_patch_boot(
     if n_patch_boot <= 0:
         return None
     rng = np.random.default_rng(seed)
-    sp_l, ed_l, ld_l = [], [], []
+    sp_l, ld_l = [], []
     keep = np.asarray(keep, dtype=bool)
     o_keep = np.asarray(obs_lfc, dtype=np.float64)[keep]
-    obs_ko_raw = np.asarray(obs_ko_raw)
     for _ in range(int(n_patch_boot)):
         rows = np.asarray(pick_rows(rng), dtype=int)
         if rows.size < 2:
@@ -146,21 +142,15 @@ def score_with_patch_boot(
             eu.pseudobulk_lfc(pred_b, src_expr[rows]), nan=0.0, posinf=0.0, neginf=0.0,
         )
         sc_ = eu.score_lfc_agreement(m_lfc[keep], o_keep)
-        ed = float(sa.aligned_energy_distance(
-            pred_b, obs_ko_raw, lib_sizes[rows], keep,
-        ))
         sp_l.append(float(sc_["spearman"]))
-        ed_l.append(ed)
         ld_l.append(float(sc_["lfc_dist"]))
     if not sp_l:
         return None
     return {
         "spearman": float(np.mean(sp_l)),
         "lfc_dist": float(np.mean(ld_l)),
-        "e_dist": float(np.mean(ed_l)),
         "spearman_boot_std": float(np.std(sp_l, ddof=1)) if len(sp_l) > 1 else 0.0,
         "lfc_dist_boot_std": float(np.std(ld_l, ddof=1)) if len(ld_l) > 1 else 0.0,
-        "e_dist_boot_std": float(np.std(ed_l, ddof=1)) if len(ed_l) > 1 else 0.0,
         "n_boot": int(len(sp_l)),
     }
 
@@ -171,10 +161,8 @@ def attach_patch_boot_stats(sc_: dict, patch_stats: dict | None) -> dict:
     sc_.update(
         spearman=patch_stats["spearman"],
         lfc_dist=patch_stats.get("lfc_dist", float("nan")),
-        e_dist=patch_stats["e_dist"],
         spearman_boot_std=patch_stats["spearman_boot_std"],
         lfc_dist_boot_std=patch_stats.get("lfc_dist_boot_std", 0.0),
-        e_dist_boot_std=patch_stats["e_dist_boot_std"],
         n_boot=patch_stats["n_boot"],
     )
     return sc_
@@ -184,11 +172,8 @@ def bootstrap_source_metrics(
     pred_rows: np.ndarray,
     src_rows: np.ndarray,
     obs_lfc: np.ndarray,
-    obs_ko_raw: np.ndarray,
-    lib_rows: np.ndarray,
     keep: np.ndarray,
     eu,
-    sa,
     n_boot: int = DEFAULT_N_BOOT,
     frac: float = DEFAULT_BOOT_FRAC,
     seed: int = 0,
@@ -203,15 +188,13 @@ def bootstrap_source_metrics(
 
     * ``spearman`` of predicted vs observed per-gene pseudobulk LFC
     * ``lfc_dist``  RMSE between predicted and observed LFC vectors
-    * ``e_dist``   aligned energy distance (predicted subset vs fixed observed KO)
 
     Parameters mirror the point-estimate call sites: ``pred_rows``/``src_rows`` are
     the (n_src, n_genes) predicted and source-expression matrices *restricted to
     this record's source cells*; ``obs_lfc`` is the already-computed observed LFC
-    (fixed); ``obs_ko_raw`` the observed KO raw counts; ``lib_rows`` the per-source
-    library sizes; ``keep`` the scored-gene mask (KO gene removed).
+    (fixed); ``keep`` the scored-gene mask (KO gene removed).
 
-    Returns ``{"spearman_boot": [...], "lfc_dist_boot": [...], "e_dist_boot": [...]}``
+    Returns ``{"spearman_boot": [...], "lfc_dist_boot": [...]}``
     (length == number of successful draws) or ``None`` when the source patch is too small (< 2 cells).
     """
     pred_rows = np.asarray(pred_rows, dtype=np.float64)
@@ -224,9 +207,8 @@ def bootstrap_source_metrics(
         k = n - 1
     keep = np.asarray(keep, dtype=bool)
     o_keep = np.asarray(obs_lfc, dtype=np.float64)[keep]
-    lib_rows = np.asarray(lib_rows, dtype=np.float64)
     rng = np.random.default_rng(seed)
-    sp_l, ed_l, ld_l = [], [], []
+    sp_l, ld_l = [], []
     for _ in range(int(n_boot)):
         idx = rng.choice(n, size=k, replace=False)
         pr = pred_rows[idx]
@@ -235,11 +217,9 @@ def bootstrap_source_metrics(
         sc_ = eu.score_lfc_agreement(m_lfc[keep], o_keep)
         rho = float(sc_["spearman"])
         ld = float(sc_["lfc_dist"])
-        ed = float(sa.aligned_energy_distance(pr, obs_ko_raw, lib_rows[idx], keep))
         sp_l.append(rho)
         ld_l.append(ld)
-        ed_l.append(ed)
-    return {"spearman_boot": sp_l, "lfc_dist_boot": ld_l, "e_dist_boot": ed_l}
+    return {"spearman_boot": sp_l, "lfc_dist_boot": ld_l}
 
 
 def boot_settings(args) -> tuple[int, float, int]:
@@ -253,15 +233,13 @@ def boot_settings(args) -> tuple[int, float, int]:
 def attach_bootstrap_stats(sc_: dict, boot: dict | None) -> dict:
     """Add per-record bootstrap summary (mean/std of resampled metrics) to ``sc_``."""
     if not boot:
-        sc_.update(spearman_boot_std=0.0, lfc_dist_boot_std=0.0, e_dist_boot_std=0.0, n_boot=0)
+        sc_.update(spearman_boot_std=0.0, lfc_dist_boot_std=0.0, n_boot=0)
         return sc_
     sp = boot["spearman_boot"]
     ld = boot.get("lfc_dist_boot", [])
-    ed = boot["e_dist_boot"]
     sc_.update(
         spearman_boot_std=float(np.std(sp, ddof=1)) if len(sp) > 1 else 0.0,
         lfc_dist_boot_std=float(np.std(ld, ddof=1)) if len(ld) > 1 else 0.0,
-        e_dist_boot_std=float(np.std(ed, ddof=1)) if len(ed) > 1 else 0.0,
         n_boot=int(len(sp)),
     )
     return sc_
@@ -300,7 +278,7 @@ def print_per_pert_table(per_pert, out_dir: Path):
     lines = []
     header = (
         f"{'gene':<14} {'level':<6} "
-        f"{'lfc_rho':>8} {'abs_rho':>8} {'e_dist':>8} {'sign':>6} {'topk':>6} {'niches':>6}"
+        f"{'lfc_rho':>8} {'abs_rho':>8} {'sign':>6} {'topk':>6} {'niches':>6}"
     )
     sep = "-" * len(header)
     lines += [sep, header, sep]
@@ -311,7 +289,6 @@ def print_per_pert_table(per_pert, out_dir: Path):
                 f"{g:<14} {lv:<6} "
                 f"{m.get('spearman_mean', float('nan')):>8.3f} "
                 f"{m.get('abs_spearman_mean', float('nan')):>8.3f} "
-                f"{m.get('e_dist_mean', float('nan')):>8.3f} "
                 f"{m.get('sign_agreement_mean', float('nan')):>6.3f} "
                 f"{m.get('topk_overlap_mean', float('nan')):>6.3f} "
                 f"{m.get('n_niches', 0):>6d}"
@@ -347,8 +324,6 @@ def aggregate_scores(scores, lv, g, worst_metric_values=None):
             sign_agreement_sd=0.0,
             topk_overlap_mean=0.0,
             topk_overlap_sd=0.0,
-            e_dist_mean=float("nan"),
-            e_dist_sd=float("nan"),
             n_niches=0,
             n_scored_genes=0,
         )
@@ -387,7 +362,6 @@ def worst_niche_score(
     n_src: int,
     n_real_g: int,
     n_scored_genes: int,
-    bad_edist: float,
 ) -> dict:
     """Worst-case per-niche metrics when a method cannot predict a perturbation."""
     return dict(
@@ -395,7 +369,6 @@ def worst_niche_score(
         abs_spearman=0.0,
         sign_agreement=0.5,
         topk_overlap=0.0,
-        e_dist=bad_edist,
         lfc_dist=float("nan"),
         niche=int(niche),
         n_src=int(n_src),
@@ -417,24 +390,15 @@ def _fill_worst_case_scores(
     unpredictable_genes,
     n_src,
     args,
-    bad_edist_default,
 ):
     """Insert worst-case niche scores for unpredicted genes / missing niches."""
     unpredictable_genes = unpredictable_genes or set()
-    scored_edists = [
-        s["e_dist"]
-        for g in panel
-        for s in scores[lv][g]
-        if np.isfinite(s.get("e_dist", np.nan))
-    ]
-    bad_edist = float(np.max(scored_edists)) if scored_edists else float(bad_edist_default)
     scored_niches = {g: {s["niche"] for s in scores[lv][g]} for g in panel}
     worst_metrics = {
         "spearman": 0.0,
         "abs_spearman": 0.0,
         "sign_agreement": 0.5,
         "topk_overlap": 0.0,
-        "e_dist": bad_edist,
     }
 
     for b in eval_bins:
@@ -457,7 +421,7 @@ def _fill_worst_case_scores(
                 reason,
             )
             scores[lv][g].append(
-                worst_niche_score(int(b), n_src, len(real_g_idx), n_scored, bad_edist)
+                worst_niche_score(int(b), n_src, len(real_g_idx), n_scored)
             )
     return worst_metrics
 
@@ -475,7 +439,6 @@ def niche_lfc_loop(
     raw_mm,
     lib_sizes,
     unpredictable_genes=None,
-    bad_edist_default=12.0,
     scoring_method: str | None = None,
 ):
     """Score per-niche LFC agreement using precomputed pred_g arrays.
@@ -485,7 +448,7 @@ def niche_lfc_loop(
     (``pred_g_cache[g] is None``) receive worst-case per-niche scores so they count
     against the method in bar-plot aggregates.
     """
-    eu, sa = import_eval_utils()
+    eu, _ = import_eval_utils()
 
     gene_names = np.asarray(adata_all.var_names)
     eval_bins = np.where(evaluable)[0]
@@ -539,12 +502,6 @@ def niche_lfc_loop(
                 abs_rho = float(spearmanr(mean_pred_hvg, mean_obs_hvg).correlation)
                 sc_["abs_spearman"] = 0.0 if np.isnan(abs_rho) else abs_rho
 
-                sc_["e_dist"] = sa.aligned_energy_distance(
-                    pred_g,
-                    np.asarray(raw_mm[real_g_idx]),
-                    lib_sizes[global_src_idx],
-                    keep,
-                )
                 sc_.update(
                     niche=int(b),
                     n_src=n_src,
@@ -567,19 +524,17 @@ def niche_lfc_loop(
             unpredictable_genes,
             n_src,
             args,
-            bad_edist_default,
         )
 
         for g in panel:
             agg[lv][g] = aggregate_scores(scores, lv, g, worst_metrics)
             if agg[lv][g]["n_niches"]:
                 log.info(
-                    "[%s] %-12s lfc_rho=%.3f abs_rho=%.3f e_dist=%.3f sign=%.3f  (n=%d)",
+                    "[%s] %-12s lfc_rho=%.3f abs_rho=%.3f sign=%.3f  (n=%d)",
                     lv,
                     g,
                     agg[lv][g].get("spearman_mean", float("nan")),
                     agg[lv][g].get("abs_spearman_mean", float("nan")),
-                    agg[lv][g].get("e_dist_mean", float("nan")),
                     agg[lv][g].get("sign_agreement_mean", float("nan")),
                     agg[lv][g]["n_niches"],
                 )

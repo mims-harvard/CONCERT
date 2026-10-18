@@ -120,7 +120,7 @@ def prepare_all_slides(outdir: Path, slides: list[str] | None = None) -> Path:
         adata.write_h5ad(dest)
         log.info("slide %s -> %s  (%d cells)", sid, dest, n)
 
-        # Raw-count cache (memmap-compatible) for energy distance.
+        # Raw-count cache (memmap-compatible).
         rc_dir = outdir / "raw_counts" / f"slide_{sid}"
         rc_dir.mkdir(parents=True, exist_ok=True)
         np.save(rc_dir / "filtered_raw_counts.npy", Xraw)
@@ -280,7 +280,7 @@ def prepare_all_slides_panel1053ko(outdir: Path, slides: list[str] | None = None
         adata.var_names = gene_names
         adata.var["ko_gene"] = ko_sub
         adata.var["in_panel_1053"] = score_sub | ko_sub  # panel membership
-        adata.var["score_gene"] = score_sub             # genes used for LFC/e-dist
+        adata.var["score_gene"] = score_sub             # genes used for LFC
         adata.obsm["spatial"] = coords_scaled
         adata.layers["counts"] = adata.X.copy()
         sc.pp.normalize_total(adata, target_sum=1e4)
@@ -464,7 +464,7 @@ def niche_lfc_seen_loop(adata_target, raw_mm, lib_sizes, global_src_idx,
     global_src_idx) is given, reference = pred_basal -> DELTA pred_KO - pred_basal
     (cancels basal reconstruction error) instead of pred_KO - observed source.
     """
-    eu, sa = sec.import_eval_utils()
+    eu, _ = sec.import_eval_utils()
     unpredictable_genes = set(unpredictable_genes or [])
     if scoring_method:
         pred_g_cache = normalize_pred_cache(scoring_method, pred_g_cache)
@@ -485,7 +485,6 @@ def niche_lfc_seen_loop(adata_target, raw_mm, lib_sizes, global_src_idx,
     mlfc = {"L2": {g: {} for g in panel}}
 
     pending_worst = []   # evaluable niches the method could not predict
-    finite_edists = []
     for (b, g, rep), rows in sorted(groups.items()):
         ko_idx, _ko_scope = _ref_ko_idx(adata_target, canon, bin_id, g, b, args.min_g_cells)
         if ko_gt_rows is not None:
@@ -513,8 +512,7 @@ def niche_lfc_seen_loop(adata_target, raw_mm, lib_sizes, global_src_idx,
                 pending_worst.append((int(b), g, len(rows), len(ko_idx), keep_n))
                 continue
             patch_stats = sec.score_with_patch_boot(
-                pred_g, ref_expr, o_lfc, np.asarray(raw_mm[ko_idx]),
-                lib_sizes[global_src_idx], keep, eu, sa,
+                pred_g, ref_expr, o_lfc, keep, eu,
                 pick_rows=lambda rng, _pl=patch_list: sec.pick_random_holdout_patch(_pl, rng),
                 n_patch_boot=n_patch_boot,
                 seed=patch_seed + int(b) * 1009 + int(rep) * 17 + hash(g) % 997,
@@ -535,34 +533,22 @@ def niche_lfc_seen_loop(adata_target, raw_mm, lib_sizes, global_src_idx,
             m_lfc = np.nan_to_num(eu.pseudobulk_lfc(pred_b, ref_expr[rows]),
                                   nan=0.0, posinf=0.0, neginf=0.0)
             sc_ = eu.score_lfc_agreement(m_lfc[keep], o_lfc[keep])
-            sc_["e_dist"] = sa.aligned_energy_distance(
-                pred_b, np.asarray(raw_mm[ko_idx]),
-                lib_sizes[global_src_idx[rows]], keep,
-            )
             if n_boot > 0:
                 sec.attach_bootstrap_stats(sc_, sec.bootstrap_source_metrics(
-                    pred_b, ref_expr[rows], o_lfc, np.asarray(raw_mm[ko_idx]),
-                    lib_sizes[global_src_idx[rows]], keep, eu, sa,
+                    pred_b, ref_expr[rows], o_lfc, keep, eu,
                     n_boot=n_boot, frac=frac,
                     seed=boot_seed + int(b) * 1009 + int(rep) * 17 + hash(g) % 997,
                 ))
         sc_.update(niche=int(b), patch_id=int(rep), n_src=int(len(rows)),
                    n_real_g=int(len(ko_idx)), n_scored_genes=int(keep.sum()),
                    random_patch=bool(random_patch and n_patch_boot > 0))
-        if not (random_patch and n_patch_boot > 0):
-            if np.isfinite(sc_.get("e_dist", np.nan)):
-                finite_edists.append(sc_["e_dist"])
-        else:
-            if np.isfinite(sc_.get("e_dist", np.nan)):
-                finite_edists.append(sc_["e_dist"])
         scores["L2"][g].append(sc_)
         mlfc["L2"][g][f"{int(b)}:{int(rep)}"] = m_lfc.tolist()
 
     # Penalise evaluable niches a method could not predict (worst-case), so
     # unpredictable methods score poorly instead of disappearing (SPAC-seq rule).
-    bad_edist = float(max(finite_edists)) if finite_edists else 12.0
     for (b, g, n_src, n_real, keep_n) in pending_worst:
-        scores["L2"][g].append(sec.worst_niche_score(b, n_src, n_real, keep_n, bad_edist))
+        scores["L2"][g].append(sec.worst_niche_score(b, n_src, n_real, keep_n))
 
     for g in panel:
         agg["L2"][g] = sec.aggregate_scores(scores, "L2", g,

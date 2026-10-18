@@ -1,4 +1,4 @@
-"""Energy-distance scoring aligned with CONCERT eval_utils.energy_distance."""
+"""Scored-gene mask, log-CP10K to count conversion and raw-count cache readers shared by the scorers."""
 from __future__ import annotations
 import sys as _sys
 from pathlib import Path as _Path
@@ -6,11 +6,9 @@ _sys.path.insert(0, str(next(p for p in _Path(__file__).resolve().parents if (p 
 import release_paths as _rp  # noqa: E402  data/, checkpoints/ and runs/ roots
 import json
 import os
-import sys
 from pathlib import Path
 import numpy as np
 
-EVAL_UTILS_DIR = Path(__file__).resolve().parent
 DEFAULT_RAW_COUNTS_DIR = Path(os.environ.get("CONCERT_DATA_DIR", f"{_rp.DATA}")) / "spacseq" / "prepared" / "raw_counts"
 RAW_COUNTS_NAME = "filtered_raw_counts.npy"
 LIB_SIZES_NAME = "filtered_lib_sizes.npy"
@@ -37,20 +35,6 @@ def log_cp10k_to_counts(log_x: np.ndarray, lib_size: np.ndarray) -> np.ndarray:
     ls = np.asarray(lib_size, dtype=np.float64).reshape(-1, 1)
     cp10k = np.expm1(np.clip(x, 0.0, 14.5))  # avoid overflow when preds are mis-scaled
     return np.clip(cp10k * ls / 1e4, 0.0, None).astype(np.float32)
-
-
-def _import_eval_utils():
-    sys.path.insert(0, str(EVAL_UTILS_DIR))
-    import eval_utils as eu
-    return eu
-
-
-def aligned_energy_distance(pred_log_cp10k, obs_raw, lib_size, gene_mask) -> float:
-    eu = _import_eval_utils()
-    pred_counts = log_cp10k_to_counts(pred_log_cp10k, lib_size)
-    obs = np.asarray(obs_raw, dtype=np.float32)
-    keep = np.asarray(gene_mask, dtype=bool)
-    return float(eu.energy_distance(pred_counts, obs, keep, subsample=500, n_pcs=50, random_state=0))
 
 
 def raw_counts_paths(raw_counts_dir: Path | str | None = None):
@@ -91,5 +75,4 @@ def hvg_info_dict(hvg_mask: np.ndarray) -> dict:
         "hvg_gene_indices": np.where(hvg_mask)[0].tolist(),
         "hvg_selection": "hvg_rank",
         "hvg_rank_max": 2000,
-        "edist": "concert_eval_utils",
     }

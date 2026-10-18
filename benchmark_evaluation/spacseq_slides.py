@@ -469,13 +469,6 @@ def lib_sizes_from_adata(adata: ad.AnnData, idx: np.ndarray) -> np.ndarray:
     return np.asarray(x, dtype=np.float64).sum(axis=1)
 
 
-def pseudo_raw_counts(adata: ad.AnnData, idx: np.ndarray) -> np.ndarray:
-    _, sa = import_eval_utils()
-    x = to_dense(adata[idx].X)
-    lib = lib_sizes_from_adata(adata, idx)
-    return sa.log_cp10k_to_counts(x, lib)
-
-
 def niche_lfc_cross_slide_loop(
     eval_genes: list[str],
     adata_target: ad.AnnData,
@@ -485,7 +478,6 @@ def niche_lfc_cross_slide_loop(
     hvg_mask: np.ndarray,
     args,
     unpredictable_genes: set[str] | None = None,
-    bad_edist_default: float = 12.0,
     scoring_method: str | None = None,
     pred_basal=None,
 ):
@@ -494,7 +486,7 @@ def niche_lfc_cross_slide_loop(
     If ``pred_basal`` (predicted basal on the source cells, aligned with global_src_idx)
     is given, predicted LFC = DELTA pred_KO - pred_basal (cancels basal reconstruction
     error) instead of pred_KO - observed source."""
-    eu, sa = import_eval_utils()
+    eu, _ = import_eval_utils()
     unpredictable_genes = set(unpredictable_genes or [])
     if scoring_method:
         pred_g_cache = normalize_pred_cache(scoring_method, pred_g_cache)
@@ -527,7 +519,6 @@ def niche_lfc_cross_slide_loop(
         "abs_spearman": 0.0,
         "sign_agreement": 0.5,
         "topk_overlap": 0.0,
-        "e_dist": bad_edist_default,
     }
 
     for g in eval_genes:
@@ -540,7 +531,7 @@ def niche_lfc_cross_slide_loop(
                     continue
                 keep = hvg_mask & (gene_names != g)
                 scores["L2"][g].append(
-                    worst_niche_score(int(b), n_src, 0, int(keep.sum()), bad_edist_default)
+                    worst_niche_score(int(b), n_src, 0, int(keep.sum()))
                 )
             continue
 
@@ -552,12 +543,11 @@ def niche_lfc_cross_slide_loop(
                     continue
                 keep = hvg_mask & (gene_names != g)
                 scores["L2"][g].append(
-                    worst_niche_score(int(b), n_src, 0, int(keep.sum()), bad_edist_default)
+                    worst_niche_score(int(b), n_src, 0, int(keep.sum()))
                 )
             continue
 
         donor_ko = donor_ko_idx[g]
-        obs_raw_donor = pseudo_raw_counts(adata_donor, donor_ko)
         y_ko_log = to_dense(adata_donor[donor_ko].X)
 
         for b in eval_bins:
@@ -579,12 +569,6 @@ def niche_lfc_cross_slide_loop(
                 spearmanr(pred_b[:, keep].mean(axis=0), y_ko_log[:, keep].mean(axis=0)).correlation
             )
             sc_["abs_spearman"] = 0.0 if np.isnan(abs_rho) else abs_rho
-            sc_["e_dist"] = sa.aligned_energy_distance(
-                pred_b,
-                obs_raw_donor,
-                lib_sizes_from_adata(adata_target, global_src_idx[src_rows]),
-                keep,
-            )
             sc_.update(
                 niche=int(b),
                 n_src=int(len(src_rows)),
@@ -593,28 +577,21 @@ def niche_lfc_cross_slide_loop(
             )
             if n_boot > 0:
                 attach_bootstrap_stats(sc_, bootstrap_source_metrics(
-                    pred_b, ref_rows, o_lfc_ref, obs_raw_donor,
-                    lib_sizes_from_adata(adata_target, global_src_idx[src_rows]),
-                    keep, eu, sa,
+                    pred_b, ref_rows, o_lfc_ref, keep, eu,
                     n_boot=n_boot, frac=frac,
                     seed=boot_seed + int(b) * 1009 + hash(g) % 997,
                 ))
             scores["L2"][g].append(sc_)
             mlfc["L2"][g][int(b)] = m_lfc.tolist()
 
-        scored_edists = [s["e_dist"] for s in scores["L2"][g] if np.isfinite(s.get("e_dist", np.nan))]
-        if scored_edists:
-            worst_metrics["e_dist"] = float(np.max(scored_edists))
-
     for g in eval_genes:
         agg["L2"][g] = aggregate_scores(scores, "L2", g, worst_metrics)
         if agg["L2"][g]["n_niches"]:
             log.info(
-                "[L2] %-12s lfc_rho=%.3f abs_rho=%.3f e_dist=%.3f (n=%d)",
+                "[L2] %-12s lfc_rho=%.3f abs_rho=%.3f (n=%d)",
                 g,
                 agg["L2"][g].get("spearman_mean", float("nan")),
                 agg["L2"][g].get("abs_spearman_mean", float("nan")),
-                agg["L2"][g].get("e_dist_mean", float("nan")),
                 agg["L2"][g]["n_niches"],
             )
 
@@ -680,7 +657,6 @@ def niche_lfc_seen_holdout_loop(
     lib_sizes,
     args,
     unpredictable_genes=None,
-    bad_edist_default=12.0,
     scoring_method: str | None = None,
     pred_basal=None,
     ko_gt_rows=None,
@@ -696,7 +672,7 @@ def niche_lfc_seen_holdout_loop(
     use the held-out source cells located in b*; observed = real KO g vs unassigned in b*
     (with-noise = mu_action + f_pert).
     """
-    eu, sa = import_eval_utils()
+    eu, _ = import_eval_utils()
     gene_names = np.asarray(adata_target.var_names)
     pert_canon = adata_target.obs["perturbation_canon"].astype(str).to_numpy()
     bin_id = adata_target.obs["bin_id"].to_numpy().astype(int)
@@ -718,7 +694,7 @@ def niche_lfc_seen_holdout_loop(
     mlfc = {"L2": {g: {} for g in panel}}
     worst_metrics = {
         "spearman": 0.0, "abs_spearman": 0.0, "sign_agreement": 0.5,
-        "topk_overlap": 0.0, "e_dist": bad_edist_default,
+        "topk_overlap": 0.0,
     }
 
     for g in panel:
@@ -737,7 +713,7 @@ def niche_lfc_seen_holdout_loop(
             or len(una_b) < args.min_g_cells
         ):
             scores["L2"][g].append(
-                worst_niche_score(b, len(src_rows), len(ko_idx), int(keep.sum()), bad_edist_default)
+                worst_niche_score(b, len(src_rows), len(ko_idx), int(keep.sum()))
             )
             continue
         pred_b = pred_g[src_rows]
@@ -760,19 +736,18 @@ def niche_lfc_seen_holdout_loop(
             )
             if not patch_list:
                 scores["L2"][g].append(
-                    worst_niche_score(b, len(src_rows), len(ko_idx), int(keep.sum()), bad_edist_default)
+                    worst_niche_score(b, len(src_rows), len(ko_idx), int(keep.sum()))
                 )
                 continue
             patch_stats = score_with_patch_boot(
-                pred_g, src_expr, o_lfc, np.asarray(raw_mm[ko_idx]),
-                lib_sizes[src_idx], keep, eu, sa,
+                pred_g, src_expr, o_lfc, keep, eu,
                 pick_rows=lambda rng, _pl=patch_list: pick_random_holdout_patch(_pl, rng),
                 n_patch_boot=n_patch_boot,
                 seed=patch_seed + int(b) * 1009 + hash(g) % 997,
             )
             if patch_stats is None:
                 scores["L2"][g].append(
-                    worst_niche_score(b, len(src_rows), len(ko_idx), int(keep.sum()), bad_edist_default)
+                    worst_niche_score(b, len(src_rows), len(ko_idx), int(keep.sum()))
                 )
                 continue
             rows0 = pick_random_holdout_patch(
@@ -795,14 +770,10 @@ def niche_lfc_seen_holdout_loop(
             sc_ = eu.score_lfc_agreement(m_lfc[keep], o_lfc[keep])
             abs_rho = float(spearmanr(pred_b[:, keep].mean(axis=0), y_ko_b[:, keep].mean(axis=0)).correlation)
             sc_["abs_spearman"] = 0.0 if np.isnan(abs_rho) else abs_rho
-            sc_["e_dist"] = sa.aligned_energy_distance(
-                pred_b, np.asarray(raw_mm[ko_idx]), lib_sizes[src_idx[src_rows]], keep,
-            )
             sc_.update(niche=b, n_src=int(len(src_rows)), n_real_g=int(len(ko_idx)), n_scored_genes=int(keep.sum()))
             if n_boot > 0:
                 attach_bootstrap_stats(sc_, bootstrap_source_metrics(
-                    pred_b, ref_expr[src_rows], o_lfc, np.asarray(raw_mm[ko_idx]),
-                    lib_sizes[src_idx[src_rows]], keep, eu, sa,
+                    pred_b, ref_expr[src_rows], o_lfc, keep, eu,
                     n_boot=n_boot, frac=frac, seed=boot_seed + int(b) * 1009 + hash(g) % 997,
                 ))
         scores["L2"][g].append(sc_)
@@ -812,11 +783,10 @@ def niche_lfc_seen_holdout_loop(
         agg["L2"][g] = aggregate_scores(scores, "L2", g, worst_metrics)
         if agg["L2"][g]["n_niches"]:
             log.info(
-                "[L2/holdout] %-12s niche=%d lfc_rho=%.3f abs_rho=%.3f e_dist=%.3f",
+                "[L2/holdout] %-12s niche=%d lfc_rho=%.3f abs_rho=%.3f",
                 g, int(panel_niche[g]),
                 agg["L2"][g].get("spearman_mean", float("nan")),
                 agg["L2"][g].get("abs_spearman_mean", float("nan")),
-                agg["L2"][g].get("e_dist_mean", float("nan")),
             )
     return scores, agg, mlfc
 
@@ -970,7 +940,6 @@ def niche_lfc_patch_holdout_loop(
     lib_sizes,
     args,
     unpredictable_genes=None,
-    bad_edist_default=12.0,
     exclude_from_baseline_idx=None,
     scoring_method: str | None = None,
     pred_basal=None,
@@ -984,7 +953,7 @@ def niche_lfc_patch_holdout_loop(
     disjoint. Results are accumulated per gene (a gene dominant in several niches
     gets several niche entries).
     """
-    eu, sa = import_eval_utils()
+    eu, _ = import_eval_utils()
     gene_names = np.asarray(adata_target.var_names)
     pert_canon = adata_target.obs["perturbation_canon"].astype(str).to_numpy()
     bin_id = adata_target.obs["bin_id"].to_numpy().astype(int)
@@ -1009,7 +978,7 @@ def niche_lfc_patch_holdout_loop(
     mlfc = {"L2": {g: {} for g in panel}}
     worst_metrics = {
         "spearman": 0.0, "abs_spearman": 0.0, "sign_agreement": 0.5,
-        "topk_overlap": 0.0, "e_dist": bad_edist_default,
+        "topk_overlap": 0.0,
     }
 
     for b, g in sorted(niche_dom.items()):
@@ -1026,7 +995,7 @@ def niche_lfc_patch_holdout_loop(
             or len(ko_idx) < args.min_g_cells
             or len(una_b) < args.min_g_cells
         ):
-            sc_ = worst_niche_score(int(b), len(src_rows), len(ko_idx), int(keep.sum()), bad_edist_default)
+            sc_ = worst_niche_score(int(b), len(src_rows), len(ko_idx), int(keep.sum()))
             scores["L2"][g].append(sc_)
             continue
         pred_b = pred_g[src_rows]
@@ -1039,9 +1008,6 @@ def niche_lfc_patch_holdout_loop(
         sc_ = eu.score_lfc_agreement(m_lfc[keep], o_lfc[keep])
         abs_rho = float(spearmanr(pred_b[:, keep].mean(axis=0), y_ko_b[:, keep].mean(axis=0)).correlation)
         sc_["abs_spearman"] = 0.0 if np.isnan(abs_rho) else abs_rho
-        sc_["e_dist"] = sa.aligned_energy_distance(
-            pred_b, np.asarray(raw_mm[ko_idx]), lib_sizes[src_idx[src_rows]], keep,
-        )
         sc_.update(
             niche=int(b), n_src=int(len(src_rows)), n_real_g=int(len(ko_idx)),
             n_scored_genes=int(keep.sum()),
@@ -1049,8 +1015,7 @@ def niche_lfc_patch_holdout_loop(
         n_boot, frac, boot_seed = boot_settings(args)
         if n_boot > 0:
             attach_bootstrap_stats(sc_, bootstrap_source_metrics(
-                pred_b, ref_expr[src_rows], o_lfc, np.asarray(raw_mm[ko_idx]),
-                lib_sizes[src_idx[src_rows]], keep, eu, sa,
+                pred_b, ref_expr[src_rows], o_lfc, keep, eu,
                 n_boot=n_boot, frac=frac, seed=boot_seed + int(b) * 1009 + hash(g) % 997,
             ))
         scores["L2"][g].append(sc_)
@@ -1060,11 +1025,10 @@ def niche_lfc_patch_holdout_loop(
         agg["L2"][g] = aggregate_scores(scores, "L2", g, worst_metrics)
         if agg["L2"][g]["n_niches"]:
             log.info(
-                "[L2/patch] %-12s n_niches=%d lfc_rho=%.3f abs_rho=%.3f e_dist=%.3f",
+                "[L2/patch] %-12s n_niches=%d lfc_rho=%.3f abs_rho=%.3f",
                 g, agg["L2"][g]["n_niches"],
                 agg["L2"][g].get("spearman_mean", float("nan")),
                 agg["L2"][g].get("abs_spearman_mean", float("nan")),
-                agg["L2"][g].get("e_dist_mean", float("nan")),
             )
     return scores, agg, mlfc
 
@@ -1108,7 +1072,7 @@ CONCERT_PYTHON = f"{_rp.WORKDIR}/concert_env/bin/python"
 
 
 def ensure_prepared_raw_counts(prepared_dir: Path, slide_id: str) -> Path:
-    """Build aligned raw-count cache for a prepared slide (for e-dist scoring)."""
+    """Build aligned raw-count cache for a prepared slide."""
     import subprocess
 
     outdir = prepared_raw_counts_dir(prepared_dir, slide_id)

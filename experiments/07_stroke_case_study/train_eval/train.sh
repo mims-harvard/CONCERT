@@ -29,8 +29,7 @@ export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 
 ARM="${1:?need arm: 2d|3d}"
-# 2dflat is the STANDALONE 2D task (per-slide tiles, no z-stack): the base for the
-# counterfactual capability demos (multi-region / lesion size / deep-vs-surface).
+# 2dflat is the standalone 2D task (per-slide tiles, no z-stack).
 # 2d is the z-ablation arm -- same as 3d but with the z axis removed, sections superimposed.
 case "$ARM" in
   3d)     NZ=4; TILE=True ;;

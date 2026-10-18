@@ -26,10 +26,9 @@ This directory holds the **complete working tree** of the stroke model, while
 `../concert_benchmark/` and `../concert_temporal/` hold trimmed copies. Alongside the model itself
 (`concert_spac.py`, `kernel.py`, `SVGP_Batch.py`, `nngp.py`, `VAE_utils.py`, `lord_batch.py`,
 `I_PID.py`, `pert_action_denoiser.py`) and the preparation and evaluation entry points
-(`preprocess.py`, `spatial_graph.py`, `eval_spatial_counterfactual.py`, `eval_utils.py`,
-`deconv_impute.py`) it holds the diagnostics that were run against it - the `diag_*.py`,
-`analyze_*.py`, `eval_*_patches.py` and gate scripts, which document how the model was checked;
-the case study itself runs without them.
+(`preprocess.py`, `spatial_graph.py`, `eval_utils.py`, `deconv_impute.py`) it holds two
+helpers that `deconv_impute.py` imports (`decompose_levels.py`, `step0_leakage_gate.py`); the case
+study itself runs from `run_concert_spac.py` alone.
 
 The three model directories are deliberate copies. Their model sources differ as well as their
 configurations, and keeping them separate means a change made for one result leaves the others

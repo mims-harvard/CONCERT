@@ -1,14 +1,12 @@
 """Pure functions for the CONCERT-spac spatial-counterfactual evaluation harness.
 
 No model/IO dependencies -- these are the unit-tested core used by
-``eval_spatial_counterfactual.py``: niche-grid construction, NTC-referenced
+the benchmark scorers: niche-grid construction, NTC-referenced
 pseudobulk LFC, LFC-agreement scoring, perturbation-panel selection, a
 spatial-kNN baseline, and contiguous held-out patch construction.
 """
 import numpy as np
-from scipy.spatial.distance import cdist
 from scipy.stats import spearmanr
-from sklearn.decomposition import PCA
 
 
 def build_niche_grid(coords: np.ndarray, grid: int = 6,
@@ -48,43 +46,6 @@ def score_lfc_agreement(model_lfc: np.ndarray, obs_lfc: np.ndarray, top_k: int =
     to = set(np.argsort(-np.abs(o))[:k].tolist())
     return {"spearman": rho, "lfc_dist": lfc_dist, "sign_agreement": sign_agr,
             "topk_overlap": len(tm & to) / k, "n_sig": int(sig.sum())}
-
-
-def energy_distance(X: np.ndarray, Y: np.ndarray, gene_mask: np.ndarray,
-                    subsample: int = 500, n_pcs: int = 50,
-                    random_state: int = 0) -> float:
-    """Energy distance between two cell populations (population-level, not pseudobulk).
-
-    Captures distributional similarity (shape, variance) not just means.
-    Use for: comparing predicted vs observed KO cell distributions per niche.
-    Lower = more similar distributions.
-
-    Steps: subset HVGs -> log1p normalize -> subsample -> joint PCA (50 PCs) -> e-distance.
-    E(X,Y) = 2*mean||x-y|| - mean||x-x'|| - mean||y-y'||
-    """
-    X = np.log1p(np.asarray(X, dtype=np.float64)[:, gene_mask])
-    Y = np.log1p(np.asarray(Y, dtype=np.float64)[:, gene_mask])
-    rng = np.random.default_rng(random_state)
-    if len(X) > subsample:
-        X = X[rng.choice(len(X), subsample, replace=False)]
-    if len(Y) > subsample:
-        Y = Y[rng.choice(len(Y), subsample, replace=False)]
-    n_comp = min(n_pcs, X.shape[1], X.shape[0] + Y.shape[0] - 1)
-    combined = np.vstack([X, Y])
-    pca = PCA(n_components=n_comp, random_state=random_state)
-    proj = pca.fit_transform(combined)
-    Xp, Yp = proj[:len(X)], proj[len(X):]
-    xy = cdist(Xp, Yp).mean()
-    # U-statistic: exclude diagonal (i==j, distance=0) so we average over
-    # distinct pairs only.  cdist.mean() is the V-statistic which includes
-    # n diagonal zeros, underestimating xx/yy by factor (n-1)/n -- a 5-10%
-    # downward bias for small niches (n~10-20) that inflates the result.
-    n, m = len(Xp), len(Yp)
-    xx_d = cdist(Xp, Xp)
-    xx = xx_d[np.triu_indices(n, k=1)].mean() if n > 1 else 0.0
-    yy_d = cdist(Yp, Yp)
-    yy = yy_d[np.triu_indices(m, k=1)].mean() if m > 1 else 0.0
-    return float(2 * xy - xx - yy)
 
 
 EXCLUDE_LABELS = {"control", "unassigned", "Unassigned", "multiple", "Multiple"}

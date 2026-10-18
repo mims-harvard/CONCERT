@@ -23,8 +23,7 @@ LFC is taken against the measured source spots, and the scored genes are the sli
 variable genes inside the 2,000-gene CONCERT panel, minus the knocked-out gene.
 
 Two metrics: LFC Spearman (do the right genes move, higher better) and LFC RMSE, called
-`lfc_dist` in the tables (is the size of the response right, lower better). E-distance still
-appears in some JSON files and is retired; it is not a reported metric.
+`lfc_dist` in the tables (is the size of the response right, lower better).
 
 Steps
   weights      per-perturbation footprint lengthscale and niche gain, read out of the weights
@@ -479,7 +478,7 @@ def main():
     cp.check([
         ("model source", MODEL_SRC / "concert_spac.py"),
         ("scoring code", cp.EVAL_SRC / "evaluate_concert_spacseq.py"),
-        ("metric helpers", cp.EVAL_SRC / "scoring_helpers" / "spac_edist_align.py"),
+        ("metric helpers", cp.EVAL_SRC / "scoring_helpers" / "gene_align.py"),
         ("raw section 1-1", SPAC_RAW / "raw_output_1-1.h5ad"),
         ("prepared cell sets", PREPARED / "slide_1-1.h5ad"),
         ("cross-slide panel", BENCH / "eval_panel.json"),

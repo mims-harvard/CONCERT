@@ -8,7 +8,7 @@ CONCERT's model gene list is the 2000-gene list saved at training
 
 Mechanism: spacseq_common.select_hvgs is wrapped so the HVG mask it returns is ANDed with the CONCERT
 gene list. Every model eval script (evaluate_concert_spacseq.py, the competitor unseen evaluator,
-run_multi_seen_eval.py) uses that mask only to build the scored-gene mask `keep` (LFC, e-dist and the
+run_multi_seen_eval.py) uses that mask only to build the scored-gene mask `keep` (LFC and the
 source-cell bootstrap) and hvg_info.json, so predictions, source cells, reference cells, panel and
 bootstrap settings are untouched. The KO gene is removed by the scripts themselves.
 
@@ -16,7 +16,7 @@ Options (before the script path):
   --concert_ctx_check   assert ctx["gene_names"] of every loaded CONCERT model equals the saved list
   --pred_bin_sums SLIDES comma list of target slides; for unseen units on these slides, save per-bin sums
                         of the method's normalised prediction (logcp10k, cp10k = expm1, raw = counts via
-                        the source-cell library sizes, as in aligned_energy_distance) over the CONCERT
+                        the source-cell library sizes, as in gene_align.log_cp10k_to_counts) over the CONCERT
                         genes to <outdir>/unseen_pert/<unit>/pred_bin_sums.npz (used by the NTC audit)
   --seen_pred_bin_sums SLIDES same for the seen patch loop of competitor runs (run_multi_seen_eval.py): per panel
                         gene, per-bin sums over the eval's patch source cells, saved to
@@ -87,8 +87,8 @@ def main():
     eu, sa = sec.import_eval_utils()
     import inspect
     src = inspect.getsource(sa.open_raw_counts)
-    print(f"[shared gene rule] spac_edist_align = {sa.__file__}; eval_utils = {eu.__file__}", flush=True)
-    assert "np.load(counts_path, mmap_mode=\"r\")" in src, "spac_edist_align.open_raw_counts is not the fixed reader"
+    print(f"[shared gene rule] gene_align = {sa.__file__}; eval_utils = {eu.__file__}", flush=True)
+    assert "np.load(counts_path, mmap_mode=\"r\")" in src, "gene_align.open_raw_counts is not the fixed reader"
 
     orig_select = sec.select_hvgs
     orig_info = sa.hvg_info_dict

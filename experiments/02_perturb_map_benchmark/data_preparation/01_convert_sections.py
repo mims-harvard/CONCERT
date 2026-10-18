@@ -1,13 +1,13 @@
-"""Convert a perturbmap slide (0..3) -> spac-format .h5ad for CONCERT-spac.
+"""Convert a perturbmap slide (0..3) to a spac-format .h5ad for CONCERT-spac.
 
 The ONE prep script for every perturbmap slide, including slide 0 (`--slide 0`).
-Run all four via sub_prep_perturbmap_multi.sh (SLURM array 0-3).
+Run it once per section, with `--slide 0`, `--slide 1`, `--slide 2` and `--slide 3`.
 
 Two ORTHOGONAL axes (perturbmap has NO NTC; KP/periphery are tissue regions, not guides):
   perturbation in {Jak2, Tgfbr2, Ifngr2, unperturbed}  -- only the 3 real KO genes are guides;
-                 unassigned/KP/periphery all -> "unperturbed" (basal).
+                 unassigned/KP/periphery all map to "unperturbed" (basal).
   tissue       in {tumor, normal, periphery}    -- region axis (feeds basal path):
-                 raw=="periphery"->periphery; raw=="KP"->tumor (KP = unperturbed tumor genotype,
+                 raw=="periphery" gives periphery; raw=="KP" gives tumor (KP = unperturbed tumor genotype,
                  forced to override any mislabeled obs.tissue); else original obs.tissue.
 No cells are excluded.
 

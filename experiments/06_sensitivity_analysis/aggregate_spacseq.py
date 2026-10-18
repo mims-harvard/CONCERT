@@ -54,9 +54,9 @@ BASE_VALUE = {
 SEED_TAGS = {"base42", "seed1", "seed2", "seed3", "seed4"}
 REP_SEEDS = [42, 1, 2]
 BASE_TAG_FOR_SEED = {42: "base42", 1: "seed1", 2: "seed2"}
-METRICS = ["spearman_mean", "lfc_dist_mean", "e_dist_mean", "sign_agreement_mean",
+METRICS = ["spearman_mean", "lfc_dist_mean", "sign_agreement_mean",
            "topk_overlap_mean", "abs_spearman_mean", "spearman_sd", "lfc_dist_sd",
-           "e_dist_sd", "spearman_boot_std_mean", "n_sig_mean"]
+           "spearman_boot_std_mean", "n_sig_mean"]
 
 
 def arm_dir(tag: str, regime: str) -> Path | None:

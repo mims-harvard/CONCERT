@@ -307,11 +307,11 @@ def run_seen(args, sid: str, unseen_units=None):
         }, index=np.arange(N).astype(str)),
         var=pd.DataFrame(index=pd.Index(gene_names)),
     )
-    # Scorer reads observed LFC / e-dist off adata_target.X, and normalize_pred_cache
+    # Scorer reads observed LFC off adata_target.X, and normalize_pred_cache
     # puts CONCERT predictions into log-CP10K. Match that space on the OBSERVED side
     # too (competitors do this inside perturbmap_common: normalize_total(1e4)+log1p,
-    # raw kept in layers["counts"]). Without this the observed X stays raw counts and
-    # e-dist is ~10x inflated vs the log-CP10K competitors.
+    # raw kept in layers["counts"]). Without this the observed X stays raw counts,
+    # a different space from the log-CP10K predictions.
     import scanpy as sc
     adata_target.layers["counts"] = adata_target.X.copy()
     sc.pp.normalize_total(adata_target, target_sum=1e4)
@@ -366,10 +366,9 @@ def run_seen(args, sid: str, unseen_units=None):
         return
 
     # Score only the genes that live in the 1053-gene KO panel competitors use.
-    # CONCERT predicts its 2000 HVG (highly-VARIABLE genes); scoring e-dist/LFC over
-    # all 2000 measures distributional spread over max-variance genes and inflates
-    # e-dist ~10-16x vs competitors, who score the 1053-gene panel. Restrict to the
-    # panel-overlap (~380-470 genes) so both metrics are apples-to-apples.
+    # CONCERT predicts its 2000 HVG (highly-VARIABLE genes); competitors score the
+    # 1053-gene panel. Restrict to the panel-overlap (~380-470 genes) so every method
+    # is scored on the same genes.
     with h5py.File(str(DATA / f"perturbmap_s{sid}_spacfmt.h5ad"), "r") as _vf:
         _vnames = _vf["var"]["_index"][:].astype(str)
         _inpanel = _vf["var"]["in_panel_1053"][:].astype(bool)

@@ -93,7 +93,7 @@ def unseen_spac(
     scoring_method: str | None = None,
 ):
     """One unseen record. Returns (score_dict, scored_model_lfc_list)."""
-    eu, sa = sec.import_eval_utils()
+    eu, _ = sec.import_eval_utils()
     if scoring_method and pred_g is not None:
         pred_g = smc.normalize_pred_cache(scoring_method, {gene: pred_g}).get(gene)
     gene_names = np.asarray(adata_target.var_names)
@@ -106,9 +106,9 @@ def unseen_spac(
     n_ko = int(len(ko_idx))
 
     if unpredictable or pred_g is None or len(pred_g) != n_src:
-        return sec.worst_niche_score(-1, n_src, n_ko, keep_n, 12.0), []
+        return sec.worst_niche_score(-1, n_src, n_ko, keep_n), []
     if n_ko < args.min_g_cells or len(ref_idx) < args.min_g_cells:
-        return sec.worst_niche_score(-1, n_src, n_ko, keep_n, 12.0), []
+        return sec.worst_niche_score(-1, n_src, n_ko, keep_n), []
 
     src_expr = to_dense(adata_target[global_src_idx].X)
     y_ko = to_dense(adata_target[ko_idx].X)
@@ -116,17 +116,11 @@ def unseen_spac(
     o_lfc = eu.pseudobulk_lfc(y_ko, y_ref)
     m_lfc = np.nan_to_num(eu.pseudobulk_lfc(pred_g, src_expr), nan=0.0, posinf=0.0, neginf=0.0)
     sc_ = eu.score_lfc_agreement(m_lfc[keep], o_lfc[keep])
-    raw_mm, _ = smc.load_prepared_raw_resources(args.prepared_dir, args.slide_id)
-    sc_["e_dist"] = sa.aligned_energy_distance(
-        pred_g, np.asarray(raw_mm[ko_idx]),
-        smc.lib_sizes_from_adata(adata_target, global_src_idx), keep,
-    )
     sc_.update(niche=-1, n_src=n_src, n_real_g=n_ko, n_scored_genes=keep_n, n_reference=int(len(ref_idx)))
     n_boot, frac, boot_seed = smc.boot_settings(args)
     if n_boot > 0:
         smc.attach_bootstrap_stats(sc_, smc.bootstrap_source_metrics(
-            pred_g, src_expr, o_lfc, np.asarray(raw_mm[ko_idx]),
-            smc.lib_sizes_from_adata(adata_target, global_src_idx), keep, eu, sa,
+            pred_g, src_expr, o_lfc, keep, eu,
             n_boot=n_boot, frac=frac, seed=boot_seed + hash(gene) % 997,
         ))
     return sc_, m_lfc.tolist()

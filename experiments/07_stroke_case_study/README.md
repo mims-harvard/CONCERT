@@ -9,8 +9,7 @@ the stack. The model code is `models/concert_spac_niche`.
 ```
 prep/         builds the CONCERT slides and the perturbation spot sets
 train_eval/   batch scripts for slide preparation, training, evaluation and figures
-figures/      figure scripts and their statistics
-diagnostics/  supporting checks of the model and the data, run through the check_*.sh scripts
+figures/      figure script and its statistics
 ```
 
 ## Reported arms
@@ -35,8 +34,9 @@ start from these two checkpoints.
 3. **Imposed lesion.** `prep/make_shape_matched_set.py` transfers the lesion mask of the stroke
    animal onto the sham sections, section by section, and writes the imposed core and rim spot
    sets (`shape_core.txt`, `shape_rim.txt`) to `${CONCERT_WORKDIR}/outputs/stroke_3d/shape_sets`.
-4. **Predict.** `sbatch train_eval/evaluate_core_rim.sh 2d` (and `3d`) runs three decode passes
-   over the sham sections: ICA on the imposed core, PIA on the imposed rim, and every sham spot
+4. **Predict.** `sbatch train_eval/evaluate_core_rim.sh 2d` (and `3d`) lists the sham spots with
+   `prep/make_sham_index.py` and runs three decode passes over the sham sections: ICA on the
+   imposed core, PIA on the imposed rim, and every sham spot
    left unperturbed as the matched baseline.
 5. **Figures.** `sbatch train_eval/plot_core_rim.sh` runs `figures/plot_core_rim_patch.py` for
    both arms: observed and predicted gene maps per section, the rim-to-core depth profile and the
@@ -52,9 +52,3 @@ start from these two checkpoints.
   which is what lets the two compartments respond differently.
 - The niche code is built from the expression latent and coordinates of the neighbours, so the
   core pass and the rim pass can be decoded separately and assembled per compartment.
-
-## Other scripts
-
-The remaining scripts in `train_eval/`, `prep/` and `figures/` run additional counterfactual
-scenarios on the stroke model (lesion size, cortical depth, multiple lesions, lesion placement
-on one section) and the supporting checks in `diagnostics/`.

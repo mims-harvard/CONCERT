@@ -1,7 +1,6 @@
 """Pure functions for the CONCERT-spac spatial-counterfactual evaluation harness.
 
-No model/IO dependencies -- these are the unit-tested core used by
-``eval_spatial_counterfactual.py``: niche-grid construction, NTC-referenced
+No model/IO dependencies. Provides niche-grid construction, NTC-referenced
 pseudobulk LFC, LFC-agreement scoring, perturbation-panel selection, a
 spatial-kNN baseline, and contiguous held-out patch construction.
 """

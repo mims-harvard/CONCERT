@@ -75,7 +75,7 @@ def _looks_like_raw_counts(x: np.ndarray) -> bool:
 
 
 def preds_to_scoring_space(method: str, pred: np.ndarray) -> np.ndarray:
-    """Convert method predictions to log-CP10K for LFC / e-dist scoring."""
+    """Convert method predictions to log-CP10K for LFC scoring."""
     m = method.lower()
     x = np.asarray(pred, dtype=np.float64)
     if x.size == 0:
@@ -85,8 +85,7 @@ def preds_to_scoring_space(method: str, pred: np.ndarray) -> np.ndarray:
         # CONCERT counterfactualPrediction returns decoder MEAN expression in count
         # scale (mu = exp(log mu)). It is sparse (median ~0), so _looks_like_raw_counts
         # (which requires median >= 0.5) misclassifies it as already-log-CP10K, leaving
-        # count-scale values that clip at 14.5 and then explode to ~5e5 counts in
-        # log_cp10k_to_counts -> e-dist blows up ~10x. Always normalize from counts.
+        # count-scale values. Always normalize from counts.
         x = raw_counts_to_logcp10k(x)
     elif _looks_like_raw_counts(x):
         x = raw_counts_to_logcp10k(x)

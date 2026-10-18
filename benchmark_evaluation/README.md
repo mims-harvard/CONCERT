@@ -93,4 +93,4 @@ runs `score_perturbmap.py` and then `perturbmap_tables.py`.
 | `spacseq_common.py`, `spacseq_slides.py`, `perturbmap_common.py` | Data loading, slide handling and matching for each assay |
 | `method_inputs.py`, `train_manifests.py` | Assemble the inputs and manifests an evaluation run needs |
 | `eval_utils.py` | Metric helpers of the counterfactual decoder |
-| `scoring_helpers/` | Helper modules the scorers import (`eval_utils.py`, `spac_edist_align.py`) |
+| `scoring_helpers/` | Helper modules the scorers import (`eval_utils.py`, `gene_align.py`) |

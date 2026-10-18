@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Generate targeted unassigned holdout indices for the multi-slide unseen eval.
 
-Rule (mirrors eval_cf_una panel selection):
+Rule (the same panel selection the evaluation uses):
   1) Per slide, pick the top-KO panel (genes with >= panel_min_cells KO cells on
      that slide, top max_panel by count) and each gene's MOST ABUNDANT niche.
   2) Hold out the UNASSIGNED cells in that niche (source cells only -- never KO/NTC).
