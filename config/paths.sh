@@ -5,7 +5,7 @@
 # Root of this codebase (the directory containing models/, experiments/, benchmark_evaluation/).
 CODEBASE_ROOT="${CODEBASE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
-# Inputs: the downloadable data/ and checkpoints/ folders, placed in the repository root
+# Inputs: the data/ and checkpoints/ folders, placed in the repository root
 # (layout in benchmark_evaluation/release_paths.py). Each can be moved with its variable.
 CONCERT_DATA_DIR="${CONCERT_DATA_DIR:-${CODEBASE_ROOT}/data}"
 CONCERT_CHECKPOINT_ROOT="${CONCERT_CHECKPOINT_ROOT:-${CODEBASE_ROOT}/checkpoints}"

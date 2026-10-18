@@ -15,7 +15,7 @@ files here are its libraries; they are run through the entry points below.
 | Rebuild the Perturb-map tables, tests and Fig. 4j | `experiments/02_perturb_seq_benchmark/evaluation/aggregate.sh` |
 
 Every input path comes from `release_paths.py`, which reads `CONCERT_DATA_DIR` and
-`CONCERT_CHECKPOINT_ROOT` (the downloadable `data/` and `checkpoints/` folders).
+`CONCERT_CHECKPOINT_ROOT` (the `data/` and `checkpoints/` folders).
 
 ## What is scored
 

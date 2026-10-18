@@ -18,7 +18,7 @@ The model is the same (`models/concert_benchmark`); the settings differ where th
 
 ## Inputs
 
-Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `datasets/README.md`):
+Everything sits in the `data/` folder (`CONCERT_DATA_DIR`, see `datasets/README.md`):
 
 - `perturbmap/raw/perturbmap_s0_spacfmt.h5ad` ... `perturbmap_s3_spacfmt.h5ad` - the four sections
   converted to the common format by `data_preparation/01_convert_sections.py`;

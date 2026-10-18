@@ -106,8 +106,8 @@ an A100.
 ### Getting started
 
 1. Create the environment from `env_requirements.txt`.
-2. Download the two input folders, `data/` and `checkpoints/` (link to be added), and place both
-   in the repository root:
+2. Obtain the two input folders, `data/` and `checkpoints/` (available from the authors upon
+   request; see [Questions](#-questions)), and place both in the repository root:
 
    ```
    CONCERT/
@@ -251,9 +251,9 @@ code reads, in [`datasets/README.md`](./datasets/README.md).
 | [Brain stroke](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
 | [Perturb-FISH](https://doi.org/10.1016/j.cell.2025.02.012) | [Original data](https://doi.org/10.35077/ace-gem-get) | [preprocessing script](./experiments/04_kernel_interpretability/perturbfish_prepare_data.py) |
 
-The trained checkpoints are one downloadable folder, `checkpoints/`, with one subdirectory per
-model; [`datasets/README.md`](./datasets/README.md#trained-checkpoints) lists them and gives the
-download command. Every result can also be regenerated from the scripts.
+The trained checkpoints are one folder, `checkpoints/`, with one subdirectory per model, available
+from the authors upon request; [`datasets/README.md`](./datasets/README.md#trained-checkpoints)
+lists them. Every result can also be regenerated from the scripts.
 
 ## ⚖️ License
 

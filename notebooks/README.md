@@ -30,7 +30,7 @@ cd notebooks && jupyter lab --no-browser --ip=0.0.0.0
 ```
 
 Start Jupyter from anywhere inside the repository: the first cell walks up from the working
-directory to find the repository root. Every input comes from the two download folders, `data/`
+directory to find the repository root. Every input comes from the two input folders, `data/`
 and `checkpoints/`, named by `CONCERT_DATA_DIR` and `CONCERT_CHECKPOINT_ROOT`; see
 [`../datasets/README.md`](../datasets/README.md).
 

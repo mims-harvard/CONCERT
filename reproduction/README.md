@@ -6,7 +6,7 @@ four results as step-by-step tutorials with their figures; [`../experiments/`](.
 is the full record of the pipeline behind every result (data preparation, training, scoring,
 aggregation and figures).
 
-Before running anything, place the downloaded `data/` and `checkpoints/` folders in the
+Before running anything, place the `data/` and `checkpoints/` folders (available from the authors upon request) in the
 repository root (see [`../datasets/README.md`](../datasets/README.md)).
 
 ## Scripts
@@ -80,7 +80,7 @@ python reproduction/01_spac_seq_benchmark.py --all
 ## Paths
 
 All four scripts resolve their roots through [`concert_paths.py`](concert_paths.py), which reads
-two environment variables, `CONCERT_DATA_DIR` (the downloadable `data/` folder) and
+two environment variables, `CONCERT_DATA_DIR` (the `data/` folder) and
 `CONCERT_CHECKPOINT_ROOT` (the `checkpoints/` folder), plus the optional `CONCERT_WORKDIR`. See
 [`../datasets/README.md`](../datasets/README.md).
 

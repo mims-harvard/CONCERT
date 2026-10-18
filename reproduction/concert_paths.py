@@ -1,7 +1,7 @@
 """Shared path resolution and import order for the reproduction scripts.
 
 The four scripts in this directory reproduce one paper result each from a trained checkpoint.
-Every input sits in two downloadable folders, and two environment variables point at them:
+Every input sits in two folders, and two environment variables point at them:
 
 | variable                  | what it holds                                                  |
 |---------------------------|----------------------------------------------------------------|

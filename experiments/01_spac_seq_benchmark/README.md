@@ -18,7 +18,7 @@ Two prediction tasks are reported. The code, output directories and CSV columns 
 
 ## Inputs
 
-Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `datasets/README.md`):
+Everything sits in the `data/` folder (`CONCERT_DATA_DIR`, see `datasets/README.md`):
 
 - `spacseq/raw/raw_output_1-1.h5ad` ... `raw_output_1-5.h5ad` - the five measured sections, with
   expression, per-cell perturbation assignment and array coordinates;

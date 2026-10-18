@@ -1,6 +1,6 @@
 """Where the released data, checkpoints and working outputs live.
 
-Two downloadable folders hold every input: `data/` and `checkpoints/`. Place both in the
+Two folders hold every input: `data/` and `checkpoints/`. Place both in the
 repository root; reruns write to `runs/` there. Each root can be moved with an environment
 variable (`CONCERT_DATA_DIR`, `CONCERT_CHECKPOINT_ROOT`, `CONCERT_WORKDIR`). Every path below is
 derived from these three roots; `data/README.md` describes each file.

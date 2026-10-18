@@ -14,10 +14,10 @@ gives the study the sections come from, where the raw data lives, and a processe
 | [**Mouse brain stroke**](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) (Han et al., *Sci. Transl. Med.* 2024) | Stroke case study, `experiments/07_stroke_case_study` | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
 | [**Perturb-FISH** tumour section](https://doi.org/10.1016/j.cell.2025.02.012) (Binan et al., *Cell* 2025) | Kernel interpretability, `experiments/04_kernel_interpretability` | [Original data](https://doi.org/10.35077/ace-gem-get) | [preprocessing script](../experiments/04_kernel_interpretability/perturbfish_prepare_data.py) |
 
-## The two download folders
+## The two input folders
 
 Every input the notebooks, the `reproduction/` scripts and the experiment run scripts read sits in two
-folders, `data/` and `checkpoints/` (download: link to be added). Place both in the repository
+folders, `data/` and `checkpoints/`, available from the authors upon request. Place both in the repository
 root; reruns write to `runs/` there. Each location can be moved with an environment variable:
 `CONCERT_DATA_DIR`, `CONCERT_CHECKPOINT_ROOT` and `CONCERT_WORKDIR`.
 
@@ -42,7 +42,8 @@ machine is wired up.
 
 ## Trained checkpoints
 
-The trained checkpoints form one folder, `checkpoints/`, with one subdirectory per model:
+The trained checkpoints form one folder, `checkpoints/`, available from the authors upon request,
+with one subdirectory per model:
 
 | Directory | Model code (`models/`) | Result | Notebook / script |
 |---|---|---|---|
