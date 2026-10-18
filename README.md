@@ -47,7 +47,7 @@ CONCERT predicts perturbation responses in four settings:
 
 1. **2D tissue sections.** Predict how each cell responds to a perturbation in the context of its spatial niche on a tissue section.
 2. **3D tissue.** Predict perturbation responses across serial sections arranged as a 3D tissue volume.
-3. **Edge imputation and counterfactual perturbation prediction.** Impute expression for cells at the edge of the measured region and predict their responses to a perturbation.
+3. **Missing-region imputation with counterfactual perturbation prediction.** Impute expression in an unmeasured tissue region and predict how its cells respond to a perturbation.
 4. **Perturbation prediction with deconvolution.** Deconvolve multi-cell spot measurements into cell-level expression and predict perturbation responses at that resolution.
 
 <p align="center">
@@ -56,7 +56,7 @@ CONCERT predicts perturbation responses in four settings:
 
 ## 🧬 CONCERT model
 
-CONCERT is a niche-aware Gaussian-process variational autoencoder that learns a spatial effect field for each perturbation.
+CONCERT disentangles spatial and perturbation effects, corrects technical and batch noise, and generates post-perturbation gene expression across tissue space.
 
 <p align="center">
   <img src="./model.jpg" alt="model" width="700"/>
