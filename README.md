@@ -2,7 +2,7 @@
 
 [![ProjectPage](https://img.shields.io/badge/Project-CONCERT-red)](https://zitniklab.hms.harvard.edu/projects/CONCERT/) [![PaperPage](https://img.shields.io/badge/Paper-bioRxiv-orange)](https://www.biorxiv.org/content/early/2025/11/10/2025.11.08.686890) [![CodePage](https://img.shields.io/badge/Code-GitHub-green)](https://github.com/mims-harvard/CONCERT/) [![Data](https://img.shields.io/badge/Data-Links-purple)](./datasets/) [![Tutorials](https://img.shields.io/badge/Tutorials-Notebooks-yellow)](./notebooks/) ![License](https://img.shields.io/badge/license-MIT-blue)
 
-Xiang Lin, [Zhenglun Kong](https://scholar.google.com/citations?hl=en&user=XYa4NVYAAAAJ), [Soumya Ghosh](https://scholar.google.com/citations?user=GEYQenQAAAAJ&hl=en), [Manolis Kellis](https://scholar.google.com/citations?user=lsYXBx8AAAAJ&hl=en), [Marinka Zitnik](https://scholar.google.com/citations?user=YtUDgPIAAAAJ&hl=en)
+Xiang Lin, [Zhenglun Kong](https://scholar.google.com/citations?hl=en&user=XYa4NVYAAAAJ), [Boyang Fu](https://dbmi.hms.harvard.edu/people/boyang-fu), [Soumya Ghosh](https://scholar.google.com/citations?user=GEYQenQAAAAJ&hl=en), [Manolis Kellis](https://scholar.google.com/citations?user=lsYXBx8AAAAJ&hl=en), [Marinka Zitnik](https://scholar.google.com/citations?user=YtUDgPIAAAAJ&hl=en)
 
 Spatial perturbation transcriptomics measures how genetic or chemical edits alter gene
 expression while preserving tissue context. Perturbation outcomes depend on a cell's intrinsic
@@ -263,7 +263,7 @@ The code in this package is licensed under the MIT License. See [`LICENSE`](./LI
 
 ```bibtex
 @article{Lin2025.11.08.686890,
-  author  = {Lin, Xiang and Kong, Zhenglun and Ghosh, Soumya and Kellis, Manolis and Zitnik, Marinka},
+  author  = {Lin, Xiang and Kong, Zhenglun and Fu, Boyang and Ghosh, Soumya and Kellis, Manolis and Zitnik, Marinka},
   title   = {CONCERT predicts niche-aware perturbation responses in spatial transcriptomics},
   elocation-id = {2025.11.08.686890},
   year    = {2025},
