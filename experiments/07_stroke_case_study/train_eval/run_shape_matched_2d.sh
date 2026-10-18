@@ -27,7 +27,7 @@ FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_pa
 OUT="${NS}/outputs/stroke_2d"
 SHAPE="${NS}/outputs/stroke_3d/shape_sets"    # geometry only, arm-independent
 cp -r "${SHAPE}" "${OUT}/shape_sets" 2>/dev/null || true
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 
 python -u run_concert_spac.py \
     --config config.yaml --sample "shape_on" --stage eval \

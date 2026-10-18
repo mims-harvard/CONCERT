@@ -20,10 +20,10 @@ module purge; module load gcc
 export NUMBA_CACHE_DIR=/tmp/numba_cache_$$; mkdir -p "${NUMBA_CACHE_DIR}"
 export CUDA_VISIBLE_DEVICES=0
 
-EVAL=${CONCERT_WORKDIR}/scoring
+EVAL=${CODEBASE_ROOT}/experiments/08_deconvolution_imputation
 OUT=${CONCERT_WORKDIR}/paper/Outputs/spac_seq/pmap_s0_jak2_concert_amortized
 CKPT=${CONCERT_WORKDIR}/outputs/ms_pmap_niche_seen
-mkdir -p "$OUT" "${EVAL}/logs"
+mkdir -p "$OUT"
 
 python -u "${EVAL}/cache_perturbmap_signatures.py" \
     --ckpt_dir "$CKPT" \

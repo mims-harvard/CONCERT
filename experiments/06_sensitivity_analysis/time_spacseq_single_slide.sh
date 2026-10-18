@@ -8,7 +8,7 @@
 #SBATCH -o spac_niche_%x_%j.out
 #SBATCH -e spac_niche_%x_%j.err
 
-# spac1 NICHE-FiLM training (code dir = CONCERT-spac-niche) with the niche-conditioned FiLM head:
+# spac1 NICHE-FiLM training (code dir = models/concert_spac_niche) with the niche-conditioned FiLM head:
 #   --use_niche_interaction False --use_niche_film True ...
 #   Data, holdout, hvg, inducing=16, ls band [3,18], encoder, basal RFF and gp_pp as in the base config.
 #   NicheDescriptor uses batch-local coord-kNN of gs_mu (no graph dep; --use_nngp/paracrine False here anyway).

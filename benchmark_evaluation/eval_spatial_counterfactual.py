@@ -73,12 +73,12 @@ def _add_fpert_kwargs(extra, args):
             extra["ls_prior_min"] = args.ls_prior_min
         if getattr(args, "ls_prior_max", None) is not None:
             extra["ls_prior_max"] = args.ls_prior_max
-        # UNITS FIX: gp_pp consumes coords/coord_scale, so its band lives in NORMALIZED
+        # gp_pp consumes coords/coord_scale, so its band lives in NORMALIZED
         # units, unlike ls_prior_min/max (loc units, tuned for the SVGP kernel scale).
         # Checkpoints trained with --fpert_ls_min/max MUST be evaluated with the same
         # values: the band is a plain float on FpertField, not a state_dict entry, so a
         # mismatch silently renders a different lengthscale from the same ls_head weights.
-        # Left unset => legacy behaviour (reuse ls_prior_min/max unconverted).
+        # Left unset => the band reuses ls_prior_min/max unconverted.
         if getattr(args, "fpert_ls_min", None) is not None:
             extra["fpert_ls_min"] = args.fpert_ls_min
         if getattr(args, "fpert_ls_max", None) is not None:
@@ -180,7 +180,7 @@ def load_eval_context_multi(args):
     # --- Load the TRAINED perturbation vocabulary -- the single source of truth persisted
     #    at training (run_concert_spac.py). Eval MUST reproduce the exact codes + label
     #    sets; rebuilding the vocab here mis-indexes the embedding table (basal/control
-    #    would become real perts and shift every code -- the classic eval-vocab bug). ---
+    #    would become real perts and shift every code). ---
     pm_path = Path(args.model_file).parent / "pert_map.json"
     if not pm_path.exists():
         raise SystemExit(f"pert_map.json not found at {pm_path}; retrain to persist it "

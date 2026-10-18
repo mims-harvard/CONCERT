@@ -29,7 +29,7 @@ SHAPE="${OUT}/shape_sets_sec1"
 python -u ${CODEBASE_ROOT}/experiments/07_stroke_case_study/prep/make_shape_matched_set.py --files "${FILES}" --slides "${SL}" \
     --outdir "${SHAPE}" --sections 1
 
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 python -u run_concert_spac.py \
     --config config.yaml --sample "shape1_on" --stage eval \
     --multi_sample_files "${FILES}" --outdir "$OUT" --model_file "model.pt" --project_index stroke \

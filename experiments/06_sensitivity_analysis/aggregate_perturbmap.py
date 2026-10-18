@@ -5,7 +5,7 @@ Walks concert_sens_<regime>_<tag>/{seen,unseen}_pert/slide_*/lfc_agg.json and em
 arm x regime x slide x perturbation, carrying the factor each arm moves and its value so the
 figure can group panels without re-parsing tags.
 
-Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+Design: experiments/06_sensitivity_analysis/README.md
 """
 from __future__ import annotations
 

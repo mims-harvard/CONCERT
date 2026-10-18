@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rescore STATE delivery predictions under OUR LFC rule.
 
-STATE H5ADs (delivery 2026-07-18):
+STATE prediction H5ADs:
   X[i, :] = predicted expression for source cell source_idx[i]
   columns = score-panel genes (SPAC ~2000; PM ~1056)
 

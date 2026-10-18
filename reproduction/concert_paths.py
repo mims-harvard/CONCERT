@@ -36,7 +36,7 @@ def _p(env_var: str, default) -> Path:
 
 
 def workdir(name: str) -> Path:
-    """Where a script writes. Never inside the repository, never on holylfs06."""
+    """Where a script writes: a named subdirectory of WORKDIR, outside the repository."""
     root = rp.WORKDIR
     d = root / name
     d.mkdir(parents=True, exist_ok=True)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Per-method mean +- SEM (across scored records) of LFC Spearman and LFC RMSE for the SPAC-seq benchmark,
-plus CONCERT rank and CONCERT-vs-competitor stats merge. Also reports old (lsfix) CONCERT means."""
+plus CONCERT rank and CONCERT-vs-competitor stats merge."""
 import sys
 from pathlib import Path
 import numpy as np, pandas as pd
@@ -16,8 +16,8 @@ def sem(v):
     return v.std(ddof=1) / np.sqrt(len(v)) if len(v) > 1 else np.nan
 
 
-def main(res: Path, ls: Path) -> None:
-    RES, LS = res, ls
+def main(res: Path) -> None:
+    RES = res
     out = []
     for regime in ("seen", "unseen"):
         df = load(RES, regime)
@@ -37,10 +37,6 @@ def main(res: Path, ls: Path) -> None:
             t[f"{tag}_q_concert_better"] = t["method_label"].map(s["p_concert_better_adj"])
         t.insert(0, "regime", regime)
         out.append(t.sort_values("rho_mean", ascending=False))
-        old = pd.read_csv(LS / f"spac_{regime}_lfc_dist_per_record.csv")
-        oc = old[old["method"].astype(str).str.startswith("concert")]
-        print(f"[old lsfix CONCERT {regime}] method={oc['method'].unique()} n={len(oc)} genes={oc.gene.nunique()} "
-              f"rho={oc.lfc_spearman.mean():.3f}+-{sem(oc.lfc_spearman):.3f} rmse={oc.lfc_dist.mean():.3f}+-{sem(oc.lfc_dist):.3f}")
     res = pd.concat(out, ignore_index=True)
     res.to_csv(RES / "spacseq_method_summary.csv", index=False)
     pd.set_option("display.width", 250); pd.set_option("display.max_columns", 30)
@@ -51,6 +47,5 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("results_dir", type=Path, help="aggregation directory (spac_*_lfc_dist_per_record.csv)")
-    ap.add_argument("pm_combined_dir", type=Path, help="directory of the earlier per-record tables, for the comparison line")
     a = ap.parse_args()
-    main(a.results_dir, a.pm_combined_dir)
+    main(a.results_dir)

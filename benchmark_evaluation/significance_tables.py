@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """SPAC-seq benchmark significance tables: paired Wilcoxon signed-rank (CONCERT vs each competitor) + BH FDR.
 
-Reconstructs the reported procedure (the procedure is
-documented in CONCERT-main/Outputs/eval_benchmark_memory_20260810/docs/00_CHAT_MEMORY.md section 3
-and in the columns of Outputs/spac_seq_lsfix/*_concert_vs_competitor_stats.csv):
+Procedure (the columns of *_concert_vs_competitor_stats.csv follow it):
   * pairing unit = (gene, slide, niche_key) shared by CONCERT and that competitor (paired per
     competitor, so n_pairs varies by method); gene-level means when no cell is shared (STATE unseen);
   * fewer than 3 pairs -> no test (p NaN, note "n<3");

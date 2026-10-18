@@ -31,8 +31,8 @@ ps.use()
 
 DUMP = Path(f"{_rp.WORKDIR}/outputs/"
             "dss_timekernel_markersign_timefield_fixedt/heldout_eval/pathway_dump.npz")
-SETS = Path(f"{_rp.WORKDIR}/"
-            "CONCERT-spac-niche-temporal/reactome_inflammation_gene_sets.json")
+SETS = (Path(__file__).resolve().parents[1] / "data_preparation"
+        / "reactome_inflammation_gene_sets.json")
 HERE = Path(f"{_rp.WORKDIR}/paper/Outputs/case_study")
 DAYS = [0, 3, 9, 21]
 

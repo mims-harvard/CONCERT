@@ -8,9 +8,9 @@
 #SBATCH -e spac_sens_%x_%j.err
 #
 # SPAC-seq sensitivity arm: 5-slide train + the benchmark eval over all 5 slides, one job.
-# Base = the REPORTED spac config (sub_train_spac_niche_lsfix.sh -> concert/seen_lsfix), so an arm
+# Base = the REPORTED SPAC-seq config (the pre-clonegate base model), so an arm
 # is "base with exactly one factor moved". ~16 h per arm.
-# Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+# Design: experiments/06_sensitivity_analysis/README.md
 #
 # Usage: TAG=seed1 SEED=1 sbatch -p <partition> run_spacseq_arm.sh
 # Knobs (env): SEED INDUCE LSINIT LSMIN LSMAX CSCALE MORAN LFCL DISR NFDIM NFK BRFFF BRFFB
@@ -34,10 +34,10 @@ if ! python -c "import torch; torch.zeros(8, device='cuda'); print('CUDA OK')" 2
   exit 0
 fi
 
-# The concert_env torch build has no sm_120 cubin, so on the RTX PRO 6000 Blackwell nodes
-# (holygpu7c*) every JIT-compiled kernel dies ~1 min in with
+# The concert_env torch build has no sm_120 cubin, so on RTX PRO 6000 Blackwell GPUs
+# every JIT-compiled kernel dies ~1 min in with
 #   nvrtc: error: invalid value for --gpu-architecture (-arch)
-# and the whole arm is lost. Submit with --exclude of those nodes;
+# and the whole arm is lost. Submit with --exclude of nodes carrying those GPUs;
 # this probe is the backstop if one slips through.
 # torch 2.3.0 is built against CUDA 11.8 here, whose ceiling is sm_90 (H100) -- anything newer
 # has no cubin and no forward-compatible PTX. get_arch_list() can come back empty, so treat an
@@ -95,7 +95,7 @@ cat > "${OUT}/arm.json" <<EOJ
  "basal_rff_features":${BRFFF},"basal_rff_bandwidth":${BRFFB},"job":"${SLURM_JOB_ID}"}
 EOJ
 
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 GUARD="--ls_prior_lambda 1.0 --ls_prior_min 3 --ls_prior_max 18 --fpert_svgp_inducing ${INDUCE} --fpert_svgp_ls_init ${LSINIT} --fpert_ls_min ${LSMIN} --fpert_ls_max ${LSMAX}"
 NICHE="--use_niche_interaction False --use_niche_film True --niche_film_dim ${NFDIM} --niche_film_k ${NFK} --niche_film_gcap 3.0 --niche_film_l2 1e-3"
 BASALRFF="--basal_rff_features ${BRFFF} --basal_rff_bandwidth ${BRFFB}"
@@ -123,7 +123,7 @@ python -u run_concert_spac.py \
 echo "[$(date)] SPAC SENS TRAIN ${TAG} done -> ${OUT}"
 
 # Eval: evaluate_concert_spacseq.py with its default output flags (predicted mean, LFC against
-# CONCERT's own basal prediction), the protocol of the base config (concert/seen_lsfix). Arch flags MUST match the
+# CONCERT's own basal prediction), the protocol of the pre-clonegate base model. Arch flags MUST match the
 # checkpoint -- inducing and basal RFF width auto-detect, but the ls band, coord scale and
 # niche_film_k are plain floats absent from the state_dict and are passed explicitly.
 cd "$EVAL_CODE"

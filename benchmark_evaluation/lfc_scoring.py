@@ -59,9 +59,8 @@ def score_lfc_agreement(model_lfc: np.ndarray, obs_lfc: np.ndarray,
     statistics, giving the sampling uncertainty of this one evaluation. It is computed
     here, at the single chokepoint every method's rescoring passes through, so CONCERT,
     the competitors, the naive reference strategies and STATE all get the same quantity
-    by construction -- previously only CONCERT and the competitors carried a bootstrap
-    term (from their own eval JSONs), so per-gene bar panels could not show a comparable
-    error for the others. Deterministic: fixed seed, so reruns reproduce byte-for-byte.
+    by construction, and per-gene bar panels show a comparable error for every method.
+    Deterministic: fixed seed, so reruns reproduce byte-for-byte.
     """
     nan_result = {"spearman": float("nan"), "lfc_dist": float("nan"),
                   "spearman_boot_std": float("nan"), "lfc_dist_boot_std": float("nan")}

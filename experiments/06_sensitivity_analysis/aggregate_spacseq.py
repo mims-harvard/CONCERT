@@ -4,12 +4,12 @@
 SPAC-seq counterpart of aggregate_perturbmap.py. The layouts differ: SPAC arms are five-slide models
 evaluated with evaluate_concert_spacseq.py, which writes
     <root>/seen_<tag>/patch/slide_<sid>/lfc_agg.json
-and the sweep straddles two roots because it was moved to netscratch mid-flight. Emits one row per arm x slide x perturbation.
+and the sweep output is split across two batch roots. Emits one row per arm x slide x perturbation.
 
 Seen regime only: the regime is fixed at train time (--holdout_file, run_spacseq_arm.sh:79),
 so an unseen sweep would be 65 fresh trainings rather than a re-scoring.
 
-Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+Design: experiments/06_sensitivity_analysis/README.md
 """
 from __future__ import annotations
 
@@ -22,13 +22,13 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "benchmark_evaluation"))
 import release_paths as rp  # noqa: E402
 
-# wave 1 landed here; the relaunches went to netscratch. First root holding a complete
+# Arms are spread over two batch roots. First root holding a complete
 # five-slide arm wins, so a half-written duplicate never shadows a finished one.
 ROOTS = [rp.SPACSEQ_SENSITIVITY / "batch1", rp.SPACSEQ_SENSITIVITY / "batch2"]
 SLIDES = ["1-1", "1-2", "1-3", "1-4", "1-5"]
 
 # tag -> (factor, value at that arm), anchored at the REPORTED spac config
-# (sub_train_spac_niche_lsfix.sh: inducing 16, band [0.15,0.90], coord scale 20).
+# (pre-clonegate base model: inducing 16, band [0.15,0.90], coord scale 20).
 ARMS: dict[str, tuple[str, float]] = {
     "base42": ("base", 0.0),
     "seed1": ("seed", 1), "seed2": ("seed", 2), "seed3": ("seed", 3), "seed4": ("seed", 4),

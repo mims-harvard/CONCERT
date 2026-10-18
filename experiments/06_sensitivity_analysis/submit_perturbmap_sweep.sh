@@ -1,6 +1,6 @@
 #!/bin/bash
 # Fan out the 20 remaining SI sensitivity arms (base42 is submitted separately as the smoke test).
-# Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+# Design: experiments/06_sensitivity_analysis/README.md
 # Caps: 12 concurrent on ${PART_H100}, 12 on ${PART_A100} (lab policy), overflow -> ${PART_REQUEUE}.
 # Partition names of your cluster: an H100 partition, an A100 partition and a preemptible one.
 # Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)

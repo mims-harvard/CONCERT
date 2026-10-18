@@ -59,7 +59,7 @@ def raw_counts_paths(raw_counts_dir: Path | str | None = None):
 
 
 def open_raw_counts(biolord_outdir: Path | None = None, raw_counts_dir: Path | str | None = None) -> np.memmap:
-    del biolord_outdir  # kept for call-site compatibility; cache lives on netscratch
+    del biolord_outdir  # kept for call-site compatibility; cache location comes from raw_counts_dir
     counts_path, _, meta_path = raw_counts_paths(raw_counts_dir)
     if not counts_path.exists() or not meta_path.exists():
         base = resolve_raw_counts_dir(raw_counts_dir)

@@ -38,7 +38,7 @@ from scipy.optimize import nnls
 from scipy.spatial import cKDTree
 from scipy.stats import spearmanr
 
-DATA = Path(f"{_rp.DATA}perturbmap/raw/perturbmap_s0_spacfmt.h5ad")
+DATA = _rp.DATA / "perturbmap/raw/perturbmap_s0_spacfmt.h5ad"
 OUT_DEFAULT = Path(
     f"{_rp.WORKDIR}/paper/Outputs/"
     "spac_seq/pmap_s0_jak2_concert_amortized"

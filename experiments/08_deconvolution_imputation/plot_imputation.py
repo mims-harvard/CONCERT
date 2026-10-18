@@ -579,13 +579,6 @@ def make_lfc_scatter(n_hvg: int = 200):
     same LFC definition as eval_impute (obs: GT vs nearby kept UNA; model:
     imputed KO vs imputed basal), after CP10K->log1p.
     """
-    _src = (
-        f"{_rp.WORKDIR}/spaVAE/"
-        "CONCERT-main/src/CONCERT-spac-rffbasal"
-    )
-    if _src not in sys.path:
-        sys.path.insert(0, _src)
-
     d = np.load(NPZ, allow_pickle=True)
     imp = d["imputed"].astype(np.float64)
     gt = d["gt_counts"].astype(np.float64)

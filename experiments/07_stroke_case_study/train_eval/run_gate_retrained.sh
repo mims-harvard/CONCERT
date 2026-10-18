@@ -32,7 +32,7 @@ else PARA="--use_paracrine True --graph_file ${NS}/outputs/stroke_2dpara/graph_r
 OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/gate_${ARM}_${MODE}
 mkdir -p $OUT
 for f in model.pt hvg_gene_names.txt pert_map.json; do ln -sf ${SRC}/$f $OUT/$f; done
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 COMMON="--config config.yaml --stage eval --multi_sample_files ${FILES} --outdir ${OUT}
   --model_file model.pt --project_index stroke --hvg_max_rank 2000 --seed 42
   --unassigned_label unperturbed --control_label __NONE__ --min_cells_per_pert 25

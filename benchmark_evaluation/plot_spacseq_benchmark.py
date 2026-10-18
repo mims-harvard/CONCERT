@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import plot_spacseq_bars as pb  # noqa: E402
 from matplotlib.colors import to_rgba  # noqa: E402
 
-# Method colors drawn at 70% opacity (author request, 2026-09-13). Applied to the shared COLORS dict
+# Method colors drawn at 70% opacity. Applied to the shared COLORS dict
 # before the dots module builds its color table from it, so bars, dots and legends all match.
 BAR_ALPHA = 0.7
 for _k, _c in list(pb.COLORS.items()):
@@ -25,11 +25,10 @@ for _k, _c in list(pb.COLORS.items()):
 
 import plot_spacseq_paired_dots as pd_  # noqa: E402
 
-# One per-knockout error for every method (author decision, 2026-09-14): s.e. from 200 gene-bootstrap
-# resamples (score_lfc_agreement), read from the rescored CSVs. load_lfc_dist_from_csv
-# (plot_spacseq_bars.py) has no entry for the benchmark CONCERT keys, so CONCERT rows were
-# skipped and CONCERT kept the JSON-path error of summarize() (:123-135: s.e.m. across niche records,
-# or the eval-native n_boot=10 bootstrap). Map the benchmark keys onto keys the loader knows.
+# One per-knockout error for every method: s.e. from 200 gene-bootstrap resamples
+# (score_lfc_agreement), read from the rescored CSVs. load_lfc_dist_from_csv
+# (plot_spacseq_bars.py) knows the niche CONCERT keys; the wrapper below maps the benchmark
+# CONCERT keys onto them so CONCERT reads the same gene-bootstrap error as every other method.
 import csv as _csv  # noqa: E402
 import tempfile as _tempfile  # noqa: E402
 

@@ -48,15 +48,15 @@ EXTRA_COMPETITORS = [
 ]
 METHOD_ORDER = [m[0] for m in METHOD_SOURCES] + EXTRA_COMPETITORS + ["CONCERT"]
 # Cool qualitative palette. Naive refs are a high-contrast grey ramp;
-# CONCERT is the one warm colour (#B2182B, 2026-09-21); scGEN/CellAgentChat hues swapped.
+# CONCERT is the one warm colour (#B2182B).
 COLORS = {
-    # Cool teal / blue / sage / lilac palette (user-specified)
+    # Cool teal / blue / sage / lilac palette
     "Biolord": "#2F6FA3",
     "GEARS": "#9CC7D8",
-    "scGEN": "#4E5D9D",          # swapped with CellAgentChat
+    "scGEN": "#4E5D9D",
     "CelComen": "#77B89C",
     "Steamboat": "#356B5B",
-    "CellAgentChat": "#147D78",  # swapped with scGEN
+    "CellAgentChat": "#147D78",
     "STATE": "#9B8EC4",
     # Naive reference strategies -- high-contrast grey ramp
     "Mean target": "#3D3D3D",
@@ -67,7 +67,7 @@ COLORS = {
     "CONCERT": "#B2182B",
 }
 # White edge on mid-tone fills. CONCERT carries the same edge as every other bar; its colour
-# alone marks it (2026-09-21, author request to drop the outline).
+# alone marks it.
 BAR_EDGE = "#FFFFFF"
 BAR_EDGE_LW = 0.9
 CONCERT_EDGE = BAR_EDGE

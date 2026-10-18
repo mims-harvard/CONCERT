@@ -89,18 +89,19 @@ def parse_args():
     # Left as None => CONCERT construction defaults (3,8); pass explicitly for the reported models.
     p.add_argument("--ls_prior_min", type=float, default=None)
     p.add_argument("--ls_prior_max", type=float, default=None)
-    # lsfix: gp_pp footprint band in NORMALIZED units. Must match the checkpoint --
-    # the band defines the sigmoid squash inside FpertField, not just a training penalty,
-    # so evaluating an lsfix ckpt without these reconstructs the wrong lengthscales.
+    # gp_pp footprint lengthscale band in normalized units. Must match the checkpoint:
+    # the band defines the sigmoid squash inside FpertField, so it sets the lengthscales
+    # reconstructed at inference.
     p.add_argument("--fpert_ls_min", type=float, default=None)
     p.add_argument("--fpert_ls_max", type=float, default=None)
     p.add_argument("--fpert_mb_bandwidths", default="")
     p.add_argument("--f_pert_clamp", type=float, default=5.0)
+    p.add_argument("--niche_film_k", type=int, default=25)
     smc.add_bootstrap_args(p, default_n=10)
     p.add_argument("--setup_only", action="store_true")
     # UNSEEN: score with the unseen-trained model; GT restricted to the held-out
     # (masked) KO cells named in this coords file. Non-masked genes auto-drop (empty
-    # ko_idx&holdout). When set, run_seen writes to unseen_pert and donor run_unseen is skipped.
+    # ko_idx&holdout). When set, run_seen writes to unseen_pert.
     p.add_argument("--unseen_ko_file", type=Path, default=None)
     # Diagnostic: disable the coord-conditioned FpertField at inference (core f_pert /
     # niche / gate kept). Tests whether the spatial field corrupts unseen/multimodal perts.
@@ -164,7 +165,7 @@ def build_pm_ctx(args, sid: str) -> dict:
     # Niche-FiLM auto-detect: if the checkpoint carries the FiLM head, build with it and turn the
     # legacy additive niche interaction OFF (matching training). niche_film_k / gcap are plain-float
     # attrs NOT saved in the state_dict, so pin them to the training defaults -- they MUST match or
-    # gamma renders differently at inference (silent corruption, same class as the ls-band bug).
+    # gamma renders differently at inference.
     try:
         import torch as _t2
         _sd = _t2.load(str(args.model_file), map_location="cpu")
@@ -182,7 +183,7 @@ def build_pm_ctx(args, sid: str) -> dict:
                 _proj is not None and _pool0 is not None
                 and int(_pool0.shape[1]) == 3 * int(_proj.shape[0])
             )
-            fwd.niche_film_k = 25
+            fwd.niche_film_k = args.niche_film_k
             fwd.niche_film_gcap = 3.0
             fwd.niche_film_l2 = 1e-3
             log.info("auto-detected niche-FiLM checkpoint: dim=%s rank=%s dispersion=%s, interaction OFF",
@@ -409,14 +410,10 @@ def run_seen(args, sid: str, unseen_units=None):
     log.info("slide %s seen: written -> %s", sid, out)
 
 
-def _dense(x):
-    return x.toarray() if sp.issparse(x) else np.asarray(x)
-
-
 def _model_adata(args, sid: str):
     """Build model-row-space AnnData (X=log-CP10K, layers['counts']=raw, obs.canon from
     patch, obs.n_counts=raw lib size) + return ctx, gene_names, raw Yobs. Same recipe
-    run_seen uses inline; shared by run_unseen + donor pooling."""
+    run_seen uses inline."""
     import scanpy as sc
     ctx = build_pm_ctx(args, sid)
     N = ctx["N"]
@@ -442,88 +439,6 @@ def _model_adata(args, sid: str):
     return adata, ctx, gene_names, Yobs
 
 
-def run_unseen(args, sid: str):
-    """Unseen pert (Option A): absent-KO genes on this slide, donor-pooled reference
-    across the OTHER slides. Scored in MODEL-ROW space with the same in-panel gene
-    mask as seen; observed LFC = donor real-KO vs donor control(KP)."""
-    out = args.outdir / "unseen_pert" / f"slide_{sid}"
-    if (out / "lfc_scores.json").exists():
-        log.info("slide %s unseen exists -- skip", sid)
-        return
-    eval_genes = pm.load_manifest_genes(pm.DEFAULT_PREPARED, sid)
-    adata_target, ctx, gene_names, Yobs = _model_adata(args, sid)
-    name2code = ctx["name2code"]
-    eval_genes = [g for g in eval_genes if g in name2code]
-    if not eval_genes:
-        log.info("slide %s: no unseen genes with a model code", sid)
-        return
-    global_src_idx = pm.source_indices(adata_target, src_role=1)
-    if len(global_src_idx) == 0:
-        log.warning("slide %s: no role==1 source cells for unseen -- skip", sid)
-        return
-    with h5py.File(str(DATA / f"perturbmap_s{sid}_spacfmt.h5ad"), "r") as _vf:
-        _vnames = _vf["var"]["_index"][:].astype(str)
-        _inpanel = _vf["var"]["in_panel_1053"][:].astype(bool)
-    _panel_set = set(_vnames[_inpanel])
-    hvg_mask = np.array([g in _panel_set for g in gene_names], dtype=bool)
-    log.info("slide %s UNSEEN: genes=%s, %d src cells, scoring %d/%d panel genes",
-             sid, eval_genes, len(global_src_idx), int(hvg_mask.sum()), len(gene_names))
-    if args.setup_only:
-        return
-
-    from eval_spatial_counterfactual import _predict_swap
-    pred_g_cache = {}
-    for g in eval_genes:
-        code = name2code.get(g)
-        pred_g_cache[g] = (np.asarray(_predict_swap(ctx, global_src_idx, code, args), dtype=np.float32)
-                           if code is not None else None)
-    unpred = {g for g, v in pred_g_cache.items() if v is None}
-
-    # Basal prediction (code=0) on the SAME source cells -> DELTA scoring.
-    pred_basal = np.asarray(_predict_swap(ctx, global_src_idx, 0, args), dtype=np.float32)
-
-    # Donor pools from the OTHER slides (model-row space, same gene order).
-    donor_ko_log = {g: [] for g in eval_genes}
-    donor_ko_raw = {g: [] for g in eval_genes}
-    donor_ctrl_log = []
-    for sid2 in SLIDES:
-        if sid2 == sid:
-            continue
-        a2, _c2, gn2, Y2 = _model_adata(args, sid2)
-        assert list(gn2) == list(gene_names), f"donor {sid2} gene order != target {sid}"
-        c2 = a2.obs["perturbation_canon"].astype(str).to_numpy()
-        ci = np.where(c2 == pm.CTRL_CANON)[0]
-        if len(ci):
-            donor_ctrl_log.append(_dense(a2[ci].X))
-        for g in eval_genes:
-            gi = np.where(c2 == g)[0]
-            if len(gi):
-                donor_ko_log[g].append(_dense(a2[gi].X))
-                donor_ko_raw[g].append(Y2[gi])
-    donor_ctrl = np.vstack(donor_ctrl_log) if donor_ctrl_log else None
-    log.info("slide %s UNSEEN donors: ctrl=%d, per-gene KO=%s", sid,
-             0 if donor_ctrl is None else donor_ctrl.shape[0],
-             {g: int(sum(a.shape[0] for a in donor_ko_raw[g])) for g in eval_genes})
-
-    scores, agg, mlfc = pm.niche_lfc_unseen_score(
-        adata_target, global_src_idx, eval_genes, pred_g_cache, hvg_mask, args,
-        donor_ko_log, donor_ko_raw, donor_ctrl,
-        unpredictable_genes=unpred, scoring_method="concert", pred_basal=pred_basal,
-    )
-    _, sa = sec.import_eval_utils()
-    pm.save_results(
-        args.outdir, sid, "unseen_pert", eval_genes, scores, agg, mlfc, "concert",
-        hvg_info=sa.hvg_info_dict(hvg_mask),
-        extra={"eval_genes": eval_genes, "src_role": 1,
-               "n_boot": args.n_boot, "boot_frac": args.boot_frac,
-               "n_src": int(len(global_src_idx)),
-               "n_donor_ctrl": int(donor_ctrl.shape[0]) if donor_ctrl is not None else 0,
-               "unpredictable_genes": sorted(unpred),
-               "reference": "donor real-KO vs donor control(KP), model-row space, in-panel genes"},
-    )
-    log.info("slide %s unseen: written -> %s", sid, out)
-
-
 def main():
     args = parse_args()
     args.outdir.mkdir(parents=True, exist_ok=True)
@@ -541,8 +456,6 @@ def main():
         else:
             log.info("=== pmap seen slide %s ===", sid)
             run_seen(args, sid)
-            log.info("=== pmap unseen(donor, legacy) slide %s ===", sid)
-            run_unseen(args, sid)
     log.info("Done -> %s", args.outdir)
 
 

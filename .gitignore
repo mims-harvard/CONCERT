@@ -4,7 +4,7 @@ __pycache__/
 *.egg-info/
 .ipynb_checkpoints/
 
-# Data and checkpoints are never committed; see datasets/README.md
+# Data and checkpoints stay outside version control; see datasets/README.md
 *.h5ad
 *.h5
 *.pt
@@ -12,7 +12,7 @@ __pycache__/
 *.npy
 
 # Run artefacts
-runs/
+runs
 outputs/
 wandb/
 slurm-*.out
@@ -20,9 +20,5 @@ slurm-*.out
 *.err
 
 # Downloaded inputs and local outputs (place data/ and checkpoints/ here)
-data/
-checkpoints/
-runs/
 data
 checkpoints
-runs

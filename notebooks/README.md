@@ -38,8 +38,8 @@ Notebooks 3 and 4 are mostly CPU work - they read result tables and draw - and o
 for the one cell that re-runs the decode, which is off by default.
 
 Each notebook writes under `CONCERT/notebook_runs/<name>/`, or wherever the environment variable
-`CONCERT_NB_WORKDIR` points. Nothing writes into `data/` or `checkpoints/`
-and where a failed write can truncate the target file to zero.
+`CONCERT_NB_WORKDIR` points. The inputs under `data/` and `checkpoints/` stay read-only, so a
+failed write, which can truncate its target file to zero, leaves them intact.
 
 ## Expensive cells
 
@@ -75,5 +75,4 @@ missing input is reported there rather than three cells later.
 
 The code paths, output directories and CSV columns use `seen` and `unseen`. In the manuscript
 those two settings are **within-niche prediction** and **cross-slide prediction**. The notebooks
-use the manuscript names in prose and the directory names when naming files; do not carry
-`seen`/`unseen` into manuscript text.
+use the manuscript names in prose and the directory names when naming files.

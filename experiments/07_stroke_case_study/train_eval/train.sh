@@ -13,6 +13,10 @@
 #   2d : --fpert_n_z_levels 1  -> footprint field is (x, y); sections superimposed
 # BOTH tile by z-STACK (mouse), so the 4 registered sections of a mouse share one XY frame --
 # that is what lets a footprint learned on the PT lesion be evaluated at Sham coordinates.
+# The 2d and 3d arms default to the core/rim configuration reported in the paper: slides with
+# separate core (ICA) and rim (PIA) lesion labels (stroke3d/slides_cr, from prepare_slides.sh)
+# and output tag _cr. The single-label variant is trained with
+#   TAG= SLIDES=${CONCERT_WORKDIR}/stroke3d/slides sbatch train.sh <2d|3d>
 # Usage: sbatch train.sh <2d|3d>
 # Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
 source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
@@ -37,11 +41,14 @@ case "$ARM" in
 esac
 
 NS=${CONCERT_WORKDIR}
-SL=${SLIDES:-${NS}/stroke3d/slides}
+case "$ARM" in
+  2d|3d) SL=${SLIDES:-${NS}/stroke3d/slides_cr}; TAG=${TAG-_cr} ;;
+  *)     SL=${SLIDES:-${NS}/stroke3d/slides} ;;
+esac
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_${ARM}${TAG:-}"
 mkdir -p "$OUT" "${NS}/logs"
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 
 # No non-targeting control in this dataset: unperturbed spots are the `unassigned` class, so
 # action correction is off and the LFC reference is non-lesion cortex (CTX) rather than "tumor".

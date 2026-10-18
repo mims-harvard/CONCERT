@@ -27,7 +27,7 @@ SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_${ARM}"
 SETS="${OUT}/pert_sets"
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 
 # Sham3 carries the richest anatomy of the four sham sections -- CTX 812 / TH 400 / STR 303 /
 # HY 215 -- and TH (thalamus) is a genuine deep structure, which Sham1 lacks entirely.

@@ -56,10 +56,9 @@ def parse_args():
     p.add_argument("--outdir", type=Path, default=DEFAULT_OUT)
     p.add_argument("--top-n", type=int, default=SPAC_SEEN_TOP_N)
     p.add_argument("--regime", choices=("seen", "unseen"), default="seen")
-    # Match plot_spacseq_bars.py: lets the CONCERT arm be swapped (e.g. the lsfix
-    # retrain) without touching the module-level default. CONCERT's plotted metrics come
-    # from the rescored --outdir CSV either way; this keeps GENE SELECTION consistent with
-    # the arm being plotted instead of silently using the old checkpoint's coverage.
+    # Match plot_spacseq_bars.py: selects the CONCERT result directory without touching the
+    # module-level default. CONCERT's plotted metrics come from the rescored --outdir CSV;
+    # this keeps gene selection consistent with the plotted CONCERT result.
     p.add_argument("--concert-dir", type=Path, default=None)
     return p.parse_args()
 

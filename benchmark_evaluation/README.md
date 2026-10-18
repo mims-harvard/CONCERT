@@ -33,15 +33,15 @@ reported spread.
 ## The scoring rule
 
 `evaluate_concert_spacseq.py` scores one checkpoint on the SPAC-seq benchmark: one slide of
-the seen setting per call, or every cross-slide unit in one call. It runs through
+the within-niche (`seen`) setting per call, or every cross-slide (`unseen`) unit in one call. It runs through
 `shared_gene_rule.py` with `--cf_output poisson_depth --cf_seen_ref observed`, so the prediction is
 one Poisson draw at the measured library size and the LFC reference is the measured source spots
 in both settings. `experiments/01_spac_seq_benchmark/evaluation/evaluate.sh`
 carries the full flag list. The default output flags (predicted mean, LFC against CONCERT's own
-basal prediction) are the ones the SI sensitivity sweep uses.
+basal prediction) are the ones the sensitivity sweep of experiment 06 uses.
 
-Pass the same spatial-field lengthscale band that training used. It is a plain attribute of
-the field rather than a saved weight, so leaving it at the default renders a different field
+Pass the same spatial-field lengthscale band that training used. The band is a plain attribute
+of the field and stays outside the saved weights, so the default band renders a different field
 from identical weights.
 
 Every compared method is scored under that same draw. A competitor's predicted profile is
@@ -71,7 +71,7 @@ runs `score_perturbmap.py` and then `perturbmap_tables.py`.
 | File | Role |
 |---|---|
 | `release_paths.py` | The layout of `data/` and `checkpoints/`; every path below derives from it |
-| `evaluate_concert_spacseq.py` | SPAC-seq scorer of one CONCERT checkpoint: one slide of the seen setting, or every cross-slide unit |
+| `evaluate_concert_spacseq.py` | SPAC-seq scorer of one CONCERT checkpoint: one slide of the within-niche setting, or every cross-slide unit |
 | `shared_gene_rule.py` | Runs a scorer under the shared gene rule (slide HVGs inside the CONCERT panel, minus the knockout) |
 | `evaluate_concert_perturbmap.py` | Perturb-map scorer of one CONCERT checkpoint (the evaluation harness) |
 | `eval_spatial_counterfactual.py`, `make_umap.py` | Load a checkpoint and decode counterfactual predictions |
@@ -81,7 +81,7 @@ runs `score_perturbmap.py` and then `perturbmap_tables.py`.
 | `lfc_scoring.py` | Observed log fold changes, scored-gene masks and the agreement metrics, from stored predictions |
 | `score_spacseq.py` | Every method's per-record SPAC-seq rank correlation and RMSE |
 | `add_cross_slide_error.py` | Gives CONCERT's cross-slide records the same gene-bootstrap error as every other method |
-| `reference_strategies.py`, `reference_strategies_seen.py`, `reference_strategies_unseen.py` | The four reference strategies (Mean target, Mean niche, Local kNN, GEX kNN): shared code, seen setting, cross-slide setting |
+| `reference_strategies.py`, `reference_strategies_seen.py`, `reference_strategies_unseen.py` | The four reference strategies (Mean target, Mean niche, Local kNN, GEX kNN): shared code, within-niche setting, cross-slide setting |
 | `score_mean_target.py` | Mean target from 50 knockout cells per unit, the reported rule |
 | `score_state_predictions.py` | STATE's delivered predictions scored under the shared rule |
 | `significance_tables.py`, `method_summary.py`, `figure_panel_numbers.py` | Paired Wilcoxon tests with Benjamini-Hochberg adjustment and the supplementary workbook; method summary; per-knockout panel numbers |
@@ -93,4 +93,4 @@ runs `score_perturbmap.py` and then `perturbmap_tables.py`.
 | `spacseq_common.py`, `spacseq_slides.py`, `perturbmap_common.py` | Data loading, slide handling and matching for each assay |
 | `method_inputs.py`, `train_manifests.py` | Assemble the inputs and manifests an evaluation run needs |
 | `eval_utils.py` | Metric helpers of the counterfactual decoder |
-| `scoring_helpers/` | The two metric modules every scorer imports (`eval_utils.py`, `spac_edist_align.py`) |
+| `scoring_helpers/` | Helper modules the scorers import (`eval_utils.py`, `spac_edist_align.py`) |

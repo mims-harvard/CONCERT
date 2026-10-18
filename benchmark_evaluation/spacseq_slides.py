@@ -682,7 +682,6 @@ def niche_lfc_seen_holdout_loop(
     unpredictable_genes=None,
     bad_edist_default=12.0,
     scoring_method: str | None = None,
-    without_noise_out: dict | None = None,
     pred_basal=None,
     ko_gt_rows=None,
 ):
@@ -696,21 +695,12 @@ def niche_lfc_seen_holdout_loop(
     Source = held-out unassigned cells (passed as src_idx). For gene g with niche b*,
     use the held-out source cells located in b*; observed = real KO g vs unassigned in b*
     (with-noise = mu_action + f_pert).
-
-    If ``without_noise_out`` (a dict) is passed, ALSO compute the without-noise flavour
-    per niche where NTC (control) cells exist: observed = KO vs NTC, predicted = with-noise
-    m_lfc + empirical offset log(mean_una_src) - log(mean_NTC) (mirrors the CF eval,
-    eval_spatial_counterfactual.py:557). Results land in without_noise_out['L2'][g].
     """
     eu, sa = import_eval_utils()
     gene_names = np.asarray(adata_target.var_names)
     pert_canon = adata_target.obs["perturbation_canon"].astype(str).to_numpy()
     bin_id = adata_target.obs["bin_id"].to_numpy().astype(int)
     una_mask = np.isin(pert_canon, list(UNASSIGNED_LABELS | {"unassigned"}))
-    ntc_mask = np.isin(pert_canon, list(CONTROL_LABELS | {"control"}))
-    compute_wo = without_noise_out is not None
-    if compute_wo:
-        without_noise_out.setdefault("L2", {})
     src_idx = np.asarray(src_idx, dtype=int)
     src_expr = to_dense(adata_target[src_idx].X)
     src_bin = bin_id[src_idx]
@@ -817,19 +807,6 @@ def niche_lfc_seen_holdout_loop(
                 ))
         scores["L2"][g].append(sc_)
         mlfc["L2"][g][b] = m_lfc.tolist()
-
-        # Without-noise (KO vs NTC) via empirical re-reference -- only where NTC exists.
-        if compute_wo:
-            ntc_b = np.where(ntc_mask & (bin_id == b))[0]
-            if len(ntc_b) >= args.min_g_cells:
-                y_ntc_b = to_dense(adata_target[ntc_b].X)
-                emp_offset = eu.pseudobulk_lfc(y_una_b, y_ntc_b)
-                m_without = np.nan_to_num(m_lfc + emp_offset, nan=0.0, posinf=0.0, neginf=0.0)
-                o_without = eu.pseudobulk_lfc(y_ko_b, y_ntc_b)
-                sc_wo = eu.score_lfc_agreement(m_without[keep], o_without[keep])
-                sc_wo.update(niche=b, n_real_g=int(len(ko_idx)), n_ntc=int(len(ntc_b)),
-                             n_scored_genes=int(keep.sum()))
-                without_noise_out["L2"].setdefault(g, []).append(sc_wo)
 
     for g in panel:
         agg["L2"][g] = aggregate_scores(scores, "L2", g, worst_metrics)

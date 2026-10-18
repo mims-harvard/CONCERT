@@ -5,8 +5,8 @@ has actually learned about place: whether the same knockout, put into different 
 same section, is predicted to do different things, and whether the parameter that is supposed
 to control that dependence really does.
 
-Everything here runs on one section of the spatial Perturb-seq assay and on the within-slide
-checkpoint from experiment 02. Nothing is refitted.
+Everything here runs on one Perturb-map section and on the within-niche checkpoint from
+experiment 02; the checkpoint is used as trained.
 
 ## Inputs
 
@@ -28,12 +28,13 @@ the four steps in order.
    position, and a part that depends on the neighbourhood, and reports their relative sizes per
    knockout. It then measures how much an unedited spot moves when some of its neighbours are
    edited, **resolved by how many of its neighbours were edited**. That resolution is the whole
-   experiment: a spot with no edited neighbour must not move, and a dense patch of edited spots
-   has no unedited neighbours to affect, so a before/after comparison across such a patch
-   measures nothing and will read as a null however the model behaves.
+   experiment: a spot without edited neighbours stays fixed, and inside a dense patch of edited
+   spots every neighbour is edited, so a before/after comparison across such a patch reads as a
+   null whatever the model does. Resolving by neighbour count measures the effect where it can
+   exist.
 3. **`evaluation/transplant_analysis.py` - replication.** Places each knockout into many
    sampled neighbourhoods, so how much a response varies with its surroundings is measured
-   across neighbourhoods rather than asserted from a single pair.
+   across neighbourhoods as well as for a single pair.
 4. **`evaluation/pathway_analysis.py` - which programmes track the neighbourhood.**
    Correlates the predicted per-gene response against the composition of the neighbourhood it
    was placed in, then tests gene sets on that ranking.
@@ -67,6 +68,5 @@ size and the second about effect shape; keeping them apart is what step 4 is for
 
 A perturbed spot does influence its neighbours, but the effect is graded and small - it rises
 monotonically with the number of edited neighbours and reaches roughly one percent of the
-expression change at full exposure. It is exactly zero, not merely small, for spots with no
-edited neighbour, which is what makes the gradient interpretable rather than noise. Report it
-as graded; it is not a large effect.
+expression change at full exposure. It is exactly zero for spots without edited neighbours,
+which makes the gradient interpretable. It is best described as a graded, small effect.

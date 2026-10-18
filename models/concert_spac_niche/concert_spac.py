@@ -454,12 +454,11 @@ class NicheDescriptor(nn.Module):
 
 def atomic_torch_save(obj, path: str) -> None:
     """torch.save via a temp file + rename, so a partial write can't destroy the
-    previous checkpoint. Saving straight onto the target once cost a 13h run: the
-    save died mid-write at epoch 297 (full group quota) and left a truncated,
-    unloadable model.pt with no fallback to fall back on."""
+    previous checkpoint. Saving straight onto the target risks a truncated,
+    unloadable model.pt when the write dies mid-way (e.g. on a full quota)."""
     tmp_path = path + ".tmp"
-    # The quota breach that motivated the atomic write is TRANSIENT: the lab group sits near its
-    # holylfs06 limit and crosses it as other members write, so a save that fails now usually
+    # A quota breach is often TRANSIENT on shared storage: a group near its limit crosses it
+    # as other members write, so a save that fails now usually
     # succeeds minutes later. Retry before giving up rather than throwing away hours of training.
     attempts = int(os.environ.get("CONCERT_SAVE_RETRIES", "5"))
     delay = float(os.environ.get("CONCERT_SAVE_RETRY_SLEEP", "60"))
@@ -1209,9 +1208,9 @@ class CONCERT(nn.Module):
             h = self.niche_h(torch.cat([pert_emb, z_niche], dim=-1))
             gamma = 1.0 + g_scale * torch.tanh(self.gamma_head(h))   # (B,1)
             shift = gamma * shift
-            # NOTE: beta is intentionally NOT gated by g_scale. Gating it (niche3 experiment 2026-07-08)
-            # HURT held-out Tgfbr2 (unseen 0.48->0.33) without recovering Ifngr2 (flat 0.258) -> the
-            # ungated beta carries real held-out signal for heterogeneous perts. Keep ungated (the original behaviour).
+            # NOTE: beta is intentionally NOT gated by g_scale. Gating it lowered held-out Tgfbr2
+            # (unseen 0.48 to 0.33) without recovering Ifngr2 (flat 0.258): the ungated beta carries
+            # real held-out signal for heterogeneous perts.
             beta = self.beta_out(self.beta_U(pert_emb) * self.beta_V(z_niche))   # (B, G)
             shift = shift + beta
         elif self.use_niche_interaction and niche is not None and self.inter_out is not None:

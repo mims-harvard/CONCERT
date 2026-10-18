@@ -8,7 +8,7 @@ Reading rule (same as the Perturb-MAP figure): an arm is "insensitive" when its 
 the five-seed range of the published configuration. Unlike Perturb-MAP, that range is narrow here,
 so the caption is written from the data rather than asserting robustness.
 
-Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+Design: experiments/06_sensitivity_analysis/README.md
 """
 from __future__ import annotations
 

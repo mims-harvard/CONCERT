@@ -10,7 +10,7 @@
 # SI sensitivity analysis, one arm = train + paired eval in a single job.
 # Base = the REPORTED pmap config (sub_train_pmap_niche.sh -> concert_ms_seen); every knob below
 # defaults to that base, so an arm is "base with exactly one factor moved".
-# Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+# Design: experiments/06_sensitivity_analysis/README.md
 #
 # Usage:  TAG=seed1 SEED=1 sbatch -p <partition> run_perturbmap_arm.sh
 # Knobs (env, all optional): SEED INDUCE LSINIT LSMIN LSMAX CSCALE MORAN LFCL DISR REGIME

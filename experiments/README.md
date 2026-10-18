@@ -7,8 +7,8 @@ code lives in `../models/`, shared scoring code in `../benchmark_evaluation/`.
 | Directory | Question | Model |
 |---|---|---|
 | `01_spac_seq_benchmark/` | Can the response of a perturbation held out from a slide be predicted from location and unperturbed expression? | `models/concert_benchmark` |
-| `02_perturb_seq_benchmark/` | The same question on spatial Perturb-map, a different assay with a different perturbation set | `models/concert_benchmark` |
-| `03_dss_gut_case_study/` | Does one model over a colitis time course reproduce the tissue at a timepoint it was not trained on? | `models/concert_temporal` |
+| `02_perturb_seq_benchmark/` | The same question on Perturb-map, a different assay with a different perturbation set | `models/concert_benchmark` |
+| `03_dss_gut_case_study/` | Does one model over a colitis time course reproduce the tissue at a timepoint held out from training? | `models/concert_temporal` |
 | `04_kernel_interpretability/` | Do the spatial parameters the model learns track the observed arrangement of the perturbed cells? | reads checkpoints from 01 |
 | `05_perturb_seq_case_study/` | Does the same knockout, placed in different parts of a section, produce a different predicted response? | reads checkpoints from 02 |
 | `06_sensitivity_analysis/` | Do the reported numbers survive changes to the hyper-parameters, once initialisation noise is measured? | retrains both benchmark models |
@@ -23,12 +23,13 @@ so from inside an experiment directory:
     sbatch train/train.sh seen
     sbatch --array=1-5 evaluation/evaluate.sh seen
 
-Scripts read from the `data/` and `checkpoints/` folders and write under `CONCERT_WORKDIR` from `config/paths.sh` and never write back into this
-repository. Run data preparation before training: the training scripts fail immediately with a
-clear message if a required input is missing, rather than training on a partial set.
+Scripts read from the `data/` and `checkpoints/` folders and write under `CONCERT_WORKDIR` from
+`config/paths.sh`, which keeps this repository read-only during a run. Run data preparation before
+training: the training scripts stop immediately with a clear message when a required input is
+missing.
 
 Experiments 01 and 02 are independent of each other and can run in either order. Experiment 04
-needs a trained checkpoint from experiment 01 and experiment 05 one from experiment 02.
+needs a trained within-niche checkpoint from experiment 01 and experiment 05 one from experiment 02.
 Experiments 03 and 07 are self-contained. Experiment 08 reads a Perturb-map within-niche
 checkpoint (the alternative niche checkpoint, whose results ship as `data/benchmark_assets/results/perturbmap_concert/within_niche_alternative`) for Supplementary Fig. 10 and single-slide SPAC-seq
 models of slides 2-1 and 2-2 for Figs. 9 and 11.

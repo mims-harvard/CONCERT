@@ -6,9 +6,9 @@ figure_stats.json, and the caption text driven by the same numbers.
 
 Reading rule: an arm is "insensitive" when its point sits inside the five-seed range of the
 published configuration. That range is reported numerically in the caption and shown directly in
-the first panel; it is not shaded on the panels (author decision, 2026-08-18).
+the first panel; it is not shaded on the panels.
 
-Design: docs/superpowers/specs/2026-08-17-concert-sensitivity-analysis-design.md
+Design: experiments/06_sensitivity_analysis/README.md
 """
 from __future__ import annotations
 

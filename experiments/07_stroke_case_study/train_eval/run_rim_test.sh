@@ -7,9 +7,9 @@
 #SBATCH --cpus-per-task=8
 #SBATCH -o rimtest_%j.out
 #SBATCH -e rimtest_%j.err
-# Phase-3 test of the rim root cause: rerun three of the 2dpara counterfactuals with
+# Test of the rim root cause: rerun three of the 2dpara counterfactuals with
 # --use_paracrine False and NO graph, everything else byte-identical to the producing run
-# (job 42285684). If the halo around the lesion disappears, the rim is paracrine spillover.
+# (run_capability_demos.sh with PARACRINE=True). If the halo around the lesion disappears, the rim is paracrine spillover.
 # Repository roots (CODEBASE_ROOT, CONCERT_DATA_DIR, CONCERT_CHECKPOINT_ROOT, CONCERT_WORKDIR)
 source "${CODEBASE_ROOT:-$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel 2>/dev/null || git rev-parse --show-toplevel)}/config/paths.sh"
 
@@ -24,7 +24,7 @@ SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/stroke_2dpara_nopara
 SETS=${OUT}/pert_sets
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 
 COMMON="--config config.yaml --stage eval --multi_sample_files ${FILES} --outdir ${OUT}
   --model_file model.pt --project_index stroke --hvg_max_rank 2000 --seed 42

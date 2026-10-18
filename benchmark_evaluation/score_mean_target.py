@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Mean target reference strategy with a fixed knockout-cell budget (default 50), SPAC-seq, both arms, sampled output.
 
-Adopted 2026-09-21 as the Mean target of the benchmark. The earlier Mean target averaged every knockout cell of the
-full prepared slides (median 560 unseen, 973 seen), 20-30x more knockout cells than the trained models receive through
-the 50,000-cell training manifest (median 18 unseen, 47 seen). Here each unit's Mean target is the mean of N knockout
-cells drawn uniformly (one fixed draw) from the same eligible pool as before:
+This is the Mean target of the benchmark. The knockout-cell budget matches what the trained models receive through
+the 50,000-cell training manifest (median 18 unseen, 47 seen knockout cells per unit). Each unit's Mean target is the
+mean of N knockout cells drawn uniformly (one fixed draw) from the eligible pool:
   unseen: knockout cells on the donor slides only (reference_strategies_unseen.donor_target_means)
   seen:   knockout cells on all five slides minus the scored (gene, slide, niche) cells
           (reference_strategies.unit_leaveout_target_mean)
-Scoring is unchanged: Poisson output at the observed source library size, shared gene mask, gene bootstrap.
+Scoring: Poisson output at the observed source library size, shared gene mask, gene bootstrap.
 The cell-count sweep behind the choice of N: mean_target_audit/mean_target_ncells_summary.csv.
 Output: <outdir>/spac_{unseen,seen}_mean_target_n<N>.csv, in the reference-strategy CSV format
 (run with PYTHONHASHSEED=0).

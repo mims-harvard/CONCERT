@@ -39,7 +39,6 @@ over the whole course, then asked about a timepoint that was removed from traini
 
 ## Reading the figures
 
-Wherever a measured value exists it is shown next to the prediction rather than the prediction
-alone, using a split mark: a whole mark means prediction only, a split mark means the measured
+Wherever a measured value exists it is shown next to the prediction, using a split mark: a whole mark means prediction only, a split mark means the measured
 value is shown beside it. Predictions are put on the observed scale by a scale factor fitted
 per feature, so the shape of the comparison across conditions stays a real test.

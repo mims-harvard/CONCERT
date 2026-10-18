@@ -22,7 +22,7 @@ NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 CELLS=${NS}/outputs/stroke_2dpara/pert_sets/real_lesion_PT1.txt
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 for ARM in 2d 3d; do
   case "$ARM" in 3d) NZ=4 ;; *) NZ=1 ;; esac
   OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/leak_${ARM}

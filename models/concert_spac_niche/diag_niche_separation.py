@@ -27,7 +27,7 @@ import numpy as np
 import torch
 
 EVAL = f"{_rp.WORKDIR}/scoring"
-CC   = f"{_rp.WORKDIR}/paper/src/CONCERT-spac-rffbasal"
+CC   = str(Path(__file__).resolve().parent)   # models/concert_spac_niche
 sys.path.insert(0, CC); sys.path.insert(0, EVAL)
 import run_concert_pm_eval as R   # build_pm_ctx, _patch_obs_on_model_rows, SLIDES, parse_args
 

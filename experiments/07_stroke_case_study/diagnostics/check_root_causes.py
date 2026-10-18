@@ -5,8 +5,7 @@ Four hypotheses, one run. No fixes here -- evidence only.
 
 H1 LIBRARY/CPM. Perturbation raises total counts inside the lesion, so a gene that does not
    respond is pushed DOWN once each spot is renormalised to a fixed library.
-H2 SIGN INVERSION. f_pert learned the effect with the wrong sign (there is a known open
-   f_pert-inversion bug in this codebase). Decisive test: correlate PREDICTED per-gene LFC against
+H2 SIGN INVERSION. f_pert learned the effect with the wrong sign. Decisive test: correlate PREDICTED per-gene LFC against
    OBSERVED per-gene LFC over all genes. A negative correlation means inversion.
 H3 RING. Response peaks just OUTSIDE the lesion boundary. Test: predicted expression binned on
    signed distance to the boundary (negative = inside).

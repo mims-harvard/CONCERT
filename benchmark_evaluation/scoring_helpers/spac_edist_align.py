@@ -59,7 +59,7 @@ def raw_counts_paths(raw_counts_dir: Path | str | None = None):
 
 
 def open_raw_counts(biolord_outdir: Path | None = None, raw_counts_dir: Path | str | None = None) -> np.memmap:
-    del biolord_outdir  # kept for call-site compatibility; cache lives on netscratch
+    del biolord_outdir  # kept for call-site compatibility; the cache location comes from raw_counts_dir
     counts_path, _, meta_path = raw_counts_paths(raw_counts_dir)
     if not counts_path.exists() or not meta_path.exists():
         base = resolve_raw_counts_dir(raw_counts_dir)
@@ -68,8 +68,7 @@ def open_raw_counts(biolord_outdir: Path | None = None, raw_counts_dir: Path | s
         )
     meta = json.loads(meta_path.read_text())
     # The cache is written with np.lib.format.open_memmap, i.e. a real .npy file with a header
-    # (128 bytes here). np.load honours the header; a raw np.memmap at offset 0 shifted every row
-    # by header_bytes / 4 = 32 genes (fixed 2026-09-14).
+    # (128 bytes here). np.load honours the header, so rows start after it.
     arr = np.load(counts_path, mmap_mode="r")
     if tuple(arr.shape) != tuple(meta["shape"]):
         raise ValueError(f"{counts_path}: npy shape {arr.shape} != meta shape {tuple(meta['shape'])}")

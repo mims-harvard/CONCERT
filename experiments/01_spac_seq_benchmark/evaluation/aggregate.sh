@@ -116,6 +116,6 @@ python -u "${BE}/plot_spacseq_rho_vs_rmse.py" --indir "${OUT}"
 bash "${CODEBASE_ROOT}/experiments/01_spac_seq_benchmark/evaluation/organize_figures.sh" "${OUT}"
 
 echo "[8] summary and per-knockout panel numbers"
-python -u "${BE}/method_summary.py" "${OUT}" "${PM_COMBINED_DIR}"
+python -u "${BE}/method_summary.py" "${OUT}"
 python -u "${BE}/figure_panel_numbers.py" "${OUT}"
 echo "[$(date)] aggregation finished -> ${OUT}"

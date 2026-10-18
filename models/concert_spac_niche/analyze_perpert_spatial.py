@@ -15,7 +15,7 @@ Reuses the training data loader so coordinate preprocessing is identical to trai
 Usage:
   python analyze_perpert_spatial.py --model_file <OUT>/model.pt \
       --multi_sample_files "s0,s1,s2,s3" --gene_names <OUT>/hvg_gene_names.txt \
-      --fig_dir <docs>/figures/2026-07-02-perpert-spatial
+      --fig_dir <OUT>/figures/perpert_spatial
 """
 import argparse, json, logging, os
 import numpy as np

@@ -44,10 +44,10 @@ import evaluate_concert_perturbmap as R  # noqa: E402
 RAW = Path(os.environ.get(
     "PMAP_RAW", f"{_rp.DATA}/source_datasets/GSM5808054_data.h5"))
 SEL = Path(os.environ.get(
-    "PMAP_SELECTIONS", f"{_rp.WORKDIR}/spaVAE/pert_cells"))
+    "PMAP_SELECTIONS", f"{_rp.REPO}/select_cells"))
 SEL2 = Path(os.environ.get(
     "PMAP_SELECTIONS2",
-    f"{_rp.WORKDIR}/paper/select_cells"))
+    f"{_rp.REPO}/select_cells"))
 CKPT = Path(os.environ.get(
     "PMAP_CKPT",
     f"{_rp.CHECKPOINTS}/perturbmap_within_niche"))

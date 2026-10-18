@@ -26,7 +26,7 @@ NS=${CONCERT_WORKDIR}
 SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 SETS=${NS}/outputs/stroke_2dpara/pert_sets
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 for GCAP in 3.0 0.0; do
   TAGG=$(echo $GCAP | tr -d .)
   OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/gate_${ARM}_g${TAGG}

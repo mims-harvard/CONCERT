@@ -19,7 +19,7 @@ SL=${NS}/stroke3d/slides
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_2dpara"
 python -u ${CODEBASE_ROOT}/experiments/07_stroke_case_study/prep/make_multi_lesion_sets.py --outdir "$OUT" --files "$FILES"
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 for N in 01 02 04 08 16; do
   echo "[$(date)] multidot n=${N}"
   python -u run_concert_spac.py \

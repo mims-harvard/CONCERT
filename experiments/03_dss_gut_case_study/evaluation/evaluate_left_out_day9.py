@@ -1,11 +1,11 @@
-"""LOTO-D9 evaluation for the CONCERT-spac-niche-temporal gut DSS case study.
+"""LOTO-D9 evaluation for the CONCERT gut DSS case study (models/concert_temporal).
 
 Rebuts the reviewer critique "the temporal prediction is just interpolation -- the mean
 between two observed timepoints." We hold out DSS9 (the acute, NON-MONOTONE injury peak)
 entirely from training and test whether CONCERT predicts the day-9 inflammation program
 BETTER than linear interpolation of DSS3 and DSS21.
 
-See docs/LOTO_D9_EVAL_DESIGN.md for the full design. Key points implemented here:
+Key points implemented here:
 
   * Leakage-free: day-9 predictions are produced by taking NON-day-9 source cells and
     re-decoding them at t = target_day/denom via counterfactualPrediction(time_t=...). No

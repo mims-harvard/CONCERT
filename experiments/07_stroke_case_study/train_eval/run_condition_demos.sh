@@ -23,7 +23,7 @@ FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_pa
 OUT=${NS}/outputs/stroke_2dpara_fixC
 SETS=${OUT}/pert_sets
 ln -sfn ${NS}/outputs/stroke_2dpara/pert_sets ${SETS} 2>/dev/null || true
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 COMMON="--config config.yaml --stage eval --multi_sample_files ${FILES} --outdir ${OUT}
   --model_file model.pt --project_index stroke --hvg_max_rank 2000 --seed 42
   --unassigned_label unperturbed --control_label __NONE__ --min_cells_per_pert 25

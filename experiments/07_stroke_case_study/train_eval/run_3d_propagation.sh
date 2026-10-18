@@ -29,7 +29,7 @@ ZSET=${SETS}/zsec1_ctx.txt
 python -u ${CODEBASE_ROOT}/experiments/07_stroke_case_study/prep/make_depth_sets.py --files "${FILES}" --target_slide Sham1 \
     --outdir "${SETS}" --zpatch_n 400 --emit z
 
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 BASE="--config config.yaml --stage eval --multi_sample_files ${FILES}
   --model_file model.pt --project_index stroke --hvg_max_rank 2000 --seed 42
   --unassigned_label unperturbed --control_label __NONE__ --min_cells_per_pert 25

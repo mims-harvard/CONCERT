@@ -5,9 +5,12 @@ perturbation states, and to fill in a contiguous patch of tissue removed from a 
 CONCERT model code these scripts call is `models/concert_spac_niche/deconv_impute.py`, reached
 through `run_concert_spac.py --stage deconv` and `--stage impute_patch`.
 
-The scripts keep the absolute lab paths of the runs that produced the figures, as described in
-the main README. Each one states its inputs and outputs as path constants or `argparse` defaults
-near the top of the file.
+The Python scripts resolve their paths through `benchmark_evaluation/release_paths.py` and the
+shell scripts through `config/paths.sh`: inputs come from `${CONCERT_DATA_DIR}` and outputs go
+under `${CONCERT_WORKDIR}`, most of them under
+`${CONCERT_WORKDIR}/paper/Outputs/` (for example `paper/Outputs/ext_exp` and
+`paper/Outputs/spac_seq/pmap_s0_jak2_concert_amortized`). Each script states its inputs and
+outputs as path constants or `argparse` defaults near the top of the file.
 
 ## Supplementary Fig. 9 - SPAC-seq deconvolution of pseudo-bulk spots
 
@@ -28,7 +31,8 @@ Run order:
    runs the four estimators on the mixture spots and writes `per_spot.csv`,
    `summary.json` and `run_meta.json` (shipped in `data/deconvolution/spacseq_2-1/`).
 4. `plot_deconvolution.py` draws the bar, win-rate, calibration and slide panels from
-   `per_spot.csv` and `summary.json`, and copies them to `Outputs/ext_exp`.
+   `per_spot.csv` and `summary.json`, and copies them to
+   `${CONCERT_WORKDIR}/deconvolution_spacseq_2-1/figures`.
 5. `plot_deconvolution_four_methods.py` rebuilds panel b with the four estimators side by side and
    writes `resp_deconv_spacseq.png`, `resp_deconv_spacseq.pdf` and
    `resp_deconv_spacseq_stats.json`.
@@ -46,11 +50,12 @@ Run order (checkpoint: the alternative Perturb-map within-niche model, whose res
 1. `deconvolve_perturbmap_jak2.sh` runs `deconvolve_perturbmap_jak2.py`, which
    queries the checkpoint for the location-matched signatures, trains the unmixing head on
    synthetic mixtures and writes `location_signatures.npz`, `amortized_head.pt` and
-   `summary.json` into `Outputs/spac_seq/pmap_s0_jak2_concert_amortized`.
+   `summary.json` into `${CONCERT_WORKDIR}/paper/Outputs/spac_seq/pmap_s0_jak2_concert_amortized`.
 2. `cache_perturbmap_signatures.sh` runs `cache_perturbmap_signatures.py`, which
    adds the normal-tissue profile `mu_normal` for every periphery spot to
    `location_signatures.npz`, and then the three figure scripts in order:
-   - `plot_perturbmap_subspots.py` writes `peri_deconv_impute_scores.csv`,
+   - `plot_perturbmap_subspots.py` writes, into the same directory,
+     `peri_deconv_impute_scores.csv`,
      `jak2_niche_subspots.csv`, `summary_deconv_impute.json`, the bar panel and the slide of
      sub-spots;
    - `plot_perturbmap_umap.py` writes the UMAP of observed spots, periphery spots and
@@ -92,9 +97,10 @@ Run order:
      `perturbation_metrics.py`.
 5. `plot_imputation.py` draws the patch-removal map (panel a) and the gene panels.
    `plot_imputation_shared_reference.py` recomputes the true-versus-predicted log-fold changes with
-   the shared reference and writes `task2_spac22_eval5_lfc10_lfc_scatter_sharedref_points.npz`.
+   the shared reference and writes `task2_spac22_eval5_lfc10_lfc_scatter_sharedref_points.npz` to
+   `${CONCERT_WORKDIR}/paper/Outputs/ext_exp`.
 6. `compose_imputation_figure.py` draws panel b from
-   `task2_spac22_impute_rescored_our_rule.csv` (per-cell Spearman and log-fold-change Spearman for
+   `${CONCERT_WORKDIR}/paper/Outputs/ext_exp/task2_spac22_impute_rescored_our_rule.csv` (per-cell Spearman and log-fold-change Spearman for
    all four methods under the shared rule, error bars as s.e.m. across the five knockouts) and
    panel c from the scatter points, and writes `resp_imputation_patch.png`,
    `resp_imputation_patch.pdf` and `resp_imputation_patch_stats.json`.

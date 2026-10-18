@@ -614,7 +614,7 @@ def _read_obs_str_column(f_obs, col: str) -> np.ndarray:
 def _load_arch_sidecar(f_obs, path: str, arch_dir: str, n_obs_full: int) -> np.ndarray:
     """Load this slice's day-invariant architectural descriptor sidecar.
 
-    Contract (arch-descriptor design Sec. 5): `<arch_dir>/<Slice_ID>.npy` is float32
+    Contract: `<arch_dir>/<Slice_ID>.npy` is float32
     (n_cells, arch_dim) with rows in the source h5ad's ON-DISK cell order -- i.e. the
     PRE-filter order. The caller must therefore apply exactly the same row filters to it
     as to tier1_raw/perturb_raw. A silent misalignment here is fatal (every cell gets
@@ -626,7 +626,7 @@ def _load_arch_sidecar(f_obs, path: str, arch_dir: str, n_obs_full: int) -> np.n
     if not manifest_p.is_file():
         raise FileNotFoundError(
             f"arch descriptor manifest not found: {manifest_p}. use_timekernel needs the "
-            f"descriptor sidecars (see docs/2026-07-16-arch-descriptor-design.md Sec. 5).")
+            f"descriptor sidecars (<Slice_ID>.npy + manifest.json).")
     with open(manifest_p) as fh:
         manifest = json.load(fh)
     # precompute_arch_descriptor.py writes the column list as "columns"; accept the
@@ -2305,14 +2305,14 @@ def parse_args() -> RunConfig:
     p.add_argument("--amp_anchor_lambda", type=float, default=None,
                    help="Soft fallback: weight of the ELBO penalty lambda*a(t_ref)^2. Inert when "
                         "--amp_anchor_offset is on. NOT sufficient alone -- at lambda=10 the NB "
-                        "term out-pulled it and a(0) rose (job 31812173).")
+                        "term out-pulled it and a(0) rose.")
     p.add_argument("--amp_anchor_t", type=float, default=None,
                    help="Normalised time of the healthy baseline for the anchor (default 0.0 = day 0).")
     p.add_argument("--time_in_field_mlp", type=str2bool, default=None,
                    help="Concatenate the time embedding into the fpert field's MLP input, so t "
                         "can reshape the spatial program per (location, time). Without it t "
                         "reaches Phi only via the scalar lengthscale l(t) -- measured near-inert "
-                        "(job 31897911: a(t)*shift moved 0.023 over the whole DSS course and "
+                        "(a(t)*shift moved 0.023 over the whole DSS course and "
                         "day-9 cells never resolved). Timekernel only.")
     p.add_argument("--marker_sign_positive", type=str2bool, default=None,
                    help="Force the DSS marker panel's component of the pert shift >= 0 (softplus on "

@@ -1,10 +1,11 @@
-"""Kernel-parameter interpretability figures -- LSFIX checkpoint.
+"""Kernel-parameter interpretability figures.
 
-Rebuilt from 03_plot_interpretability.py (old ckpt) because the units fix changes the
-RESULT, not just the numbers: on the CONCERT model BOTH learned per-perturbation kernel
-scalars carry spatial signal, and they track the SAME two descriptors with OPPOSITE
-signs. So the figure set is organised around that two-knob agreement instead of around
-one knob against six mutually-correlated dispersion descriptors.
+Reads the per-perturbation kernel-parameter tables that 01_extract_kernel_params.py and
+02_merge_with_accuracy.py derive from the SPAC-seq kernel-analysis checkpoint
+(checkpoints/spacseq_kernel_analysis/model.pt; tables shipped in data/spacseq/kernel_params/).
+On this model BOTH learned per-perturbation kernel scalars carry spatial signal, and they
+track the SAME two descriptors with OPPOSITE signs, so the figure set is organised around
+that two-knob agreement.
 
   fig1_two_knob_dispersion.png  both knobs vs the two descriptors that survive BH
   fig2_exemplar_maps.png        dispersed vs compact tissue maps + gain / occupancy bars

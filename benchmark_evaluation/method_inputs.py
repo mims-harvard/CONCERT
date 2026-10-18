@@ -15,9 +15,9 @@ Tutorial input formats (``adata_for_method``):
   Steamboat
       raw counts -> ``prep_adatas(norm=True, log1p=True)`` (scanpy default target_sum=1e4).
 
-Scoring (LFC + energy distance) expects **predictions in log-CP10K** matching
-prepared ``adata.X``.  Ground-truth e-dist uses raw counts; ``aligned_energy_distance``
-maps log-CP10K -> counts via each source cell's library size before PCA.
+Scoring expects **predictions in log-CP10K** matching prepared ``adata.X``. The
+reported metrics are LFC Spearman rho and LFC RMSE between predicted and observed
+pseudobulk log fold changes.
 """
 
 from __future__ import annotations

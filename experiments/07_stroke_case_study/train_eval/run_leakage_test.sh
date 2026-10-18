@@ -25,7 +25,7 @@ FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_pa
 OUT=${CONCERT_WORKDIR}/scratch/CONCERT_rimtest/stroke_2dpara_nopara
 SETS=${OUT}/pert_sets
 python -u ${CODEBASE_ROOT}/experiments/07_stroke_case_study/prep/make_real_lesion_set.py
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 COMMON="--config config.yaml --stage eval --multi_sample_files ${FILES} --outdir ${OUT}
   --model_file model.pt --project_index stroke --hvg_max_rank 2000 --seed 42
   --unassigned_label unperturbed --control_label __NONE__ --min_cells_per_pert 25

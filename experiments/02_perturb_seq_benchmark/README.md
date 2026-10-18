@@ -1,24 +1,24 @@
-# Experiment 02 - spatial Perturb-seq held-out perturbation benchmark
+# Experiment 02 - Perturb-map perturbation prediction benchmark
 
-The same held-out perturbation question as experiment 01, on four sections of a spatial
-Perturb-seq assay. Running it on a second assay tests whether the result depends on the
-measurement platform.
+The same two prediction tasks as experiment 01 (within-niche and cross-slide prediction), on four
+Perturb-map lung tumour sections. Running them on a second assay tests whether the result holds
+across measurement platforms.
 
 ## Differences from experiment 01
 
 The model is the same (`models/concert_benchmark`); the settings differ where the assays do:
 
-- there is no non-targeting control class, so unperturbed cells are the comparison group and
-  the control label is left unset;
+- the assay has no non-targeting control class, so unperturbed cells are the comparison group
+  and the control label is left unset;
 - guide assignment is unambiguous here, so the technical correction that separates intended
   from assigned perturbation is switched off;
 - spots are denser and sections smaller, so the spatial field uses more inducing points (64
   against 16) and a wider lengthscale band, read at a larger coordinate scale;
-- no minimum cell count per perturbation is imposed, since the panel is already balanced.
+- the minimum cell count per perturbation is left at zero, since the panel is already balanced.
 
 ## Inputs
 
-Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `data/README.md`):
+Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `datasets/README.md`):
 
 - `perturbmap/raw/perturbmap_s0_spacfmt.h5ad` ... `perturbmap_s3_spacfmt.h5ad` - the four sections
   converted to the common format by `data_preparation/01_convert_sections.py`;
@@ -40,9 +40,9 @@ Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `dat
 4. **Score.** `sbatch evaluation/evaluate.sh seen` runs
    `../../benchmark_evaluation/evaluate_concert_perturbmap.py` on the checkpoint and writes a
    per-perturbation summary per section. The lengthscale band, coordinate scale and inducing
-   count are passed again there and must match the training values - the band defines the
+   count are passed again there and must match the training values: the band defines the
    squashing function inside the spatial field, so a checkpoint read back under a different
-   band reconstructs different lengthscales rather than failing.
+   band silently reconstructs different lengthscales.
 5. **Compare against the published methods (the reported numbers).**
    `sbatch evaluation/aggregate.sh` rescores the stored predicted LFCs of every
    method, the four reference strategies and STATE against the disjoint reference: the knockout cells
@@ -53,7 +53,7 @@ Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `dat
    `perturbmap_tables.py` writes the per-record tables, the paired tests and the Fig. 4j panel
    (`plot_perturbmap_panel.py`) to `${CONCERT_WORKDIR}/perturbmap_results/` (the shipped
    copy is `data/benchmark_assets/results/perturbmap_results/`). The predictions are the
-   ones on disk; nothing is retrained or re-run.
+   ones on disk; the aggregation step only rescores them.
 
    The harness reference (every control cell of the niche, `lfc_scoring.observed_lfc_pm_niche`)
    fixes which records are scored and the shared record set; `score_perturbmap.py` writes both

@@ -38,7 +38,7 @@ SL=${NS}/stroke3d/slides_cr
 FILES="${SL}/stroke_paste2_PT1.h5ad,${SL}/stroke_paste2_PT2.h5ad,${SL}/stroke_paste2_PT3.h5ad,${SL}/stroke_paste2_PT4.h5ad,${SL}/stroke_paste2_Sham1.h5ad,${SL}/stroke_paste2_Sham2.h5ad,${SL}/stroke_paste2_Sham3.h5ad,${SL}/stroke_paste2_Sham4.h5ad"
 OUT="${NS}/outputs/stroke_${ARM}${CRTAG:-_cr}"
 SHAPE="${NS}/outputs/stroke_3d/shape_sets"     # geometry only; identical across arms
-cd ${NS}/CONCERT-spac-niche
+cd ${CODEBASE_ROOT}/models/concert_spac_niche
 
 python -u ${CODEBASE_ROOT}/experiments/07_stroke_case_study/prep/make_sham_index.py --files "${FILES}" --out "${OUT}/sham_cells.txt"
 cp -r "${SHAPE}" "${OUT}/shape_sets" 2>/dev/null || true

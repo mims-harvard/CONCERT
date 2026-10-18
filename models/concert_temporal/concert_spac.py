@@ -436,10 +436,10 @@ class AmplitudeTime(nn.Module):
     so the pre-injury day-0 snapshot is reconstructed by the basal path alone. This
     is what identifies the SIGN of f_pert: with basal pinned to healthy, every later
     day's residual must ADD inflammation rather than the model storing inflammation
-    in basal and having f_pert subtract it (the inverted mechanism job 31807288 found).
+    in basal and having f_pert subtract it (an inverted mechanism).
     a(t_ref) is a CONSTANT here -- no gradient, nothing for the NB term to pull on -- which
     a soft lambda*a(0)^2 penalty could not achieve: at lambda=10 the likelihood simply
-    out-pulled it and a(0) ROSE 0.69 -> 0.82 (job 31812173).
+    out-pulled it and a(0) ROSE from 0.69 to 0.82.
     """
     def __init__(self, time_emb_dim: int, hidden: int = 16, anchor_offset: float = 0.0):
         super().__init__()

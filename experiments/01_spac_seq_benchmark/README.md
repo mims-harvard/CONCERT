@@ -1,19 +1,24 @@
-# Experiment 01 - SPAC-seq held-out perturbation benchmark
+# Experiment 01 - SPAC-seq perturbation prediction benchmark
 
 Five tissue sections carrying a pooled perturbation panel. A set of perturbations is held out;
 the model is given each held-out cell's location and unperturbed expression and asked to
 predict its perturbed expression, which is then compared with what was measured.
 
-Two holdout settings are reported:
+Two prediction tasks are reported. The code, output directories and CSV columns call them
+`seen` and `unseen`:
 
-- **seen** - a perturbation is removed from one slide but remains visible on the others, so
-  the question is whether its effect transfers to a new tissue context;
-- **unseen** - a perturbation is removed from every slide, so the question is whether its
-  effect can be inferred from related perturbations.
+- **within-niche prediction** (`seen`) - a patch of unperturbed cells is held out on each slide
+  and every knockout stays in training; the model predicts how the held-out cells respond to a
+  knockout carried by cells of their own niche, and the prediction is scored against those
+  knockout cells;
+- **cross-slide prediction** (`unseen`) - each evaluated knockout is masked on its target slide
+  only and stays visible on the other slides, so the model transfers the response learned on
+  other slides to a slide on which that knockout was held out
+  (`data_preparation/05_build_holdout_coords.py`, `benchmark_evaluation/benchmark_holdouts.py`).
 
 ## Inputs
 
-Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `data/README.md`):
+Everything sits in the downloadable `data/` folder (`CONCERT_DATA_DIR`, see `datasets/README.md`):
 
 - `spacseq/raw/raw_output_1-1.h5ad` ... `raw_output_1-5.h5ad` - the five measured sections, with
   expression, per-cell perturbation assignment and array coordinates;
@@ -33,19 +38,19 @@ scores your own training run.
 1. **Filter and select genes.** `data_preparation/01_filter_cells.py` applies the cell and guide
    quality rules; `data_preparation/02_rank_genes.py` ranks genes so training can take the top
    2000. `data_preparation/03_build_spatial_graph.py` writes the neighbour graph.
-2. **Define the holdouts.** `data_preparation/05_build_holdout_coords.py --dataset spac` turns the
-   holdout pools of `prepared/benchmark/` into the coordinate-keyed files training reads, for
-   both settings. Run it after step 3.
-   `data_preparation/build_niche_holdout.py` covers the microenvironment-level variant.
-3. **Build evaluation assets.** `data_preparation/04_build_benchmark_panel.py` writes the
-   evaluation panel (85 knockout-target-slide pairs in the unseen setting) and holdout pools;
+2. **Build evaluation assets.** `data_preparation/04_build_benchmark_panel.py` writes the
+   evaluation panel (85 knockout-target-slide pairs in the cross-slide setting) and holdout pools;
    `benchmark_evaluation/make_source_cells.py` draws the 5,000 shared source spots per
    target slide.
+3. **Define the holdouts.** `data_preparation/05_build_holdout_coords.py --dataset spac` turns the
+   holdout pools of `prepared/benchmark/` into the coordinate-keyed files training reads, for
+   both settings. `data_preparation/build_niche_holdout.py` covers the microenvironment-level
+   variant.
 4. **Train.** `sbatch train/train.sh seen` (and `unseen`). One GPU; the reported runs
    trained for up to 1500 epochs with early stopping. Both settings use the clonality gate
    (`--clonality_gate clone_size --clone_min_cells 100`) and the per-slide guide shift
    (`--slide_guide_shift True`).
-5. **Score.** `sbatch evaluation/evaluate.sh unseen` scores every unseen
+5. **Score.** `sbatch evaluation/evaluate.sh unseen` scores every cross-slide
    pair in one job; `sbatch --array=1-5 evaluation/evaluate.sh seen` runs one
    slide per array task. Both use the reported scoring rule: one Poisson draw at each source
    spot's measured library size (`--cf_output poisson_depth`), the LFC taken against the
@@ -65,8 +70,8 @@ scores your own training run.
 
 ## Notes
 
-The lengthscale band of the spatial field is passed at both training and evaluation. It is a
-plain attribute rather than a saved weight, so evaluating without it renders a different field
-from the same trained parameters.
+The lengthscale band of the spatial field is passed at both training and evaluation. The band is
+a plain attribute of the field and stays outside the saved weights, so evaluation needs the same
+band that training used to render the same field.
 
-The trained checkpoint from the `seen` setting is the input to experiment 04.
+The trained checkpoint from the within-niche (`seen`) setting is the input to experiment 04.

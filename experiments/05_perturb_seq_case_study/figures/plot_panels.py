@@ -281,7 +281,7 @@ def main() -> None:
                                  "spac_seq_eval/figures/pmap_case_study"))
     ap.add_argument("--out", type=Path,
                     default=Path(f"{_rp.WORKDIR}/"
-                                 "spaVAE/CONCERT-main/Outputs/case_study_pm"))
+                                 "outputs/case_study_pm"))
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
 
