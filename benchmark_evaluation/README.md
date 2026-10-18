@@ -11,8 +11,8 @@ files here are its libraries; they are run through the entry points below.
 | Reproduce a reported number, step by step | `reproduction/01_spac_seq_benchmark.py`, `reproduction/02_perturb_map_benchmark.py`, or notebooks 01 and 02 |
 | Score a checkpoint on the SPAC-seq benchmark | `experiments/01_spac_seq_benchmark/evaluation/evaluate.sh` |
 | Rebuild the SPAC-seq tables, tests and figures | `experiments/01_spac_seq_benchmark/evaluation/aggregate.sh` |
-| Score a checkpoint on the Perturb-map benchmark | `experiments/02_perturb_seq_benchmark/evaluation/evaluate.sh` |
-| Rebuild the Perturb-map tables, tests and Fig. 4j | `experiments/02_perturb_seq_benchmark/evaluation/aggregate.sh` |
+| Score a checkpoint on the Perturb-map benchmark | `experiments/02_perturb_map_benchmark/evaluation/evaluate.sh` |
+| Rebuild the Perturb-map tables, tests and Fig. 4j | `experiments/02_perturb_map_benchmark/evaluation/aggregate.sh` |
 
 Every input path comes from `release_paths.py`, which reads `CONCERT_DATA_DIR` and
 `CONCERT_CHECKPOINT_ROOT` (the `data/` and `checkpoints/` folders).
@@ -63,7 +63,7 @@ rescoring, the 50-cell Mean target, the significance tables and the plotting mod
 `evaluate_concert_perturbmap.py` is the Perturb-map evaluation harness. The reported within-niche numbers
 rescore the stored predicted LFCs of every method against a reference built from the niche's
 control cells outside every held-out patch (`perturbmap_reference.py`), so reference and
-prediction share no cells. `experiments/02_perturb_seq_benchmark/evaluation/aggregate.sh`
+prediction share no cells. `experiments/02_perturb_map_benchmark/evaluation/aggregate.sh`
 runs `score_perturbmap.py` and then `perturbmap_tables.py`.
 
 ## Modules

@@ -1,14 +1,14 @@
 #!/bin/bash -l
-#SBATCH -J concert_perturb_seq_eval
+#SBATCH -J concert_perturb_map_eval
 #SBATCH -p gpu
 #SBATCH --mem=200G
 #SBATCH --time 0-04:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o concert_perturb_seq_eval_%j.out
-#SBATCH -e concert_perturb_seq_eval_%j.err
+#SBATCH -o concert_perturb_map_eval_%j.out
+#SBATCH -e concert_perturb_map_eval_%j.err
 #
-# Score a trained Perturb-seq checkpoint on the held-out niche patches of all four sections.
+# Score a trained Perturb-map checkpoint on the held-out niche patches of all four sections.
 #
 # Usage: sbatch evaluate.sh <seen|unseen>
 #
@@ -38,7 +38,7 @@ EVAL_DIR="${CODEBASE_ROOT}/benchmark_evaluation"
 # Default: the released checkpoint. MODEL=<your model.pt> scores your own training run.
 CKPT_NAME=$([ "$REGIME" = "seen" ] && echo perturbmap_within_niche || echo perturbmap_cross_slide)
 MODEL="${MODEL:-${CONCERT_CHECKPOINT_ROOT}/${CKPT_NAME}/model.pt}"
-OUT="${OUTPUT_ROOT}/perturb_seq_${REGIME}_eval"
+OUT="${OUTPUT_ROOT}/perturb_map_${REGIME}_eval"
 
 [ -f "$MODEL" ] || { echo "[FATAL] checkpoint missing: $MODEL"; exit 1; }
 mkdir -p "$OUT"
@@ -59,4 +59,4 @@ python -u evaluate_concert_perturbmap.py \
     --model_file "$MODEL" --outdir "$OUT" --slides ${SLIDES:-0 1 2 3} --n_boot 10 \
     ${GUARD} ${UNSEEN_KO}
 
-echo "[$(date)] Perturb-seq ${REGIME} evaluation finished -> ${OUT}"
+echo "[$(date)] Perturb-map ${REGIME} evaluation finished -> ${OUT}"

@@ -7,10 +7,10 @@ code lives in `../models/`, shared scoring code in `../benchmark_evaluation/`.
 | Directory | Question | Model |
 |---|---|---|
 | `01_spac_seq_benchmark/` | Can the response of a perturbation held out from a slide be predicted from location and unperturbed expression? | `models/concert_benchmark` |
-| `02_perturb_seq_benchmark/` | The same question on Perturb-map, a different assay with a different perturbation set | `models/concert_benchmark` |
+| `02_perturb_map_benchmark/` | The same question on Perturb-map, a different assay with a different perturbation set | `models/concert_benchmark` |
 | `03_dss_gut_case_study/` | Does one model over a colitis time course reproduce the tissue at a timepoint held out from training? | `models/concert_temporal` |
 | `04_kernel_interpretability/` | Do the spatial parameters the model learns track the observed arrangement of the perturbed cells? | reads checkpoints from 01 |
-| `05_perturb_seq_case_study/` | Does the same knockout, placed in different parts of a section, produce a different predicted response? | reads checkpoints from 02 |
+| `05_perturb_map_case_study/` | Does the same knockout, placed in different parts of a section, produce a different predicted response? | reads checkpoints from 02 |
 | `06_sensitivity_analysis/` | Do the reported numbers survive changes to the hyper-parameters, once initialisation noise is measured? | retrains both benchmark models |
 | `07_stroke_case_study/` | Can a lesion of a chosen size and position be imposed on a healthy brain and its response predicted, in 2D and in 3D? | `models/concert_spac_niche` |
 | `08_deconvolution_imputation/` | Can CONCERT unmix spots that pool several perturbation states, and fill in a patch of tissue removed from a slide? | `models/concert_spac_niche` (`deconv_impute.py`) |
@@ -42,6 +42,6 @@ Four of these experiments have a tutorial that starts from the trained checkpoin
 | Experiment | Script | Notebook |
 |---|---|---|
 | `01_spac_seq_benchmark` | `../reproduction/01_spac_seq_benchmark.py` | `../notebooks/01_spac_seq_benchmark.ipynb` |
-| `02_perturb_seq_benchmark` | `../reproduction/02_perturb_map_benchmark.py` | `../notebooks/02_perturb_map_benchmark.ipynb` |
+| `02_perturb_map_benchmark` | `../reproduction/02_perturb_map_benchmark.py` | `../notebooks/02_perturb_map_benchmark.ipynb` |
 | `03_dss_gut_case_study` | `../reproduction/03_dss_colitis_marker_trend.py` | `../notebooks/03_dss_colitis_per_mouse_marker_trend.ipynb` |
 | `07_stroke_case_study` | `../reproduction/04_stroke_2d_3d_prediction.py` | `../notebooks/04_stroke_2d_and_3d_prediction.ipynb` |

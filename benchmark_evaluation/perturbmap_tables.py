@@ -21,7 +21,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import significance_tables as bst  # noqa: E402
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments" / "02_perturb_seq_benchmark" / "figures"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments" / "02_perturb_map_benchmark" / "figures"))
 import plot_perturbmap_benchmark as ppb  # noqa: E402
 import plot_perturbmap_panel as ppbp  # noqa: E402
 

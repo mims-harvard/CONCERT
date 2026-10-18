@@ -129,10 +129,10 @@ run things in, and what it writes.
 | Directory | Question |
 |---|---|
 | [`01_spac_seq_benchmark`](../experiments/01_spac_seq_benchmark/) | Can the response of a perturbation held out from a slide be predicted from location and unperturbed expression? |
-| [`02_perturb_seq_benchmark`](../experiments/02_perturb_seq_benchmark/) | The same question on spatial Perturb-map, a different assay and perturbation set |
+| [`02_perturb_map_benchmark`](../experiments/02_perturb_map_benchmark/) | The same question on spatial Perturb-map, a different assay and perturbation set |
 | [`03_dss_gut_case_study`](../experiments/03_dss_gut_case_study/) | Does one model over a colitis time course reproduce the tissue at a timepoint it was not trained on? |
 | [`04_kernel_interpretability`](../experiments/04_kernel_interpretability/) | Do the spatial parameters the model learns track the observed arrangement of the perturbed cells? |
-| [`05_perturb_seq_case_study`](../experiments/05_perturb_seq_case_study/) | Does the same knockout, placed in different parts of a section, produce a different predicted response? |
+| [`05_perturb_map_case_study`](../experiments/05_perturb_map_case_study/) | Does the same knockout, placed in different parts of a section, produce a different predicted response? |
 | [`06_sensitivity_analysis`](../experiments/06_sensitivity_analysis/) | Do the reported numbers survive changes to the hyper-parameters, once initialisation noise is measured? |
 | [`07_stroke_case_study`](../experiments/07_stroke_case_study/) | Can a lesion of a chosen size and position be imposed on a healthy brain and its response predicted, in 2D and in 3D? |
 | [`08_deconvolution_imputation`](../experiments/08_deconvolution_imputation/) | Can CONCERT unmix spots that pool several perturbation states, and fill in a patch of tissue removed from a slide? |

@@ -10,7 +10,7 @@ experiment 02; the checkpoint is used as trained.
 
 ## Inputs
 
-- the checkpoint from `experiments/02_perturb_seq_benchmark/train/train.sh seen`;
+- the checkpoint from `experiments/02_perturb_map_benchmark/train/train.sh seen`;
 - the measured section (`GSM5808054_data.h5`) and the spot selections that define the patches.
 
 Paths are read from the environment (`PMAP_CKPT`, `PMAP_RAW`, `PMAP_SELECTIONS`, and the three
@@ -55,7 +55,7 @@ evaluation step wrote and emit a `figure_stats.json` next to the panels, so a ca
 checked against the numbers actually plotted.
 
 The benchmark panel that appears in the same figure is produced by experiment 02
-(`experiments/02_perturb_seq_benchmark/figures/plot_perturbmap_benchmark.py`).
+(`experiments/02_perturb_map_benchmark/figures/plot_perturbmap_benchmark.py`).
 
 ## Reading the results
 

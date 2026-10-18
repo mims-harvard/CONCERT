@@ -18,7 +18,7 @@ from matplotlib.colors import to_rgba
 from matplotlib.patches import Patch
 
 # plot_perturbmap_benchmark (the shared style) lives with the Perturb-map figure scripts
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments" / "02_perturb_seq_benchmark" / "figures"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "experiments" / "02_perturb_map_benchmark" / "figures"))
 from plot_perturbmap_benchmark import GRID, INK, METHODS, MUTED, PERTS  # noqa: E402
 
 BAR_ALPHA = 0.7

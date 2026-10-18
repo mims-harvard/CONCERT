@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild the spatial Perturb-seq case study on the shipped model.
+"""Rebuild the Perturb-map case study on the shipped model.
 
 Two analyses, both on slide GSM5808054, using the ORIGINAL patch selections:
 

@@ -1,14 +1,14 @@
 #!/bin/bash -l
-#SBATCH -J concert_perturb_seq
+#SBATCH -J concert_perturb_map
 #SBATCH -p gpu
 #SBATCH --mem=200G
 #SBATCH --time 0-06:00
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH -o concert_perturb_seq_%j.out
-#SBATCH -e concert_perturb_seq_%j.err
+#SBATCH -o concert_perturb_map_%j.out
+#SBATCH -e concert_perturb_map_%j.err
 #
-# Train CONCERT on the spatial Perturb-seq slides (four sections, s0 to s3).
+# Train CONCERT on the Perturb-map slides (four sections, s0 to s3).
 #
 # Usage: sbatch train.sh <seen|unseen>
 #
@@ -38,10 +38,10 @@ activate_env
 
 REGIME="${1:?usage: sbatch train.sh <seen|unseen>}"
 MODEL_DIR="${CODEBASE_ROOT}/models/concert_benchmark"
-OUT="${OUTPUT_ROOT}/perturb_seq_${REGIME}"
+OUT="${OUTPUT_ROOT}/perturb_map_${REGIME}"
 HOLDOUT="${HOLDOUT_COORDS}/holdout_pmap_${REGIME}.json"
 
-FILES=$(for s in 0 1 2 3; do echo -n "${PERTURB_SEQ_DIR}/perturbmap_s${s}_spacfmt.h5ad,"; done | sed 's/,$//')
+FILES=$(for s in 0 1 2 3; do echo -n "${PERTURBMAP_DIR}/perturbmap_s${s}_spacfmt.h5ad,"; done | sed 's/,$//')
 [ -f "$HOLDOUT" ] || { echo "[FATAL] holdout file missing: $HOLDOUT"; exit 1; }
 mkdir -p "$OUT"
 cd "$MODEL_DIR"
@@ -54,4 +54,4 @@ python -u run_concert_spac.py --config configs/perturbmap.yaml --stage train \
     --multi_sample_files "${FILES}" --outdir "$OUT" \
     --holdout_file "${HOLDOUT}" --resume "${RESUME:-False}"
 
-echo "[$(date)] Perturb-seq ${REGIME} training finished -> ${OUT}"
+echo "[$(date)] Perturb-map ${REGIME} training finished -> ${OUT}"

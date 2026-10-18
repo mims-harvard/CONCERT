@@ -40,7 +40,7 @@ except Exception:
 
 
 def make_args(model_file, outdir):
-    """Perturb-map arch defaults (match train_perturb_seq.sh) + ls band + inducing 64."""
+    """Perturb-map arch defaults (match experiments/02_perturb_map_benchmark/train/train.sh) + ls band + inducing 64."""
     argv = ["--model_file", str(model_file), "--outdir", str(outdir),
             "--ls_prior_min", "3", "--ls_prior_max", "18", "--fpert_svgp_inducing", "64"]
     old = sys.argv

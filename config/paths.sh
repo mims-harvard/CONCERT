@@ -12,7 +12,7 @@ CONCERT_CHECKPOINT_ROOT="${CONCERT_CHECKPOINT_ROOT:-${CODEBASE_ROOT}/checkpoints
 export CONCERT_DATA_DIR CONCERT_CHECKPOINT_ROOT
 SPAC_SEQ_DIR="${CONCERT_DATA_DIR}/spacseq/raw"
 SPAC_SEQ_PREPARED="${CONCERT_DATA_DIR}/spacseq/prepared"
-PERTURB_SEQ_DIR="${CONCERT_DATA_DIR}/perturbmap/raw"
+PERTURBMAP_DIR="${CONCERT_DATA_DIR}/perturbmap/raw"
 HOLDOUT_COORDS="${CONCERT_DATA_DIR}/benchmark_assets/holdout_coords"
 SPACSEQ_PREDICTIONS="${CONCERT_DATA_DIR}/benchmark_assets/results/spacseq_predictions"
 DSS_DIR="${CONCERT_DATA_DIR}/dss_colitis/sections"

@@ -8,10 +8,9 @@ gives the study the sections come from, where the raw data lives, and a processe
 | Dataset | Used for | Raw data | Processed data |
 |---|---|---|---|
 | [**SPAC-seq** CRISPR screen](https://doi.org/10.1016/j.cell.2026.04.049) (Zhang et al., *Cell* 2026) | Benchmark, `experiments/01_spac_seq_benchmark` | [SPAC-seq portal](https://spac.pku-genomics.org) | [preprocessing scripts](../experiments/01_spac_seq_benchmark/data_preparation/) |
-| [**Perturb-map** lung tumour](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7) (Dhainaut et al., *Cell* 2022) | Benchmark, `experiments/02_perturb_seq_benchmark` | [GEO GSE193460](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460) | [Figshare](https://figshare.com/articles/dataset/Datasets_-_Perturb-Map/29198468) |
+| [**Perturb-map** lung tumour](https://www.cell.com/cell/fulltext/S0092-8674(22)00195-7) (Dhainaut et al., *Cell* 2022) | Benchmark, `experiments/02_perturb_map_benchmark` | [GEO GSE193460](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193460) | [preprocessing scripts](../experiments/02_perturb_map_benchmark/data_preparation/) |
 | [**Colitis MERFISH** time course](https://doi.org/10.1016/j.cell.2024.03.013) (Cadinu et al., *Cell* 2024) | Time-course case study, `experiments/03_dss_gut_case_study` | [Dryad](https://datadryad.org/dataset/doi:10.5061/dryad.rjdfn2zh3) | [preprocessing script](../experiments/03_dss_gut_case_study/data_preparation/convert_sections.py) |
-| [**Mouse gut DSS** Visium](https://www.nature.com/articles/s41586-024-08216-z) (Mayassi et al., *Nature* 2024) | Colon inflammation | [Broad SCP2771](https://singlecell.broadinstitute.org/single_cell?type=study&page=1&terms=SCP2771) | [Figshare](https://figshare.com/articles/dataset/Mouse_gut_inflammation_dataset/29882873) |
-| [**Mouse brain stroke**](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) (Han et al., *Sci. Transl. Med.* 2024) | Stroke case study, `experiments/07_stroke_case_study` | From the authors of the original paper on request | [Figshare](https://figshare.com/articles/dataset/Mouse_brain_stroke_dataset/29882900) |
+| [**Mouse brain stroke**](https://www.science.org/doi/abs/10.1126/scitranslmed.adg1323) (Han et al., *Sci. Transl. Med.* 2024) | Stroke case study, `experiments/07_stroke_case_study` | From the authors of the original paper on request | [preprocessing script](../experiments/07_stroke_case_study/prep/prepare_slides.py) |
 | [**Perturb-FISH** tumour section](https://doi.org/10.1016/j.cell.2025.02.012) (Binan et al., *Cell* 2025) | Kernel interpretability, `experiments/04_kernel_interpretability` | [Original data](https://doi.org/10.35077/ace-gem-get) | [preprocessing script](../experiments/04_kernel_interpretability/perturbfish_prepare_data.py) |
 
 ## The two input folders
@@ -33,7 +32,7 @@ machine is wired up.
 | Experiment | Input in `data/` |
 |---|---|
 | `01_spac_seq_benchmark` | `spacseq/raw/` (five sections), `spacseq/prepared/` (matched cell sets, raw counts), `benchmark_assets/spacseq_benchmark/`, `benchmark_assets/holdout_coords/`, `benchmark_assets/results/spacseq_*` |
-| `02_perturb_seq_benchmark` | `perturbmap/raw/` (four sections), `perturbmap/prepared/`, `perturbmap/patches/`, `benchmark_assets/perturbmap_benchmark/`, `benchmark_assets/results/perturbmap_*` |
+| `02_perturb_map_benchmark` | `perturbmap/raw/` (four sections), `perturbmap/prepared/`, `perturbmap/patches/`, `benchmark_assets/perturbmap_benchmark/`, `benchmark_assets/results/perturbmap_*` |
 | `03_dss_gut_case_study` | `dss_colitis/sections/` (MERFISH sections and `manifest.csv`), `dss_colitis/architecture/`, `dss_colitis/case_study/`, `dss_colitis/heldout_eval/` |
 | `04_kernel_interpretability` | `spacseq/kernel_params/`, `perturbfish/` |
 | `06_sensitivity_analysis` | `benchmark_assets/results/spacseq_sensitivity/`, `benchmark_assets/results/sensitivity_tables/` |

@@ -8,7 +8,7 @@
 #SBATCH -o pmap_case_study_%j.out
 #SBATCH -e pmap_case_study_%j.err
 #
-# Run the whole Perturb-seq case study on the checkpoint from experiment 02, in order.
+# Run the whole Perturb-map case study on the checkpoint from experiment 02, in order.
 #
 # Usage: sbatch run_all.sh
 #
@@ -34,11 +34,11 @@ source "$_PATHS"
 activate_env
 
 # Derived from CODEBASE_ROOT rather than from this file, for the sbatch reason above.
-HERE="${CODEBASE_ROOT}/experiments/05_perturb_seq_case_study/evaluation"
-export PMAP_CKPT="${PMAP_CKPT:-${OUTPUT_ROOT}/perturb_seq_seen}"
-export PMAP_CASE_OUT="${PMAP_CASE_OUT:-${OUTPUT_ROOT}/perturb_seq_case_study/case}"
-export PMAP_INTERPRET_OUT="${PMAP_INTERPRET_OUT:-${OUTPUT_ROOT}/perturb_seq_case_study/interpret}"
-export PMAP_SYSTEMATIC_OUT="${PMAP_SYSTEMATIC_OUT:-${OUTPUT_ROOT}/perturb_seq_case_study/systematic}"
+HERE="${CODEBASE_ROOT}/experiments/05_perturb_map_case_study/evaluation"
+export PMAP_CKPT="${PMAP_CKPT:-${OUTPUT_ROOT}/perturb_map_seen}"
+export PMAP_CASE_OUT="${PMAP_CASE_OUT:-${OUTPUT_ROOT}/perturb_map_case_study/case}"
+export PMAP_INTERPRET_OUT="${PMAP_INTERPRET_OUT:-${OUTPUT_ROOT}/perturb_map_case_study/interpret}"
+export PMAP_SYSTEMATIC_OUT="${PMAP_SYSTEMATIC_OUT:-${OUTPUT_ROOT}/perturb_map_case_study/systematic}"
 
 [ -f "${PMAP_CKPT}/model.pt" ] || {
     echo "[FATAL] checkpoint missing: ${PMAP_CKPT}/model.pt -- run experiment 02 training first"
@@ -59,4 +59,4 @@ python -u transplant_analysis.py
 # 4. Which programmes track the neighbourhood, with the overall effect size divided out.
 python -u pathway_analysis.py
 
-echo "[$(date)] Perturb-seq case study finished -> ${OUTPUT_ROOT}/perturb_seq_case_study"
+echo "[$(date)] Perturb-map case study finished -> ${OUTPUT_ROOT}/perturb_map_case_study"
