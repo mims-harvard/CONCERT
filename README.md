@@ -41,17 +41,25 @@ Ignoring cells' tissue context when predicting perturbations
   <img src="./issue2.jpg" alt="issue2" width="400"/>
 </p>
 
-## 🛠️ Functions of CONCERT
+## 🛠️ Tasks
 
-1. Predict perturbations on cells considering their niches (2D or 3D).
-2. Predict perturbations across slides, including perturbations never seen on the target slide.
-3. Predict perturbations at timepoints that were never measured.
-4. Impute missing cells with perturbation prediction.
-5. Learn the scope of a perturbation's effect on tissue space.
-6. Disentangle perturbation effects - intra- or inter-cellular.
+CONCERT predicts perturbation responses in four settings:
+
+1. **2D tissue sections.** Predict how each cell responds to a perturbation in the context of its spatial niche on a tissue section.
+2. **3D tissue.** Predict perturbation responses across serial sections arranged as a 3D tissue volume.
+3. **Edge imputation and counterfactual perturbation prediction.** Impute expression for cells at the edge of the measured region and predict their responses to a perturbation.
+4. **Perturbation prediction with deconvolution.** Deconvolve multi-cell spot measurements into cell-level expression and predict perturbation responses at that resolution.
 
 <p align="center">
-  <img src="./function.jpg" alt="model" width="400"/>
+  <img src="./tasks.jpg" alt="tasks" width="700"/>
+</p>
+
+## 🧬 CONCERT model
+
+CONCERT is a niche-aware Gaussian-process variational autoencoder that learns a spatial effect field for each perturbation.
+
+<p align="center">
+  <img src="./model.jpg" alt="model" width="700"/>
 </p>
 
 ## 🗂️ Repository layout
