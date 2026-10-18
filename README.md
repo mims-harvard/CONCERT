@@ -56,7 +56,7 @@ CONCERT predicts perturbation responses in four settings:
 
 ## 🧬 CONCERT model
 
-CONCERT disentangles spatial and perturbation effects, corrects technical and batch noise, and generates post-perturbation gene expression across tissue space.
+CONCERT disentangles spatial and perturbation effects, learns the spatial effect of each perturbation, corrects technical and batch noise, and generates post-perturbation gene expression across tissue space.
 
 <p align="center">
   <img src="./model.jpg" alt="model" width="700"/>
